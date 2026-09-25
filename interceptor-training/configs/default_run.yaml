@@ -1,0 +1,110 @@
+# default_run.yaml -- interceptor drone curriculum training (plan §4.3, §11)
+#
+# Top-level sections: `global`, `stages` (optional per-stage overrides),
+# `configs` (one training baseline per block).
+
+global:
+  seed: 42
+  device: auto                 # auto|cpu|cuda
+  data_dir: /data              # host-mounted volume (see docker-compose.yml)
+  n_parallel_envs: 8
+  checkpoint_interval_steps: 50000
+  tensorboard: true
+  execution_mode: sequential   # plan §7: only sequential supported
+  rollback:                    # plan §6.2 policy
+    max_attempts: 2            # max rollbacks per stage
+    retry_budget_scale: 0.5    # re-entered stage runs on 50% of its budget
+    threshold_scale: 0.5       # rollback threshold = 50% of success_rate
+    min_steps_scale: 0.25      # rollback only after 25% of max_training_steps
+  # optional smoke override (used by `train.py --smoke`):
+  # smoke:
+  #   config: ppo_baseline
+  #   stages: [1, 2, 3]
+  #   steps_per_stage: 1000
+
+# Per-stage overrides merged on the built-in stage table.
+# Empty here = use the exact plan defaults.  Example that enables the
+# optional features:
+#   stage_1:
+#     domain_randomize: false
+#     wind_enabled: false
+#     ground_effect: false
+#     rollback_threshold: null
+stages: {}
+
+# --- baselines (plan §4.3) --------------------------------------------------
+configs:
+  ppo_baseline:
+    algo: PPO
+    policy: MlpPolicy
+    net_arch: {pi: [256, 256, 128], vf: [256, 256, 128]}
+    activation: ReLU
+    obs_history: {frames: 3, skip: 2}
+    stages: [1, 2, 3, 4, 5, 6, 7]
+    hyperparameters:
+      n_steps: 4096
+      batch_size: 512
+      gamma: 0.995
+      learning_rate: 3.0e-4
+      gae_lambda: 0.95
+      clip_range: 0.2
+      ent_coef: 0.005
+      n_epochs: 10
+      max_grad_norm: 0.5
+      vf_coef: 0.5
+
+  sac_baseline:
+    algo: SAC
+    policy: MlpPolicy
+    net_arch: {pi: [256, 256], qf: [256, 256]}
+    activation: ReLU
+    obs_history: {frames: 3, skip: 2}
+    stages: [1, 2, 3, 4, 5, 6, 7]
+    hyperparameters:
+      learning_rate: 3.0e-4
+      buffer_size: 1000000
+      batch_size: 512
+      gamma: 0.995
+      tau: 0.005
+      ent_coef: auto
+      learning_starts: 25000
+      train_freq: 1
+      gradient_steps: 1
+
+  td3_baseline:
+    algo: TD3
+    policy: MlpPolicy
+    net_arch: {pi: [256, 256], qf: [256, 256]}
+    activation: ReLU
+    obs_history: {frames: 3, skip: 2}
+    stages: [1, 2, 3, 4, 5, 6, 7]
+    action_noise_sigma: 0.1
+    hyperparameters:
+      learning_rate: 1.0e-3
+      buffer_size: 1000000
+      batch_size: 512
+      gamma: 0.995
+      tau: 0.005
+      learning_starts: 25000
+      train_freq: 1
+      gradient_steps: 1
+      policy_delay: 2
+
+  ppo_5layer_deep:
+    algo: PPO
+    policy: MlpPolicy
+    net_arch: {pi: [512, 256, 256, 128, 64], vf: [512, 256, 256, 128, 64]}
+    activation: ReLU
+    obs_history: {frames: 5, skip: 3}
+    stages: [1, 2, 3, 4, 5, 6, 7]
+    hyperparameters:
+      n_steps: 4096
+      batch_size: 512
+      gamma: 0.995
+      learning_rate: 1.0e-4
+      gae_lambda: 0.95
+      clip_range: 0.15
+      ent_coef: 0.01
+      n_epochs: 15
+      max_grad_norm: 0.5
+      vf_coef: 0.5
