@@ -5,6 +5,11 @@ correct training runs, affect only resume/accounting edge cases, or are
 documented design compromises. They are tracked as a follow-up list, not
 fixed mid-task (per task instructions).
 
+**Last reviewed 2026-09-25 (end of day):** repo published to
+`github.com/siddhmehta5131/interceptor-drone-rl` and `Docker_Setup_and_Running_Guide.pdf`
+shipped — documentation/infrastructure work only. **No new code findings**;
+items 1–10 below unchanged.
+
 ---
 
 ## 1. Mid-rollback resume retrains the retry stage from transfer weights

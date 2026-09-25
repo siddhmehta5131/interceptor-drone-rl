@@ -2,8 +2,9 @@
 
 Implementation of `implementation_plan.md` v1.0. All deliverables live in
 `interceptor-training/`. Status: **build complete — code complete, host-side
-smoke suite green, critique-review remediation merged, container integration
-run still to be executed on a CUDA/Docker host.**
+smoke suite green (8/8), critique-review remediation merged, repo published on
+GitHub as `siddhmehta5131/interceptor-drone-rl`, beginner Docker setup guide
+shipped, container integration run still to be executed on a CUDA/Docker host.**
 
 ---
 
@@ -124,6 +125,32 @@ Evaluation (in container):
 docker compose run --rm --entrypoint python interceptor-train scripts/evaluate.py \
   --config /data/configs/default_run.yaml --config-name ppo_baseline --stage 3 --episodes 50
 ```
+
+## End-of-day status — 2026-09-25
+
+**Repo published on GitHub.** The merged repository (simulator + reference env +
+Dockerized pipeline) was assembled into a clean, committed clone and pushed to
+`https://github.com/siddhmehta5131/interceptor-drone-rl` (branch `main`) as three
+commits:
+
+- `5debf50` feat: add Dockerized RL interceptor training pipeline (8-stage SB3 curriculum)
+- `3075a74` docs: rewrite README for merged simulator + RL training repo
+- `433d5b9` docs: add Docker setup and running guide (Ubuntu + NVIDIA + CUDA training)
+
+The published repo contains only the essential files (no scratch); the local
+workspace keeps the unsynced scratch copies. Verified before pushing: smoke suite
+run from the published clone's `interceptor-training/` → **8/8 PASS, exit 0**.
+Repo name was renamed on GitHub from `rl-drone-flight-simulator` → `interceptor-drone-rl`.
+
+**Docker setup guide shipped.** `Docker_Setup_and_Running_Guide.pdf` (+ `.md`
+source) created for a first-time user: Ubuntu + NVIDIA driver + Docker +
+NVIDIA Container Toolkit install, clone, in-container smoke, background training,
+TensorBoard, evaluation, CPU-only fallback, quick-reference and troubleshooting
+tables. Saved in the workspace **and** committed to the repo (`433d5b9`).
+
+**Remaining:** Phase 9 — run the in-container integration smoke on the Ubuntu GPU
+box exactly as the guide describes, then start the real training
+(`docker compose up -d --build`).
 
 ## Integration smoke (Phase 9) — blocked locally
 
