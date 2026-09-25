@@ -1,19 +1,27 @@
-﻿# RL-Based Autonomous Interceptor Drone — Flight Simulator
+﻿# RL-Based Autonomous Interceptor Drone
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python)
 ![NumPy](https://img.shields.io/badge/NumPy-Simulation-013243?logo=numpy)
-![Matplotlib](https://img.shields.io/badge/Matplotlib-Visualisation-11557c)
+![Gymnasium](https://img.shields.io/badge/Gymnasium-RL%20Env-3776AB?logo=openai)
+![Stable-Baselines3](https://img.shields.io/badge/SB3-Dockerized%20Training-2ea44f)
+![Docker](https://img.shields.io/badge/Docker-CUDA-2496ed?logo=docker)
 ![License](https://img.shields.io/badge/License-MIT-yellow)
 
-A **real-time physics-based quadrotor flight simulator** controlled via a USB gamepad. The simulator implements a full 9-stage rigid-body dynamics pipeline calibrated to the Crazyflie 2.0/2.1 nano-quadrotor, with aerodynamic coefficients fitted from real PX4 flight-log data.
+A complete **autonomous interceptor-drone** project: a real-time physics-based
+quadrotor flight simulator and a **Dockerized multi-stage reinforcement-learning
+training pipeline** that learns to intercept a moving target.
 
-Built as the simulation backbone for a reinforcement-learning based autonomous interceptor drone project (BTP).
+The simulator implements a full 9-stage rigid-body dynamics pipeline calibrated
+to the Crazyflie 2.0/2.1 nano-quadrotor, with aerodynamic coefficients fitted
+from real PX4 flight-log data and live gamepad control. The training pipeline
+sits on top of it: an 8-stage curriculum (hover → waypoint → evasive intercept)
+trained with Stable-Baselines3 (PPO/SAC/TD3) inside a CUDA Docker container.
 
 ---
 
 ## 🧠 Architecture
 
-The simulation pipeline follows a paper-derived, modular architecture where each stage is a pure function with documented inputs and outputs:
+### Flight simulator — 9-stage physics pipeline
 
 ```
 Gamepad input (thrust, roll, pitch, yaw)
@@ -28,11 +36,31 @@ Stage 5 ─── Force Aggregation ────────────→ tota
 Stage 6 ─── Gyroscopic Torques ───────────→ reaction + inertial coupling
 Stage 7 ─── Aerodynamic Drag Model ───────→ polynomial drag (fitted from PX4)
 Stage 8 ─── Newton-Euler Dynamics ────────→ state derivatives
-Stage 9 ─── Euler Integration ────────────→ new position + attitude
+Stage 9 ─── RK4 Integration ──────────────→ new position + attitude
     │
     ▼
 Live 3D matplotlib visualisation (position trail + body-frame arrows)
 ```
+
+### RL training — curriculum (see `implementation_plan.md`)
+
+```
+stage_1  hover (bit-identical to hover_env.AltitudeHoldEnv)
+stage_2  waypoint tracking (static target)
+stage_3  intercept, static target        ── kill bonus scaled by miss distance
+stage_4  + time-to-kill bonus            ── + adaptive time penalty
+stage_5  moving target (order-1)         ── look-ahead prediction on
+stage_6  + noisy/missing target obs      ── + normalized progress reward
+stage_7  evasive target (order-2/3)      ── + wind / domain randomisation (opt.)
+stage_8  full evasive intercept          ── optional ground effect (opt.)
+
+stage success  → advance     (windowed success rate ≥ threshold)
+stage failure  → rollback    (≤ 2 retries) then cap
+```
+
+Stage 1 must be **bit-identical** to the reference `hover_env.py` (same seed +
+action stream → identical obs arrays, rewards, terminations and infos). This is
+enforced by `interceptor-training/scripts/smoke_test.py`.
 
 ---
 
@@ -43,20 +71,34 @@ Live 3D matplotlib visualisation (position trail + body-frame arrows)
 - 📊 **Real-world calibration** — mass, inertia, arm length from Crazyflie 2.0 published data
 - 🌊 **Fitted aero model** — drag coefficients from least-squares regression on 15 PX4 flight logs
 - 🔋 **ESC polynomial** — battery/motor model fitted to real ESC telemetry
-- 🏠 **Room boundary simulation** — floor collision + wall/ceiling detection
 - 📈 **Dual live visualisation** — 3D trajectory + 4-channel input bar chart
+- 🤖 **8-stage RL curriculum** — hover → waypoint → moving/evasive intercept, with advance/rollback scheduling
+- 🐳 **Dockerized training** — CUDA container, PPO/SAC/TD3 via Stable-Baselines3, TensorBoard logging
+- 🔄 **Resumable runs** — stage checkpoints, run-state JSON, off-policy replay buffers persisted
+- 🧪 **Host-side verification** — 8-test smoke suite (no torch/SB3 needed) that also enforces stage-1 parity
 
 ---
 
 ## 🗂️ Project Structure
 
 ```
-rl-drone-flight-simulator/
-├── src/
-│   ├── simulation.py       # Full 9-stage physics pipeline + live loop
-│   └── visualiser.py       # Standalone visualisation utilities
+interceptor-drone-rl/
+├── src/                     # Flight simulator (gamepad + 9-stage physics + visualiser)
+│   ├── simulation.py
+│   └── visualiser.py
+├── interceptor-training/    # Dockerized RL training pipeline
+│   ├── Dockerfile           #   pytorch/pytorch:2.7.0-cuda12.8-cudnn9-runtime
+│   ├── docker-compose.yml   #   GPU reservation, ./data:/data volume
+│   ├── configs/             #   default_run.yaml — global + 4 algorithm configs
+│   ├── src/                 #   physics/, envs/ (8 stages), training/, utils/
+│   ├── scripts/             #   train.py (entrypoint), evaluate.py, smoke_test.py
+│   └── data/                #   host-mounted volume (checkpoints, tb_logs, ...)
 ├── docs/
-│   └── coefficient_fitting.md
+│   └── coefficient_fitting.md   # how the aero + ESC coefficients were fitted
+├── hover_env.py             # reference environment (stage-1 parity target)
+├── implementation_plan.md   # authoritative spec for the RL training pipeline
+├── CURRENT_WORK.md          # build status / verification log
+├── BUGS.md                  # known non-blocking issues
 ├── requirements.txt
 ├── .gitignore
 └── README.md
@@ -67,15 +109,20 @@ rl-drone-flight-simulator/
 | File | Purpose |
 |------|---------|
 | `src/visualiser.py` | 3 standalone functions: `plot_trajectory()`, `plot_input_bars()`, `read_gamepad()` — fully decoupled from physics |
-| `src/simulation.py` | 10 stage functions (PID → Mixer → ESC → Motors → Props → Forces → Gyro → Aero → Dynamics → Integration) + calibration constants + live loop |
+| `src/simulation.py` | 10 stage functions (PID → Mixer → ESC → Motors → Props → Forces → Gyro → Aero → Dynamics → RK4 Integration) + calibration constants + live loop |
+| `interceptor-training/src/physics/` | Constants, quaternion, aero, dynamics pipeline — ported from `hover_env._ph_*` |
+| `interceptor-training/src/envs/` | `stage_config` (8-stage table), `obs_builder` (history stacking), `reward` (plan §5.5 terms), `target_generator`, `base_env` |
+| `interceptor-training/src/training/` | `curriculum` scheduler, `checkpoint_manager`, `callbacks` (TB/logging), `orchestrator` (stage loop) |
+| `interceptor-training/scripts/train.py` | Container entrypoint; also `--smoke` for an in-container integration run |
 
 ---
 
 ## ⚙️ Prerequisites
 
-- Python 3.10+
-- A USB gamepad / joystick (any standard dual-stick layout)
-- Display capable of running matplotlib interactively
+- Python 3.10+ (simulator & smoke suite)
+- A USB gamepad / joystick (any standard dual-stick layout) — simulator only
+- Display capable of running matplotlib interactively — simulator only
+- Docker + NVIDIA GPU driver + nvidia-container-toolkit — training only
 
 ---
 
@@ -83,14 +130,14 @@ rl-drone-flight-simulator/
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/siddhmehta5131/rl-drone-flight-simulator
-cd rl-drone-flight-simulator
+git clone https://github.com/siddhmehta5131/interceptor-drone-rl
+cd interceptor-drone-rl
 
-# 2. Create virtual environment
+# 2. Create virtual environment (simulator + smoke suite)
 python -m venv venv
 source venv/bin/activate       # Windows: venv\Scripts\activate
 
-# 3. Install dependencies
+# 3. Install host dependencies
 pip install -r requirements.txt
 ```
 
@@ -98,26 +145,42 @@ pip install -r requirements.txt
 
 ## 🚀 Usage
 
-### Run the full simulation
+### Run the flight simulator
+
 ```bash
 cd src
 python simulation.py
 ```
 
-Two windows open:
-1. **3D Trajectory** — drone position trail + body-frame coordinate arrows
-2. **Input Bar Chart** — live thrust/roll/pitch/yaw from the gamepad
+Two windows open: **3D Trajectory** (position trail + body-frame arrows) and
+**Input Bar Chart** (live thrust/roll/pitch/yaw). Push the left stick up for
+thrust; right stick controls roll/pitch.
 
-Push the left stick up for thrust. Right stick controls roll/pitch. Close either window to exit.
+### Verify the training pipeline on the host (no GPU/torch needed)
 
-### Use the visualiser standalone
-```python
-from visualiser import plot_trajectory, plot_input_bars, read_gamepad
+```bash
+cd interceptor-training
+python scripts/smoke_test.py          # 8/8 tests: parity, envs, reward, scheduler, ...
+```
 
-# In your own simulation loop:
-thrust, roll, pitch, yaw = read_gamepad()
-plot_input_bars({"thrust": thrust, "roll": roll, "pitch": pitch, "yaw": yaw})
-plot_trajectory(my_position, my_quaternion)
+### Train in the container (CUDA host)
+
+```bash
+cd interceptor-training
+docker compose up --build                                     # default run config
+docker compose run --rm interceptor-train --smoke \           # quick in-container smoke
+  --smoke-config ppo_baseline --smoke-stages 1,2,3 --smoke-steps 1000
+```
+
+Training output lands in `interceptor-training/data/` (mounted at `/data`):
+`checkpoints/` (per-stage final + periodic), `tb_logs/` (TensorBoard),
+`curriculum_state/` (resume state), `results/` (final model + evaluation JSON).
+
+### Evaluate a trained model
+
+```bash
+docker compose run --rm --entrypoint python interceptor-train scripts/evaluate.py \
+  --config /data/configs/default_run.yaml --config-name ppo_baseline --stage 3 --episodes 50
 ```
 
 ---
@@ -139,7 +202,24 @@ plot_trajectory(my_position, my_quaternion)
 
 ---
 
-## 🐛 Bugs Fixed (from development versions)
+## 🤖 RL Training in Brief
+
+- **Stages 1–8** live in `interceptor-training/src/envs/stage_config.py` with the
+  plan's tuned reward weights (kill bonus, time/miss-distance scaling, progress,
+  alignment, smoothness/angular-velocity penalties).
+- **Algorithm configs** (`configs/default_run.yaml`): `ppo_baseline`,
+  `sac_baseline`, `td3_baseline`, `ppo_5layer_deep` (deeper net + longer obs
+  history: 5 frames @ 3-step skip vs the default m=3/s=2).
+- **Curriculum** advances a stage once its windowed success rate clears the
+  threshold (60–85% depending on stage); failures roll back at 50% of the
+  threshold, max 2 retries per stage.
+- Full specification: [`implementation_plan.md`](implementation_plan.md); build
+  status and verified behaviour: [`CURRENT_WORK.md`](CURRENT_WORK.md); known
+  non-blocking issues: [`BUGS.md`](BUGS.md).
+
+---
+
+## 🐛 Bugs Fixed (flight simulator, from development versions)
 
 1. **Division by zero in `mixer()`** — when all motors command the same value (`cmd_max_val == c_cmd`), the scaling denominator is zero. Added `abs(denom) > 1e-9` guard.
 2. **Double-step motor integration** — `rigid_body_dynamics` was receiving `Omega_new` (already integrated in Stage 3) and then Euler-integrating it again in Stage 9. Fixed to pass old `Omega`.
@@ -154,4 +234,3 @@ plot_trajectory(my_position, my_quaternion)
 ## 📄 License
 
 MIT © 2025 **Siddh Mehta**
-
