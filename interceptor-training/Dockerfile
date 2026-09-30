@@ -14,7 +14,7 @@ WORKDIR /app
 
 # Install Python dependencies first (better layer caching).
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --default-timeout=120 --retries 10 -r requirements.txt
 
 # Application source, entrypoint scripts and shipped configs.
 COPY src/ ./src/
