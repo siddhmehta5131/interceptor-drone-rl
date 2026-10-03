@@ -55,6 +55,13 @@ from torch import nn
 
 from stable_baselines3.common.policies import ActorCriticPolicy, MlpExtractor
 
+# MlpPolicy was moved in SB3 2.9; support both import paths.
+try:
+    from stable_baselines3.common.policies import MlpPolicy as _MlpPolicy
+except ImportError:
+    from stable_baselines3 import PPO as _PPO_cls  # type: ignore
+    _MlpPolicy = _PPO_cls.policy_aliases["MlpPolicy"]  # type: ignore
+
 
 __all__ = [
     "AsymmetricActorCriticPolicy",
@@ -74,6 +81,17 @@ class _SplitExtractor(nn.Module):
         super().__init__()
         self.actor = actor_extractor
         self.critic = critic_extractor
+
+    # SB3 >= 2.4 reads these in ActorCriticPolicy._build() to size the
+    # action/value heads.  We expose the actor dim as latent_dim_pi and the
+    # critic dim as latent_dim_vf (matching the standard MlpExtractor API).
+    @property
+    def latent_dim_pi(self) -> int:
+        return self.actor.latent_dim_pi
+
+    @property
+    def latent_dim_vf(self) -> int:
+        return self.critic.latent_dim_vf
 
     def forward_actor(self, latent_pi: th.Tensor) -> th.Tensor:
         return self.actor.forward_actor(latent_pi)
@@ -191,9 +209,7 @@ def policy_kwargs_for(
     kwargs = dict(policy_kwargs or {})
 
     if not fields:
-        from stable_baselines3.common.policies import MlpPolicy
-
-        return MlpPolicy, kwargs
+        return _MlpPolicy, kwargs
 
     from ..envs.obs_builder import PRIVILEGED_FIELDS
 

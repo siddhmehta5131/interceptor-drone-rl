@@ -1,7 +1,7 @@
 # torch is intentionally omitted: pytorch/pytorch:2.7.0-cuda12.8-cudnn9-runtime
 # already ships torch 2.7.0+cu128. Listing it here causes pip to upgrade to
 # the latest release (a CPU-only wheel), overwriting the CUDA build.
-stable-baselines3[extra]>=2.4.0
+stable-baselines3[extra]>=2.4.0,<2.9.0
 gymnasium>=1.0.0
 numpy>=2.0.0
 scipy>=1.13.0
