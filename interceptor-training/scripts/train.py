@@ -35,9 +35,14 @@ PROJECT_ROOT = str(Path(__file__).resolve().parent.parent)
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-#: Where docker-compose mounts the shipped configs.
+#: Runtime (mounted) config defaults — used for real training runs.
 DEFAULT_CONFIG = os.environ.get("INTERCEPTOR_CONFIG", "/data/configs/config.yaml")
 DEFAULT_MODEL = os.environ.get("INTERCEPTOR_MODEL", "/data/configs/model.yaml")
+
+#: Baked-in smoke defaults — always present inside the image at /app/configs/.
+_APP_DIR = Path(__file__).resolve().parent.parent
+DEFAULT_SMOKE_MODEL = str(_APP_DIR / "configs" / "smoke_model.yaml")
+DEFAULT_SMOKE_CONFIG = str(_APP_DIR / "configs" / "smoke_config.yaml")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -70,10 +75,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     p.add_argument("--smoke", action="store_true",
                    help="integration smoke test: tiny budgets, capped stages advance")
-    p.add_argument("--smoke-model", default=DEFAULT_MODEL,
-                   help="model YAML used by --smoke")
-    p.add_argument("--smoke-config", default=DEFAULT_CONFIG,
-                   help="settings YAML used by --smoke")
+    p.add_argument("--smoke-model", default=DEFAULT_SMOKE_MODEL,
+                   help="model YAML used by --smoke (default: baked-in smoke_model.yaml)")
+    p.add_argument("--smoke-config", default=DEFAULT_SMOKE_CONFIG,
+                   help="settings YAML used by --smoke (default: baked-in smoke_config.yaml)")
     p.add_argument("--smoke-stages", default="1,2,3")
     p.add_argument("--smoke-steps", type=int, default=1000)
     p.add_argument("--smoke-models", default=None,
