@@ -3,7 +3,7 @@
 # This run: ppo_baseline only, stages 1 & 2 to full completion.
 #   Stage 1 (Hover/Attitude):            budget = 3,000,000 steps
 #   Stage 2 (Directional Flight/Wpt):    budget = 5,000,000 steps
-# Total maximum: 8,000,000 steps.
+# Total maximum: 8,000,000 steps (~hours on a GPU host with 8 envs).
 #
 # Top-level sections: `global`, `stages` (optional per-stage overrides),
 # `configs` (one training baseline per block).

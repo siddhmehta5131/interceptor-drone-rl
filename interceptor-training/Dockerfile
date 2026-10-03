@@ -1,6 +1,6 @@
 # Multi-stage RL Training Pipeline for the Autonomous Interceptor Drone.
 #
-# Base image: PyTorch 2.7.0 (CUDA 12.8, cuDNN 9 runtime) â€” supports sm_120
+# Base image: PyTorch 2.7.0 (CUDA 12.8, cuDNN 9 runtime) — supports sm_120
 # (RTX 50 series) GPUs. Fallback if the image is unavailable: switch base to
 # `pytorch/pytorch:2.7.0-cuda12.8-cudnn9-devel` or install torch from the
 # cu128 index (`pip install torch --index-url https://download.pytorch.org/whl/cu128`).
@@ -14,7 +14,7 @@ WORKDIR /app
 
 # Install Python dependencies first (better layer caching).
 COPY requirements.txt .
-RUN pip install --no-cache-dir --default-timeout=120 --retries 10 -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 # opencv-python needs GUI libs (libxcb) missing here; headless is enough for training.
 RUN pip uninstall -y opencv-python && pip install --no-cache-dir --default-timeout=120 --retries 10 opencv-python-headless

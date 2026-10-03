@@ -1,12 +1,3 @@
-# Host-level dependencies:
-#   - flight simulator (src/): numpy, matplotlib, pygame
-#   - host-side verification (interceptor-training/scripts/smoke_test.py):
-#     numpy, scipy, gymnasium, PyYAML
-# The heavy training stack (torch, stable-baselines3, tensorboard) lives in
-# interceptor-training/requirements.txt and is installed inside the container.
-numpy>=1.24.0
-matplotlib>=3.7.0
-pygame>=2.5.0
-gymnasium>=0.29.0
-scipy>=1.10.0
-PyYAML>=6.0
+numpy==2.5.1
+matplotlib==3.11.1
+pygame==2.5.8

@@ -1,10 +1,10 @@
-"""orchestrator.py -- plan Â§7 per-config curriculum training loop.
+"""orchestrator.py -- plan §7 per-config curriculum training loop.
 
 Imports of stable_baselines3/torch are module-level **inside functions** so
 the module still imports without them (harmless locally; train.py runs it
 inside the container).
 
-Flow per config (plan Â§7):
+Flow per config (plan §7):
 
 1. for each stage in the config's stage list:
    a. build a :class:`CurriculumScheduler` (budgeted)
@@ -235,7 +235,7 @@ class Orchestrator:
             return CurriculumScheduler(stage, budget=budget, rollback_threshold=0.0)
         rt = stage.rollback_threshold
         if rt is None:
-            # plan Â§6.2: roll back when success drops below
+            # plan §6.2: roll back when success drops below
             # (threshold_scale * required success_rate).  An explicit
             # per-stage override wins.
             rt = stage.success_rate * float(roll_cfg.get("threshold_scale", 0.5))
@@ -363,7 +363,7 @@ class Orchestrator:
                     own_final = cm.latest_final(stage.id)
                     if own_final is not None:
                         model = self._load_model(cname, str(own_final), vec)
-                        # reduced-budget re-entry (plan Â§6.2) must actually
+                        # reduced-budget re-entry (plan §6.2) must actually
                         # train: the loaded final already consumed the original
                         # budget, so reset the step count or `remaining` would
                         # be <= 0 and the retrain would be skipped entirely.
@@ -457,7 +457,7 @@ class Orchestrator:
                                          stage.id, cname)
                         router[stage_num]["result"] = "stuck"
                         break
-                    # re-enter the previous stage on a reduced budget (plan Â§6.2)
+                    # re-enter the previous stage on a reduced budget (plan §6.2)
                     idx -= 1
                     reentry = True
                     next_scale = float(roll.get("retry_budget_scale", 0.5))

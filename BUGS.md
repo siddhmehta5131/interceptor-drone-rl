@@ -5,10 +5,9 @@ correct training runs, affect only resume/accounting edge cases, or are
 documented design compromises. They are tracked as a follow-up list, not
 fixed mid-task (per task instructions).
 
-**Last reviewed 2026-09-25 (end of day):** repo published to
-`github.com/siddhmehta5131/interceptor-drone-rl` and `Docker_Setup_and_Running_Guide.pdf`
-shipped — documentation/infrastructure work only. **No new code findings**;
-items 1–10 below unchanged.
+**Last reviewed 2026-09-30 (smoke run on CUDA host completed):** Phase 9
+in-container smoke ran successfully. Two runtime bugs found and fixed (items
+11–12). Items 1–10 unchanged from prior review.
 
 ---
 
@@ -38,13 +37,13 @@ and deliberately not restored on resume. A future "resume exact episode
 window" feature must round-trip numpy types properly (e.g. custom encoder).
 
 ## 4. `requirements.txt` relies on the base image's torch satisfying `>=2.7.0`
-**Area:** `requirements.txt` / `Dockerfile`
-**Impact:** Low. `pytorch/pytorch:2.7.0-cuda12.8-cudnn9-runtime` ships
-torch 2.7.0+cuda12.8 which satisfies `torch>=2.7.0`, so pip skips the
-reinstall (no CPU-wheel overwrite of the CUDA build). If the image tag ever
-changes to a build that still satisfies the constraint but is CPU-only this
-silently reverts to CPU training. Mitigation if it ever bites: pin the exact
-index URL (`pip install torch --index-url .../whl/cu128`).
+**Area:** `requirements.txt`
+**Impact was HIGH (now FIXED):** pip resolves `torch>=2.7.0` to the latest
+release (2.14.0 as of 2026-09-30), downloading a 554 MB CPU-only wheel and
+silently overwriting the CUDA build from the base image. `torch` has been
+removed from `requirements.txt` — the base image
+`pytorch/pytorch:2.7.0-cuda12.8-cudnn9-runtime` provides torch 2.7.0+cu128;
+pip must not touch it.
 
 ## 5. `scripts/smoke_test.py` needs `hover_env.py` at the repo root
 **Area:** scripts/smoke_test.py
@@ -92,3 +91,21 @@ parallel envs; cache per-step if profiling ever demands it.
 `USER` directive and `./configs:/data/configs` mounts read-write, so an
 accident inside the container could churn the shipped configs. Harden with
 `USER` + `:ro` before any multi-user deployment.
+
+## 11. `_atomic_json` TypeError: `os.open` returns int, not tuple — FIXED
+**Area:** `src/training/orchestrator.py` (`_atomic_json`)
+**Impact:** Would crash every JSON write at runtime. `os.open()` returns a
+single file descriptor (`int`), but the original code unpacked it as
+`fd, tmp = os.open(...)`. In the smoke run this was masked by a host-side
+file-mount patch; now fixed in-tree. The `tmp` path is constructed first,
+then `fd = os.open(str(tmp), ..., 0o644)`, and `os.replace` reuses `tmp`.
+
+## 12. `opencv-python` crashes `SubprocVecEnv` workers (missing `libxcb`) — FIXED
+**Area:** `Dockerfile` / `requirements.txt` (transitive via `sb3[extra]`)
+**Impact:** High (performance). `stable-baselines3[extra]` installs the full
+`opencv-python`, which needs X11/GUI libraries (`libxcb.so.1`, etc.) absent
+from the headless PyTorch container. Each `SubprocVecEnv` worker crashes on
+`import cv2`, the orchestrator silently falls back to `DummyVecEnv`
+(sequential, single-process), and the 8-env parallelism is lost. Fixed by
+adding a Dockerfile step that replaces `opencv-python` with
+`opencv-python-headless` after `pip install`.

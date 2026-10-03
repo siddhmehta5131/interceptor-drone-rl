@@ -1,10 +1,11 @@
 # CURRENT_WORK — RL-based Autonomous Interceptor Drone Training Pipeline
 
 Implementation of `implementation_plan.md` v1.0. All deliverables live in
-`interceptor-training/`. Status: **build complete — code complete, host-side
-smoke suite green (8/8), critique-review remediation merged, repo published on
-GitHub as `siddhmehta5131/interceptor-drone-rl`, beginner Docker setup guide
-shipped, container integration run still to be executed on a CUDA/Docker host.**
+`interceptor-training/`. Status: **all phases complete — code complete, host-side
+smoke suite green (8/8), critique-review remediation merged, in-container CUDA
+smoke passed (Phase 9), repo published on GitHub as
+`siddhmehta5131/interceptor-drone-rl`, beginner Docker setup guide shipped.
+Ready for real multi-stage training.**
 
 ---
 
@@ -40,7 +41,7 @@ interceptor-training/
 | 6 | Curriculum scheduler + checkpoint manager + resume logic | DONE — advances/caps/rollback tested |
 | 7 | Orchestrator + callbacks + TensorBoard | DONE — static review + 5 fixes (see BUGS.md); runtime test pending container |
 | 8 | Docker infra + configs | DONE |
-| 9 | Integration smoke (1 config, stages 1–3, 1000 steps each) | **PENDING** — needs CUDA/Docker host (see below) |
+| 9 | Integration smoke (1 config, stages 1–3, 1000 steps each) | DONE — `run_summary.json` 2026-09-30; two runtime bugs found & fixed (see below) |
 | 10 | CURRENT_WORK.md / BUGS.md | DONE |
 | 11 | Critique-review remediation | DONE — all findings addressed; smoke suite re-run green |
 
@@ -152,20 +153,27 @@ tables. Saved in the workspace **and** committed to the repo (`433d5b9`).
 box exactly as the guide describes, then start the real training
 (`docker compose up -d --build`).
 
-## Integration smoke (Phase 9) — blocked locally
+## Integration smoke (Phase 9) — COMPLETE
 
-This machine has no Docker and no NVIDIA GPU, so `train.py` cannot run locally
-(Python 3.14 has no torch/SB3 wheels; training requires the Linux+CUDA
-container). The `--smoke` path exists and is implemented:
+Run on CUDA host 2026-09-30 (`run_id: 20260930-130451`). `ppo_baseline`
+stages 1→2→3, ~1000 steps each, all `capped` with `success_rate: 0.0`
+(expected for a smoke budget). Final model saved to
+`/data/results/ppo_baseline_final.zip`. Wall time: 2.7 s.
 
-```
-docker compose run --rm interceptor-train --smoke \
-  --smoke-config ppo_baseline --smoke-stages 1,2,3 --smoke-steps 1000
-```
+Two runtime bugs discovered and fixed:
 
-Expected outcome per stage: 1000 steps → budget exhausted → CAPPED → stage
-final saved → advance to next stage → config completed → `run_summary.json` +
-`results/ppo_baseline_final.zip` written under `data/`.
+- **Bug #11:** `_atomic_json` used `fd, tmp = os.open(...)` — `os.open`
+  returns a single `int`, not a tuple. Fixed: path constructed first, then
+  `fd = os.open(str(tmp), ..., 0o644)`.
+- **Bug #12:** `opencv-python` (from `sb3[extra]`) needs `libxcb.so.1` and
+  other GUI libs absent from the container. Each `SubprocVecEnv` worker
+  crashed on `import cv2`, silently falling back to `DummyVecEnv`
+  (sequential, single-process). Fixed: Dockerfile now replaces
+  `opencv-python` with `opencv-python-headless`.
+
+Additional observation: SB3 warns that PPO with `MlpPolicy` may run faster
+on CPU. Once `SubprocVecEnv` is restored, benchmark `device: cpu` vs
+`device: auto` (cuda) for the PPO configs.
 
 ## Config coverage (`configs/default_run.yaml`)
 
@@ -181,3 +189,56 @@ final saved → advance to next stage → config completed → `run_summary.json
   1–7.
 - Optional DR/wind/ground-effect stage flags default **off** (Stage 1 stays
   bit-identical to the reference `hover_env.py`).
+
+## Session log — Phase 0 discovery (2026-10-02)
+
+Read-only discovery for the repo-clean/sync/push/Docker engagement
+(role.txt inputs: NEW = `context_v5_0.md`, OLD = `context_v0.0.md`;
+the TODO to-do list was **not** supplied — Phase 1 planning is blocked
+on it).
+
+- Mode: command execution available (Windows PowerShell 5.1 build 26100,
+  Windows NT 10.0.26200).
+- Tools: git 2.53.0.windows.2; Docker 29.8.1 + Compose v5.5.1 — **daemon
+  not running** (npipe missing); Python 3.14.6 (`C:\Python314`);
+  gh 2.98.0 authenticated as `siddhmehta5131` (scopes: gist, read:org,
+  repo). Free space on C: 38 GB.
+- Target repo: `C:\Users\ADMIN\Desktop\projects\github_repos\rl-drone-flight-simulator`,
+  remote `https://github.com/siddhmehta5131/interceptor-drone-rl.git`,
+  PUBLIC, default branch `main`, 8 commits, working tree clean,
+  local `main` == `origin/main`, last push 2026-09-30T13:30:13Z,
+  45 tracked files / 673,043 B, no `.gitattributes`, no submodules,
+  `git lfs ls-files` returned no entries.
+- Workspace vs repo: 96 workspace files (excl. `.git/`, `__pycache__/`);
+  51 exist only in the workspace; 0 exist only in the repo; 10 differ
+  byte-wise: `.gitignore` (528 vs 807 B), `BUGS.md` (6384 vs 5374),
+  `context.md` (88641 vs 4672), `CURRENT_WORK.md` (10073 vs 9596),
+  `interceptor-training/configs/default_run.yaml` (1967 vs 1932),
+  `interceptor-training/Dockerfile` (1359 vs 1427),
+  `interceptor-training/requirements.txt` (332 vs 314),
+  `interceptor-training/src/training/orchestrator.py` (23213 vs 23224),
+  `README.md` (6571 vs 11280), `requirements.txt` (47 vs 441).
+- Workspace git: unborn `HEAD` (no commits), 53 staged (`A`) entries.
+- This log entry is the only workspace file touched in Phase 0; the
+  original staged content is recoverable with
+  `git show :CURRENT_WORK.md > CURRENT_WORK.md`.
+
+## Session log — Phase 1 plan delivered (2026-10-02)
+
+- The TODO file was never supplied; on the user's "continue" the work
+  list was **derived from NEW itself** (§13.9 stale-dependents table,
+  Decision Log D-1…D-58, Session Handoff FIX/TO-DO/PROPOSED lists),
+  yielding work items T-01…T-23. Substitution disclosed as Assumption
+  A-1 / Open question O-0 in the plan — confirmation required at GATE.
+- Phase 1 deliverable written: `plan_2026-10-02.md` (sections 0–11 per
+  role.txt: backups, work breakdown + T→S traceability, 96-file
+  inventory, target repo tree, Git/Docker strategy, 11 verification
+  gates, risk register, rollback, 15-line DoD, 17 open questions,
+  6 assumptions).
+- Scope stance recorded: decided-but-unimplemented NEW decisions are in
+  scope; PROPOSED/OPEN values are questions (never guessed); NEW's own
+  spec-body FIX pass is out of scope by default (O-6).
+- Workspace files touched in Phase 1: `CURRENT_WORK.md` (this log) and
+  new `plan_2026-10-02.md`. Nothing else; no backups taken yet (S-00 is
+  the first Phase 2 step); no deletions; no git/push/docker actions.
+- Status: **GATE — waiting for literal "APPROVED"** before Phase 2.
