@@ -109,3 +109,22 @@ from the headless PyTorch container. Each `SubprocVecEnv` worker crashes on
 (sequential, single-process), and the 8-env parallelism is lost. Fixed by
 adding a Dockerfile step that replaces `opencv-python` with
 `opencv-python-headless` after `pip install`.
+
+## 13. ESC polynomial is monotonically decreasing (R-1) — KNOWN LIMITATION
+**Area:** `src/physics/constants.py` (L121–L122), `src/physics/pipeline.py` (L99–L110)
+**Impact:** Sim-to-real only — does not affect training inside the simulator.
+The fitted ESC steady-state polynomial `Ω_ss(c) = 2461.18 − 170.06√c − 1818.9c`
+is monotonically **decreasing** over the entire command range:
+`Ω_ss(0.02) ≈ 2400.75 rad/s`, `Ω_ss(0.2325) ≈ 1956 rad/s` (hover),
+`Ω_ss(1.0) ≈ 472 rad/s`. The derivative at hover command is ≈ −1995 rad/s
+per unit command. This means increasing throttle *reduces* motor speed and
+therefore thrust — the opposite of a real motor. A policy can still learn to
+hover and intercept inside the simulator (it finds the equilibrium at cmd ≈ 0.23),
+but the learned command mapping will not transfer to a real Crazyflie.
+**Decision (2026-10-03):** Do not correct `PH_BAT` or the polynomial coefficients
+at this time. Any change would alter `PH_C_HOVER = 0.23253743635354834` and
+break the bit-exact Stage-1 parity with `hover_env.py` (a hard requirement).
+**Recommended fix for future work:** re-identify the ESC polynomial on the real
+drone; replace coefficients; recompute `PH_C_HOVER`; reset Stage-1 parity baseline.
+**Acceptable for current scope:** Yes — training goal is algorithmic validation,
+not immediate sim-to-real transfer.

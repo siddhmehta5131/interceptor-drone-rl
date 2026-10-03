@@ -1,507 +1,746 @@
-"""orchestrator.py -- plan §7 per-config curriculum training loop.
+"""orchestrator.py -- the internal multi-model training engine (plan B-5, C-1..C-9).
 
-Imports of stable_baselines3/torch are module-level **inside functions** so
-the module still imports without them (harmless locally; train.py runs it
-inside the container).
+This module is **not** the public API.  Users call
+:func:`src.api.train_model`, which validates the request and then hands over to
+:class:`Orchestrator`.  Everything here is an implementation detail:
 
-Flow per config (plan §7):
+* the curriculum stages come from the caller, not from a config block (D-21);
+* every artifact lives under ``<data_dir>/runs/<name>/`` (D-22);
+* the seed may be overridden per call (D-36);
+* the return value is a :class:`~src.results.TrainResult` keyed by model id,
+  not a summary ``dict`` (D-26);
+* a model that fails never takes the other models down with it (D-31, D-55).
 
-1. for each stage in the config's stage list:
-   a. build a :class:`CurriculumScheduler` (budgeted)
-   b. build a vectorised environment (SubprocVecEnv, ``n_parallel_envs``)
-   c. build/load the SB3 model:
-      - resume                      -> load mid-stage periodic checkpoint
-      - rollback re-entry           -> load the stage's own final checkpoint
-      - obs space unchanged vs prev -> fresh model + ``set_parameters``
-        transfer from the previous stage's final checkpoint
-      - otherwise                   -> fresh model
-   d. ``model.learn(remaining_budget, reset_num_timesteps=False)`` with
-      Reward/Metrics/Checkpoint/Curriculum callbacks (the last returns
-      False from ``on_step`` to stop learning on advance/cap/rollback)
-2. react to the terminal result:
-      advance  -> save stage final checkpoint, advance to next stage
-      capped   -> log "capped -- did not converge", save best, advance
-      rollback -> retries[stage]+=1; either re-enter previous stage on a
-                  reduced budget (max_attempts limit) or mark the stage
-                  stuck and move to the next config
-3. save the config's final model to ``results/<config>_final.zip`` and
-   append the per-config summary to ``results/run_summary.json``.
+Layout, relative to ``run_dir`` (which *is* the ``data_dir`` handed to
+:class:`~src.training.checkpoint_manager.CheckpointManager`)::
+
+    checkpoints/<model_id>/stage_<N>/<algo>_<steps>_steps.zip   periodic
+    checkpoints/<model_id>/stage_<N>/<algo>_stage_<N>_final.zip stage final
+    checkpoints/<model_id>/stage_<N>/monitor/                   Monitor CSVs
+    tb_logs/<model_id>/stage_<N>/                               TensorBoard
+    results/<model_id>_final.zip                                last model
+    results/run_summary.json                                    run descriptor
+    curriculum_state/run_state.json                             mid-stage resume
+
+Off-policy algorithms (SAC/TD3) additionally persist their replay buffer as
+``<checkpoint>_buffer.pkl`` so a resumed stage does not restart with an empty
+buffer (D-47).
 """
 
 from __future__ import annotations
 
-import os
 import time
+from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 import numpy as np
 
-from ..utils.config_loader import RunConfig, config_hash
-from ..utils.logger import get_logger
+from ..results import (
+    STATUS_CAPPED,
+    STATUS_COMPLETED,
+    STATUS_CRASHED,
+    STATUS_STUCK,
+    ModelResult,
+    StageOutcome,
+    TrainResult,
+    check_continuation_eligibility,
+)
+from ..utils.config_loader import TrainConfig
+from ..utils.logger import configure_file_logging, get_logger
 from .checkpoint_manager import CheckpointManager
 from .curriculum import ADVANCE, CAPPED, ROLLBACK, CurriculumScheduler
 
-__all__ = ["Orchestrator", "resolve_device", "build_policy_kwargs"]
+__all__ = [
+    "Orchestrator",
+    "RetryLedger",
+    "resolve_device",
+    "build_policy_kwargs",
+    "obs_dim_for",
+]
 
+
+# ---------------------------------------------------------------------------
+# lazy SB3 access (keeps this module importable for py_compile on a bare host)
+# ---------------------------------------------------------------------------
 _SB3: Dict[str, Any] = {}
-_SB3_NOISE = None
+_SB3_NOISE: Dict[str, Any] = {}
+_CB: Dict[str, Any] = {}
+
+_OFF_POLICY = frozenset({"SAC", "TD3"})
 
 
 def _algo(name: str):
-    """Lazy stable_baselines3 import (module must stay importable without it)."""
-    global _SB3_NOISE
-    if name not in _SB3:
-        from stable_baselines3 import PPO, SAC, TD3  # noqa: F401
+    """Import and cache one SB3 algorithm class."""
+    key = str(name).upper()
+    if key not in _SB3:
+        try:
+            from stable_baselines3 import PPO, SAC, TD3
+        except ImportError as exc:  # pragma: no cover - container always has SB3
+            raise RuntimeError(
+                "training requires torch and stable-baselines3 "
+                "(pip install stable-baselines3[extra])"
+            ) from exc
+        _SB3.update({"PPO": PPO, "SAC": SAC, "TD3": TD3})
+    return _SB3[key]
 
-        _SB3.update(PPO=PPO, SAC=SAC, TD3=TD3)
-    if _SB3_NOISE is None:
+
+def _action_noise(algo_name: str, n_actions: int, sigma: float):
+    """TD3 needs an exploration noise object at construction time."""
+    if "NormalActionNoise" not in _SB3_NOISE:
         from stable_baselines3.common.noise import NormalActionNoise
 
-        _SB3_NOISE = NormalActionNoise
-    return _SB3[name]
+        _SB3_NOISE["NormalActionNoise"] = NormalActionNoise
+    cls = _SB3_NOISE["NormalActionNoise"]
+    return cls(np.zeros(n_actions), sigma * np.ones(n_actions))
 
 
+# ---------------------------------------------------------------------------
+# small pure helpers (kept at module scope so tests can use them directly)
+# ---------------------------------------------------------------------------
 def resolve_device(device: str) -> str:
-    """'auto' -> cuda when available, else cpu."""
-    if device != "auto":
-        return device
+    """``auto`` -> ``cuda`` when torch sees a GPU, else ``cpu``."""
+    if str(device) != "auto":
+        return str(device)
     try:
         import torch
-
-        return "cuda" if torch.cuda.is_available() else "cpu"
-    except Exception:
+    except ImportError:  # pragma: no cover
         return "cpu"
+    return "cuda" if torch.cuda.is_available() else "cpu"
 
 
-def build_policy_kwargs(algo_name: str, net_arch: Dict[str, List[int]], activation: str) -> Dict[str, Any]:
-    """SB3 policy_kwargs (net_arch dict + activation_fn *class*)."""
+def build_policy_kwargs(algo_name: str, net_arch: Mapping[str, Sequence[int]],
+                        activation: str) -> Dict[str, Any]:
+    """``policy_kwargs`` for a plain SB3 ``MlpPolicy``.
+
+    ``net_arch`` is the model's ``{pi: [...], vf: [...]}`` mapping.  SAC and TD3
+    read ``net_arch["qf"]``, so it is mirrored from ``vf`` for them.
+    """
     import torch.nn as nn
 
-    act = {"ReLU": nn.ReLU, "Tanh": nn.Tanh, "ELU": nn.ELU}[activation]
-    # PPO: dict(pi=[...], vf=[...]); SAC/TD3: dict(pi=[...], qf=[...])
-    return {"net_arch": dict(net_arch), "activation_fn": act}
+    arch = {"pi": [int(x) for x in net_arch.get("pi", [])],
+            "vf": [int(x) for x in net_arch.get("vf", [])]}
+    if str(algo_name).upper() in _OFF_POLICY:
+        arch["qf"] = list(arch["vf"])
+    act = {"relu": nn.ReLU, "tanh": nn.Tanh, "elu": nn.ELU}.get(
+        str(activation).strip().lower(), nn.ReLU
+    )
+    return {"net_arch": arch, "activation_fn": act}
 
 
-def obs_dim_for(stage, history: Dict[str, int]) -> int:
-    """Observation dimension for a stage + per-config history settings."""
-    frames, skip = int(history["frames"]), int(history["skip"])
-    if not stage.obs.include_target:
-        return 14
-    return 19 * (frames + 1)
+def obs_dim_for(stage, model_def, cfg: TrainConfig) -> int:
+    """Observation width a model sees on ``stage``.
+
+    Stage 1 has no target, so it stays 14-dim (bit-exact parity with
+    ``hover_env``).  Every later stage is
+    ``19 * (1 + m) + 7 * n + privileged``.
+    """
+    from ..envs.obs_builder import observation_dim
+
+    return int(
+        observation_dim(
+            include_target=bool(stage.obs.include_target),
+            history_frames=int(model_def.obs_frames),
+            future_samples=int(cfg.observation.future_samples),
+            privileged_fields=tuple(model_def.privileged_critic or ()),
+        )
+    )
 
 
+# ---------------------------------------------------------------------------
+# D-45: rollback retry counts that outlive a single train_model() call
+# ---------------------------------------------------------------------------
+class RetryLedger:
+    """Persistent ``(model_id, stage) -> rollback count`` map.
+
+    Lives at ``<data_dir>/curriculum_state/retries.json`` (shared by every run)
+    so a stage that already burned its retries cannot get a fresh budget just
+    because the user started a new run (D-45).  The map is reset when the
+    ``config_hash`` changes, because the training setup is then a different
+    experiment.
+    """
+
+    def __init__(self, path: Path, config_hash: str) -> None:
+        self.path = Path(path)
+        self.config_hash = str(config_hash)
+        self._counts: Dict[str, int] = {}
+        self._load()
+
+    @staticmethod
+    def key(model_id: str, stage_number: int) -> str:
+        return f"{model_id}:stage_{int(stage_number)}"
+
+    def _load(self) -> None:
+        data = CheckpointManager._atomic_read_json(self.path)
+        if not isinstance(data, Mapping):
+            return
+        if str(data.get("config_hash", "")) != self.config_hash:
+            return  # different experiment -> start from a clean slate
+        counts = data.get("retries")
+        if isinstance(counts, Mapping):
+            self._counts = {
+                str(k): int(v) for k, v in counts.items() if isinstance(v, (int, float))
+            }
+
+    def get(self, model_id: str, stage_number: int) -> int:
+        return int(self._counts.get(self.key(model_id, stage_number), 0))
+
+    def bump(self, model_id: str, stage_number: int) -> int:
+        k = self.key(model_id, stage_number)
+        self._counts[k] = self.get(model_id, stage_number) + 1
+        self.save()
+        return self._counts[k]
+
+    def reset(self, model_id: str, stage_number: int) -> None:
+        self._counts.pop(self.key(model_id, stage_number), None)
+        self.save()
+
+    def save(self) -> Path:
+        CheckpointManager._atomic_write_json(
+            self.path, {"config_hash": self.config_hash, "retries": dict(self._counts)}
+        )
+        return self.path
+
+
+# ---------------------------------------------------------------------------
+# engine
+# ---------------------------------------------------------------------------
 class Orchestrator:
-    """Runs every config of a :class:`RunConfig` through the curriculum."""
+    """Run the curriculum for every model bound to ``cfg``.
+
+    Parameters
+    ----------
+    cfg:
+        A :class:`~src.utils.config_loader.TrainConfig` whose models have
+        already been bound (the API does that so the ``config_hash`` spans the
+        config *and* the model file).
+    name:
+        Run name; ``run_dir`` holds every artifact (D-22).
+    run_dir:
+        ``<data_dir>/runs/<name>``.  Defaults to ``cfg.data_dir / "runs" / name``.
+    stages:
+        Stage numbers to run, in order (D-21).
+    source_result:
+        The previous run when this is a continuation; used for weight transfer
+        and for the skip/deny checks (D-27, D-28, D-56).
+    result:
+        The (empty) :class:`~src.results.TrainResult` to fill in and return.
+    """
 
     def __init__(
         self,
-        run_cfg: RunConfig,
+        cfg: TrainConfig,
         *,
-        data_dir: Optional[str] = None,
-        logger=None,
+        name: str = "",
+        run_dir: Optional[Path] = None,
+        stages: Optional[Sequence[int]] = None,
+        source_result: Optional[TrainResult] = None,
+        result: Optional[TrainResult] = None,
+        logger: Any = None,
         vecenv: str = "auto",
+        resume: bool = True,
     ) -> None:
-        self.cfg = run_cfg
-        self.data_dir = Path(data_dir or run_cfg.data_dir)
+        self.cfg = cfg
+        self.name = str(name)
+        self.run_dir = Path(run_dir) if run_dir else cfg.data_dir / "runs" / self.name
+        self.stages: List[int] = [int(s) for s in (stages or cfg.stage_numbers())]
+        self.source_result = source_result
+        self.result = result if result is not None else TrainResult(
+            name=self.name, run_dir=self.run_dir, stages=list(self.stages),
+            config_hash=cfg.config_hash, seed=cfg.seed,
+        )
         self.log = logger or get_logger("orchestrator")
-        self.vecenv = vecenv
-        self.device = resolve_device(run_cfg.device)
+        self.vecenv = str(vecenv)
+        self.resume_enabled = bool(resume)
+        self.device = resolve_device(cfg.device)
         self._run_id = time.strftime("%Y%m%d-%H%M%S")
+        self.retries = RetryLedger(
+            cfg.data_dir / "curriculum_state" / "retries.json", cfg.config_hash
+        )
 
-    # ======================================================================
-    # top-level
-    # ======================================================================
-    def run(self) -> Dict[str, Any]:
-        self.log.info("run_id=%s device=%s data_dir=%s", self._run_id, self.device, self.data_dir)
-        self.data_dir.mkdir(parents=True, exist_ok=True)
+    # -- entry point --------------------------------------------------------
 
-        resume = CheckpointManager.run_state_path(self.data_dir)
-        state: Optional[Dict[str, Any]] = CheckpointManager._atomic_read_json(resume)
-        h = config_hash(self.cfg)
-        if state is not None and state.get("config_hash") != h:
-            self.log.warning(
-                "run_state.json exists but config hash differs -- starting fresh "
-                "(found %s, expected %s)", str(state.get("config_hash"))[:12], h[:12]
-            )
-            state = None
+    def run(self) -> TrainResult:
+        self.run_dir.mkdir(parents=True, exist_ok=True)
+        configure_file_logging(self.run_dir / "results" / "logs")
+        self.log.info(
+            "run=%s models=%s stages=%s device=%s run_dir=%s",
+            self.name or self._run_id, self.cfg.model_ids(), self.stages,
+            self.device, self.run_dir,
+        )
+        for model_id in self.cfg.model_ids():
+            prior = self.source_result.get(model_id) if self.source_result else None
+            verdict = check_continuation_eligibility(model_id, prior, self.stages)
+            if verdict is not None:
+                status, reason = verdict
+                self.log.warning("skipping %s: %s (%s)", model_id, reason, status)
+                self.result.set(
+                    model_id,
+                    ModelResult(
+                        model_id,
+                        algo=self._algo_name(model_id),
+                        config_hash=self.cfg.config_hash,
+                        run_dir=str(self.run_dir),
+                        status=status,
+                        reason=reason,
+                        meta=self._training_meta(model_id),
+                    ),
+                )
+                continue
+            try:
+                self.result.set(model_id, self._run_model(model_id, prior))
+            except Exception as exc:  # C-5 / D-31: isolate the failure
+                self.log.error("model %s crashed: %s", model_id, exc, exc_info=True)
+                self.result.set(
+                    model_id,
+                    ModelResult(
+                        model_id,
+                        algo=self._algo_name(model_id),
+                        config_hash=self.cfg.config_hash,
+                        run_dir=str(self.run_dir),
+                        status=STATUS_CRASHED,
+                        reason=f"Training crashed: {exc}",
+                        finished=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                        meta=self._training_meta(model_id),
+                    ),
+                )
+        return self.result
 
-        smoke = self.cfg.smoke_block()
-        if smoke:
-            self.log.info("SMOKE mode: config=%s stages=%s steps/stage=%s",
-                          smoke.get("config"), smoke.get("stages"), smoke.get("steps_per_stage"))
-        configs = self.cfg.config_names()
-        if smoke and smoke.get("config") in configs:
-            configs = [smoke["config"]]
+    # -- per-model ----------------------------------------------------------
 
-        started = time.time()
-        completed: Set[str] = set(state.get("configs_completed", [])) if state else set()
-        summary: Dict[str, Any] = {
-            "run_id": self._run_id,
-            "config_file": self.cfg.source,
-            "config_hash": h,
-            "device": self.device,
-            "data_dir": str(self.data_dir),
-            "started": time.strftime("%Y-%m-%d %H:%M:%S"),
-            "configs": {},
+    def _algo_name(self, model_id: str) -> str:
+        try:
+            return str(self.cfg.model(model_id).algo)
+        except Exception:  # pragma: no cover
+            return ""
+
+    def _training_meta(self, model_id: str) -> Dict[str, Any]:
+        """C-3 payload: the architecture a continuation must reproduce."""
+        mdef = self.cfg.model(model_id)
+        return {
+            "model_id": model_id,
+            "algo": str(mdef.algo),
+            "hyperparameters": dict(mdef.hyperparameters),
+            "net_arch": {k: list(v) for k, v in mdef.net_arch.items()},
+            "config_hash": self.cfg.config_hash,
+            "model_def": mdef.to_dict(),
         }
 
-        total_all = int(state.get("total_steps_all_stages", 0)) if state else 0
-
-        for cname in configs:
-            if cname in completed:
-                self.log.info("config %s already completed -- skipping", cname)
-                continue
-            resume_for_cfg = None
-            if state is not None and state.get("current_config") == cname:
-                resume_for_cfg = dict(state)
-            cfg_result = self._run_config(
-                cname, resume_for_cfg, smoke=smoke if smoke else None
-            )
-            summary["configs"][cname] = cfg_result["summary"]
-            total_all += int(cfg_result.get("steps_added", 0))
-            if cfg_result["completed"]:
-                completed.add(cname)
-                cm = CheckpointManager(self.data_dir, cname, cfg_result["algo"])
-                self._write_state(
-                    configs_completed=sorted(completed),
-                    current_config=None,
-                    current_stage=0,
-                    stage_num=None,
-                    current_stage_steps=0,
-                    total_steps_all_stages=total_all,
-                    last_checkpoint_path=str(cfg_result.get("final_model", "")),
-                    episode_buffer=None,
-                    retries={},
-                )
-
-        # final summary file
-        summary["finished"] = time.strftime("%Y-%m-%d %H:%M:%S")
-        summary["wall_seconds"] = round(time.time() - started, 1)
-        out = self.data_dir / "results" / "run_summary.json"
-        self._atomic_json(out, summary)
-        self.log.info("run_summary written to %s", out)
-        return summary
-
-    # ======================================================================
-    # helpers
-    # ======================================================================
-    @staticmethod
-    def _atomic_json(path: Path, payload: Any) -> None:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = path.parent / (path.stem + ".tmp")
-        fd = os.open(str(tmp), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o644)
-        import json
-
-        with os.fdopen(fd, "w", encoding="utf-8") as fh:
-            json.dump(payload, fh, indent=2, default=str)
-        os.replace(str(tmp), str(path))
-
-    def _write_state(self, **kw: Any) -> None:
-        payload = dict(kw)
-        payload["run_id"] = self._run_id
-        payload["config_file"] = self.cfg.source
-        payload["config_hash"] = config_hash(self.cfg)
-        payload["timestamp"] = time.strftime("%Y-%m-%d %H:%M:%S")
-        path = CheckpointManager.run_state_path(str(self.data_dir))
-        CheckpointManager._atomic_write_json(path, payload)
-
-    def _build_vec_envs(self, stage, history: Dict[str, int], monitor_dir: Optional[str], base_seed: int):
-        """Return (vec_env, factories).  SubprocVecEnv with DummyVecEnv
-        fallback when the platform can't spawn subprocesses."""
-        n = self.cfg.n_parallel_envs
-        frames, skip = int(history["frames"]), int(history["skip"])
-        from ..envs.base_env import make_env_factory
-
-        factories = [
-            make_env_factory(stage, frames, skip, seed=base_seed + rank,
-                             monitor_dir=monitor_dir)
-            for rank in range(n)
-        ]
-        use_subproc = self.vecenv in ("auto", "subproc")
-        if use_subproc:
-            try:
-                from stable_baselines3.common.vec_env import SubprocVecEnv
-
-                return SubprocVecEnv(factories)
-            except Exception:
-                self.log.warning("SubprocVecEnv unavailable -- using DummyVecEnv")
-        from stable_baselines3.common.vec_env import DummyVecEnv
-
-        return DummyVecEnv(factories)
-
-    def _make_scheduler(self, stage, budget: int, roll_cfg: Dict[str, Any], smoke: bool):
-        if smoke:
-            return CurriculumScheduler(stage, budget=budget, rollback_threshold=0.0)
-        rt = stage.rollback_threshold
-        if rt is None:
-            # plan §6.2: roll back when success drops below
-            # (threshold_scale * required success_rate).  An explicit
-            # per-stage override wins.
-            rt = stage.success_rate * float(roll_cfg.get("threshold_scale", 0.5))
-        return CurriculumScheduler(
-            stage,
-            budget=budget,
-            rollback_threshold=rt,
-            rollback_min_steps=int(budget * float(roll_cfg.get("min_steps_scale", 0.25))),
-        )
-
-    def _create_model(self, cname: str, stage, history, vec):
-        conf = self.cfg.config(cname)
-        algo_cls = _algo(conf["algo"])  # also initialises _SB3_NOISE
-        kwargs = dict(
-            env=vec,
-            policy="MlpPolicy",
-            policy_kwargs=build_policy_kwargs(conf["algo"], conf["net_arch"], conf["activation"]),
-            seed=self.cfg.seed + int(stage.id.split("_")[1]),
-            device=self.device,
-            tensorboard_log=(
-                str(self.cfg.data_dir / "tb_logs" / cname / stage.id)
-                if self.cfg.tensorboard else None
-            ),
-        )
-        hyper = dict(conf.get("hyperparameters", {}))
-        kwargs.update(hyper)
-        if conf["algo"] == "TD3" and "action_noise" not in kwargs:
-            n_act = int(vec.action_space.shape[0])
-            sigma = float(conf.get("action_noise_sigma", 0.1))
-            kwargs["action_noise"] = _SB3_NOISE(np.zeros(n_act), sigma * np.ones(n_act))
-        return algo_cls(**kwargs)
-
-    def _load_model(self, cname: str, path: str, vec) -> Any:
-        algo = self.cfg.config(cname)["algo"]
-        model = _algo(algo).load(str(path), env=vec, device=self.device)
-        # restore the off-policy replay buffer alongside the checkpoint
-        try:
-            from .checkpoint_manager import CheckpointManager as _CM
-
-            _CM.load_replay_buffer(model, Path(path))
-        except Exception:
-            pass
-        return model
-
-    # ======================================================================
-    # per-config loop
-    # ======================================================================
-    def _run_config(
-        self, cname: str, resume: Optional[Dict[str, Any]], smoke: Optional[Dict[str, Any]]
-    ) -> Dict[str, Any]:
-        conf = self.cfg.config(cname)
-        algo_name = conf["algo"]
-        history = self.cfg.config_obs_history(cname)
-        cm = CheckpointManager(self.data_dir, cname, algo_name)
+    def _run_model(self, model_id: str, prior: Optional[ModelResult]) -> ModelResult:
+        mdef = self.cfg.model(model_id)
+        algo = str(mdef.algo)
+        cm = CheckpointManager(self.run_dir, model_id, algo)
         cm.ensure()
+        configure_file_logging(cm.log_dir())
 
-        smoke_stages = [int(s) for s in smoke["stages"]] if smoke and smoke.get("stages") else None
-        stage_numbers: List[int] = [int(s) for s in smoke_stages] if smoke_stages \
-            else self.cfg.config_stages(cname)
-
+        stage_cfgs = [self.cfg.stage(n) for n in self.stages]
         roll = self.cfg.rollback_cfg
         max_attempts = int(roll.get("max_attempts", 2))
+        retry_scale = float(roll.get("retry_budget_scale", 0.5))
+
+        mr = ModelResult(
+            model_id,
+            algo=algo,
+            config_hash=self.cfg.config_hash,
+            run_dir=str(self.run_dir),
+            started=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            meta=self._training_meta(model_id),
+        )
+
+        resume_state = self._resume_state(model_id)
+        idx = 0
+        stage_scale = 1.0
+        reentry = False
         last_model = None
-        # JSON round-trip turns int keys into strings -- coerce back so
-        # retries.get(stage_num, 0) keeps working across a resume.
-        raw_retries = resume.get("retries", {}) if resume else {}
-        retries: Dict[int, int] = {int(k): int(v) for k, v in raw_retries.items()}
-        idx = int(resume.get("current_stage", 0)) if resume else 0
-        # True when this config was resumed from run_state.json (enables
-        # mid-stage periodic-checkpoint discovery for interrupted stages).
-        resumed: bool = resume is not None
-        reentry: bool = False
-        next_scale: float = 1.0
-        resume_configs_completed: List[str] = []
-        if resume is not None:
-            next_scale = float(resume.get("current_stage_scale", 1.0))
-            resume_configs_completed = list(resume.get("configs_completed", []))
-            # interrupted between the last stage transition and completion:
-            # replay the final stage (it resumes from its own final ckpt and
-            # immediately returns CAPPED with remaining budget 0).
-            idx = min(idx, max(0, len(stage_numbers) - 1))
-        last_ckpt: Optional[str] = None
-        steps_added = 0
-        router: Dict[str, Any] = {}
+        last_path: Optional[Path] = None
+        total_steps = 0
+        t0 = time.time()
 
-        self.log.info("=== config %s | algo %s | device %s | stages %s",
-                      cname, algo_name, self.device, stage_numbers)
-
-        while idx < len(stage_numbers):
-            stage_num = int(stage_numbers[idx])
-            stage = self.cfg.stage(stage_num)
-            stage_scale = next_scale
+        while idx < len(stage_cfgs):
+            stage = stage_cfgs[idx]
+            stage_id = stage.id
             budget = max(1, int(stage.max_training_steps * stage_scale))
-            if smoke and smoke.get("steps_per_stage"):
-                budget = min(budget, int(smoke["steps_per_stage"]))
-
-            sched = self._make_scheduler(stage, budget, roll, bool(smoke))
-            resume_ck: Optional[str] = None
-            if (
-                resume is not None
-                and idx == int(resume.get("current_stage", -1))
-            ):
-                # run_state.json describes the stage that JUST finished; its
-                # checkpoint is only loadable directly when it belongs to THIS
-                # stage (the interrupted-just-before-completion "replay final
-                # stage" edge).  Otherwise the ckpt belongs to a previous stage
-                # and the transfer / periodic / reentry paths below handle it.
-                if int(resume.get("stage_num") or -1) == stage_num:
-                    resume_ck = resume.get("last_checkpoint_path")
-                resume = None  # only the first stage uses resume state
-
+            sched = self._make_scheduler(stage, budget)
             vec = None
             try:
-                self.log.info("-- stage %s (%s) budget=%d retries=%d reentry=%s",
-                              stage.id, stage.name, budget, retries.get(stage_num, 0), reentry)
-                monitor_dir = str(cm.monitor_dir(stage.id))
-                vec = self._build_vec_envs(stage, history, monitor_dir, base_seed=self.cfg.seed)
-
-                model = None
-                # --- model selection --------------------------------------
-                if resume_ck and Path(resume_ck).exists():
-                    model = self._load_model(cname, resume_ck, vec)
-                    self.log.info("resumed from %s", resume_ck)
-                if model is None and reentry:
-                    own_final = cm.latest_final(stage.id)
-                    if own_final is not None:
-                        model = self._load_model(cname, str(own_final), vec)
-                        # reduced-budget re-entry (plan §6.2) must actually
-                        # train: the loaded final already consumed the original
-                        # budget, so reset the step count or `remaining` would
-                        # be <= 0 and the retrain would be skipped entirely.
-                        model.num_timesteps = 0
-                        self.log.info("re-entering stage %s from %s (budget=%d)",
-                                      stage.id, own_final.name, budget)
-                if model is None and resumed:
-                    # resumed run, no direct resume ckpt / no re-entry: if the
-                    # process died MID-stage, the most recent periodic
-                    # checkpoint of THIS stage is the right continuation
-                    # (it also restores the off-policy replay buffer).
-                    periodic = cm.latest_periodic(stage.id)
-                    if periodic is not None:
-                        model = self._load_model(cname, str(periodic), vec)
-                        self.log.info("resumed mid-stage %s from periodic %s",
-                                      stage.id, periodic.name)
-                if model is None and idx > 0:
-                    prev_stage = self.cfg.stage(stage_numbers[idx - 1])
-                    if obs_dim_for(stage, history) == obs_dim_for(prev_stage, history):
-                        prev_final = cm.latest_final(prev_stage.id)
-                        if prev_final is not None:
-                            old = _algo(algo_name).load(str(prev_final), device=self.device)
-                            new = self._create_model(cname, stage, history, vec)
-                            new.set_parameters(old.get_parameters(), exact_match=True)
-                            model = new
-                            self.log.info("transferred weights from %s", prev_final.name)
-                if model is None:
-                    model = self._create_model(cname, stage, history, vec)
-
-                # --- learn -------------------------------------------------
-                remaining = budget - int(model.num_timesteps)
-                from stable_baselines3.common.callbacks import CallbackList
-                from .callbacks import (
-                    CurriculumCallback,
-                    CurriculumCheckpointCallback,
-                    MetricsCallback,
-                    RewardComponentCallback,
+                vec = self._build_vec_env(stage, mdef, cm, self.cfg.seed + 1000 * idx)
+                model, source_note = self._resolve_model(
+                    model_id, mdef, stage, vec, cm, idx, stage_cfgs, prior,
+                    reentry, resume_state,
                 )
+                CallbackList, cur_cb = self._curriculum_callbacks(sched, cm, stage_id)
+                remaining = max(1, budget - int(model.num_timesteps))
 
-                cur_cb = CurriculumCallback(sched)
-                log_interval = 10 if algo_name == "PPO" \
-                    else max(10000, self.cfg.checkpoint_interval_steps)
-                cb = CallbackList([
-                    CurriculumCheckpointCallback(cm, stage.id, self.cfg.checkpoint_interval_steps),
-                    RewardComponentCallback(log_interval=log_interval),
-                    MetricsCallback(log_interval=log_interval),
-                    cur_cb,
-                ])
-
-                if remaining > 0:
-                    self.log.info("learning: remaining=%d (already %d)", remaining, int(model.num_timesteps))
-                    model.learn(
-                        total_timesteps=remaining,
-                        reset_num_timesteps=False,
-                        callback=cb,
-                        tb_log_name=f"{algo_name}_{stage.id}",
-                        log_interval=log_interval,
-                        progress_bar=False,
-                    )
-
-                result = cur_cb.stage_finished if cur_cb.stage_finished is not None else CAPPED
+                self.log.info(
+                    "[%s] %s: budget=%d remaining=%d (%s)",
+                    model_id, stage_id, budget, remaining, source_note,
+                )
+                model.learn(
+                    total_timesteps=remaining,
+                    reset_num_timesteps=False,
+                    callback=cb,
+                    tb_log_name=f"{algo}_{stage_id}",
+                    log_interval=self._log_interval,
+                    progress_bar=False,
+                )
+                result = cur_cb.stage_finished or CAPPED
                 steps_here = int(model.num_timesteps)
-                steps_added += steps_here
-                success_rate = sched.rate()
-                last_model = model
-                self.log.info("stage %s result=%s steps=%d success_rate=%.3f",
-                              stage.id, result, steps_here, success_rate)
-
-                # --- result handling ---------------------------------------
-                if result == ADVANCE or result == CAPPED:
-                    final_path = cm.save_model(model, stage.id, steps_here, final=True)
-                    last_ckpt = str(final_path)
-                    retries.pop(stage_num, None)
-                    router[stage_num] = {
-                        "result": result, "steps": steps_here, "success_rate": success_rate,
-                    }
-                    if result == CAPPED:
-                        self.log.warning("stage %s capped -- did not converge", stage.id)
-                    idx += 1
-                    next_scale = 1.0
-                    reentry = False
-                elif result == ROLLBACK:
-                    retries[stage_num] = retries.get(stage_num, 0) + 1
-                    router[stage_num] = {
-                        "result": "rollback", "steps": steps_here, "success_rate": success_rate,
-                    }
-                    self.log.warning("stage %s rolled back (attempt %d/%d)",
-                                     stage.id, retries[stage_num], max_attempts)
-                    if idx == 0 or retries[stage_num] > max_attempts:
-                        self.log.warning("stage %s marked STUCK -- skipping rest of config %s",
-                                         stage.id, cname)
-                        router[stage_num]["result"] = "stuck"
-                        break
-                    # re-enter the previous stage on a reduced budget (plan §6.2)
-                    idx -= 1
-                    reentry = True
-                    next_scale = float(roll.get("retry_budget_scale", 0.5))
-                else:  # pragma: no cover - defensive
-                    self.log.error("unexpected stage result %r", result)
-                    break
+                rate = float(sched.rate())
+                total_steps += steps_here
             finally:
                 if vec is not None:
                     vec.close()
 
-            # persist resume state after every transition (current_stage
-            # is the *next* stage to run; current_stage_scale applies to it)
-            ep_buffer = list(sched.state_dict().get("records", []))
-            self._write_state(
-                configs_completed=resume_configs_completed,
-                current_config=cname,
-                current_stage=idx,
-                stage_num=stage_num,
-                current_stage_steps=steps_here,
-                total_steps_all_stages=steps_added,
-                last_checkpoint_path=last_ckpt,
-                episode_buffer=ep_buffer,
-                retries=retries,
-                current_stage_scale=next_scale,
+            outcome = StageOutcome(
+                stage=stage.stage_number,
+                result=result,
+                steps=steps_here,
+                success_rate=rate,
+                budget=budget,
+                retries=self.retries.get(model_id, stage.stage_number),
+            )
+            mr.stages[stage.stage_number] = outcome
+
+            if result in (ADVANCE, CAPPED):
+                last_path = cm.save_model(model, stage_id, steps_here, final=True)
+                cm.save_training_meta(last_path, mr.meta or {})
+                self.retries.reset(model_id, stage.stage_number)
+                last_model = model
+                self._write_run_state(
+                    model_id, stage, steps_here, last_path, stage_scale, sched
+                )
+                resume_state = None
+                reentry = False
+                stage_scale = 1.0
+                if result == CAPPED and self.cfg.on_capped == "stop":
+                    # D-24: 'stop' means this model is done here.
+                    mr.status = STATUS_CAPPED
+                    mr.reason = (
+                        f"stage {stage.stage_number} hit its "
+                        f"{budget}-step budget and on_capped is 'stop'"
+                    )
+                    outcome.result = result
+                    break
+                idx += 1
+                continue
+
+            if result == ROLLBACK:
+                count = self.retries.bump(model_id, stage.stage_number)
+                outcome.retries = count
+                if idx == 0 or count > max_attempts:
+                    mr.status = STATUS_STUCK
+                    mr.reason = (
+                        f"stage {stage.stage_number} rolled back {count} time(s) "
+                        f"(max_attempts={max_attempts})"
+                    )
+                    outcome.result = "stuck"
+                    break
+                idx -= 1
+                reentry = True
+                stage_scale = retry_scale
+                self._write_run_state(
+                    model_id, stage, steps_here, last_path, stage_scale, sched
+                )
+                resume_state = None
+                continue
+
+            # An unknown terminal result must not loop forever.
+            mr.status = STATUS_STUCK
+            mr.reason = f"stage {stage.stage_number}: unexpected result {result!r}"
+            outcome.result = "stuck"
+            break
+
+        mr.steps = int(total_steps)
+        mr.seconds = float(time.time() - t0)
+        mr.finished = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        if last_model is not None:
+            mr.final_model = last_model
+            mr.final_path = last_path
+            mr.last_stage = max(mr.stages) if mr.stages else None
+            config_final = cm.save_config_final(last_model)
+            cm.save_training_meta(config_final, mr.meta or {})
+            mr.meta = dict(mr.meta or {})
+            mr.meta["final_checkpoint"] = str(last_path)
+            mr.meta["config_final"] = str(config_final)
+        if mr.status == STATUS_COMPLETED and not mr.stages:
+            mr.status = STATUS_CRASHED
+            mr.reason = "no stage ran"
+        self.log.info(
+            "[%s] %s after %.1fs (%d steps)", model_id, mr.status, mr.seconds, mr.steps
+        )
+        return mr
+
+    # -- curriculum plumbing ------------------------------------------------
+
+    @property
+    def _log_interval(self) -> int:
+        try:
+            return max(1, int(self.cfg.global_cfg.get("log_interval", 1000)))
+        except Exception:  # pragma: no cover
+            return 1000
+
+    def _curriculum_callbacks(self, sched: CurriculumScheduler,
+                              cm: CheckpointManager, stage_id: str):
+        """Build the SB3 callback list for one stage (C-1 drives ``sched``)."""
+        cls = _cb_classes()
+        cb = cls["CurriculumCallback"](sched)
+        callbacks = cls["CallbackList"]([
+            cls["CurriculumCheckpointCallback"](
+                cm, stage_id, self.cfg.checkpoint_interval_steps
+            ),
+            cls["RewardComponentCallback"](self._log_interval),
+            cls["MetricsCallback"](self._log_interval),
+            cb,
+        ])
+        return callbacks, cb
+
+    def _make_scheduler(self, stage, budget: int) -> CurriculumScheduler:
+        roll = self.cfg.rollback_cfg
+        threshold = stage.rollback_threshold
+        if threshold is None:
+            threshold = float(stage.success_rate) * float(roll.get("threshold_scale", 0.5))
+        return CurriculumScheduler(
+            stage,
+            budget=budget,
+            rollback_threshold=float(threshold),
+            rollback_min_steps=int(budget * float(roll.get("min_steps_scale", 0.25))),
+        )
+
+    def _build_vec_env(self, stage, mdef, cm: CheckpointManager, base_seed: int):
+        from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
+
+        from ..envs.base_env import make_env_factory
+
+        obs = self.cfg.observation
+        monitor_dir = str(cm.monitor_dir(stage.id))
+
+        def _one(rank: int):
+            return make_env_factory(
+                stage,
+                history_frames=int(mdef.obs_frames),
+                history_skip=int(mdef.obs_skip),
+                target_alt=self.cfg.target_alt_range,
+                future_samples=int(obs.future_samples),
+                future_skip=int(obs.future_skip),
+                predictor=str(obs.predictor),
+                future_source=str(obs.future_source),
+                privileged_fields=tuple(mdef.privileged_critic or ()),
+                seed=int(base_seed) + rank,
+                monitor_dir=monitor_dir,
             )
 
-        conf_done = bool(router) and all(
-            r["result"] in (ADVANCE, CAPPED) for r in router.values()
+        n = max(1, int(self.cfg.n_parallel_envs))
+        factories = [_one(r) for r in range(n)]
+        if self.vecenv in ("auto", "subproc") and n > 1:
+            return SubprocVecEnv(factories)
+        return DummyVecEnv(factories)
+
+    def _create_model(self, mdef, stage, vec, cm: CheckpointManager):
+        from .asymmetric_policy import policy_kwargs_for
+
+        algo = str(mdef.algo)
+        obs_dim = obs_dim_for(stage, mdef, self.cfg)
+        policy_cls, policy_kwargs = policy_kwargs_for(
+            mdef,
+            obs_dim,
+            policy_kwargs=build_policy_kwargs(algo, mdef.net_arch, mdef.activation),
+            privileged_fields=tuple(mdef.privileged_critic or ()),
         )
-        final_model_path: Optional[str] = None
-        if conf_done and last_model is not None:
-            final_model_path = str(cm.save_config_final(last_model))
-        self.log.info("config %s %s%s", cname,
-                      "COMPLETED" if conf_done else "INTERRUPTED",
-                      f" final_model={final_model_path}" if final_model_path else "")
-        return {
-            "algo": algo_name,
-            "summary": {
-                "algo": algo_name,
-                "stages": router,
-                "final_model": final_model_path,
-                "steps": steps_added,
-            },
-            "completed": conf_done,
-            "steps_added": steps_added,
-            "final_model": final_model_path,
+        kwargs: Dict[str, Any] = {
+            "env": vec,
+            "policy": policy_cls,
+            "policy_kwargs": policy_kwargs,
+            "seed": int(self.cfg.seed) + int(stage.stage_number),
+            "device": self.device,
         }
+        if self.cfg.tensorboard:
+            kwargs["tensorboard_log"] = str(cm.tb_dir(stage.id))
+        kwargs.update(dict(mdef.hyperparameters))
+        if algo == "TD3" and "action_noise" not in kwargs:
+            kwargs["action_noise"] = _action_noise(
+                algo, int(vec.action_space.shape[0]),
+                float(kwargs.get("action_noise_sigma", 0.1)),
+            )
+        return _algo(algo)(**kwargs)
+
+    def _load_model(self, mdef, path: Path, vec):
+        model = CheckpointManager.load_model(
+            str(mdef.algo), str(path), env=vec, device=self.device
+        )
+        if str(mdef.algo).upper() in _OFF_POLICY:
+            CheckpointManager.load_replay_buffer(model, Path(path))
+        return model
+
+    # -- model selection ----------------------------------------------------
+
+    def _resolve_model(
+        self,
+        model_id: str,
+        mdef,
+        stage,
+        vec,
+        cm: CheckpointManager,
+        idx: int,
+        stage_cfgs: Sequence[Any],
+        prior: Optional[ModelResult],
+        reentry: bool,
+        resume_state: Optional[Mapping[str, Any]],
+    ) -> Tuple[Any, str]:
+        """Pick the weights this stage starts from.
+
+        Order: mid-stage resume checkpoint, own final (rollback re-entry),
+        cross-stage weight transfer, fresh.  Returns ``(model, note)``.
+        """
+        stage_id = stage.id
+
+        # 1) mid-stage resume (C-7 / D-46)
+        if resume_state:
+            ckpt = resume_state.get("last_checkpoint_path")
+            if ckpt and str(resume_state.get("stage_num")) == str(stage.stage_number) \
+                    and Path(str(ckpt)).exists():
+                model = self._load_model(mdef, Path(str(ckpt)), vec)
+                model.num_timesteps = int(resume_state.get("stage_steps") or 0)
+                self.log.info(
+                    "[%s] %s: resuming from %s at %d steps",
+                    model_id, stage_id, ckpt, model.num_timesteps,
+                )
+                return model, f"resumed from {Path(str(ckpt)).name}"
+
+        # 2) rollback re-entry: restart the same stage from its own final
+        if reentry:
+            own = cm.latest_final(stage_id)
+            if own is not None:
+                model = self._load_model(mdef, own, vec)
+                model.num_timesteps = 0
+                return model, "rollback re-entry"
+
+        # 3) cross-stage transfer (C-4 / D-33)
+        donor = self._donor_checkpoint(idx, stage_cfgs, prior, cm)
+        if donor is not None:
+            old = self._load_model(mdef, donor, None)
+            model = self._create_model(mdef, stage, vec, cm)
+            note = self._transfer(old, model, donor)
+            del old
+            return model, note
+
+        return self._create_model(mdef, stage, vec, cm), "fresh"
+
+    def _donor_checkpoint(
+        self,
+        idx: int,
+        stage_cfgs: Sequence[Any],
+        prior: Optional[ModelResult],
+        cm: CheckpointManager,
+    ) -> Optional[Path]:
+        """Where the incoming weights come from, or ``None`` for a fresh model."""
+        if idx > 0:
+            prev = stage_cfgs[idx - 1]
+            own = cm.latest_final(prev.id)
+            if own is not None:
+                return own
+        if prior is not None and prior.final_path:
+            p = Path(str(prior.final_path))
+            if p.exists():
+                return p
+        return None
+
+    def _transfer(self, old_model, new_model, donor: Path) -> str:
+        """Copy what matches, random-init what is new (D-33)."""
+        from .weight_transfer import stage1_prefix_for, transfer_model, summarise
+
+        new_dim = int(new_model.observation_space.shape[0])
+        old_dim = int(old_model.observation_space.shape[0])
+        if new_dim == old_dim:
+            new_model.set_parameters(old_model.get_parameters(), exact_match=True)
+            return f"weights from {donor.name} ({new_dim} dims)"
+        prefix = stage1_prefix_for(old_dim, new_dim)
+        report = transfer_model(
+            old_model, new_model, shared_prefix=prefix, obs_width=new_dim,
+            seed=int(self.cfg.seed),
+        )
+        return (
+            f"weights from {donor.name} ({old_dim}->{new_dim}, prefix={prefix}): "
+            f"{summarise(report)}"
+        )
+
+    # -- resume / run state -------------------------------------------------
+
+    def _resume_state(self, model_id: str) -> Optional[Dict[str, Any]]:
+        """Load this run's ``run_state.json`` when it matches (C-7 / D-46)."""
+        if not self.resume_enabled:
+            return None
+        state = CheckpointManager._atomic_read_json(
+            CheckpointManager.run_state_path(self.run_dir)
+        )
+        if not isinstance(state, Mapping):
+            return None
+        if str(state.get("config_hash", "")) != self.cfg.config_hash:
+            self.log.info("ignoring resume state: config_hash changed")
+            return None
+        if str(state.get("name", self.name)) != self.name:
+            return None
+        if str(state.get("model_id", model_id)) != model_id:
+            return None
+        if not state.get("last_checkpoint_path"):
+            return None
+        return dict(state)
+
+    def _write_run_state(
+        self,
+        model_id: str,
+        stage,
+        steps: int,
+        checkpoint: Optional[Path],
+        stage_scale: float,
+        sched: Optional[CurriculumScheduler],
+    ) -> None:
+        records = []
+        if sched is not None:
+            try:
+                records = list(sched.state_dict().get("records", []))
+            except Exception:  # pragma: no cover
+                records = []
+        CheckpointManager._atomic_write_json(
+            CheckpointManager.run_state_path(self.run_dir),
+            {
+                "run_id": self._run_id,
+                "name": self.name,
+                "model_id": model_id,
+                "algo": str(self.cfg.model(model_id).algo),
+                "config_file": str(self.cfg.source),
+                "config_hash": self.cfg.config_hash,
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "stages": list(self.stages),
+                "stage_num": int(stage.stage_number),
+                "stage_steps": int(steps),
+                "stage_scale": float(stage_scale),
+                "last_checkpoint_path": str(checkpoint) if checkpoint else "",
+                "episode_buffer": records,
+                "retries": {
+                    f"{model_id}:stage_{n}": self.retries.get(model_id, n)
+                    for n in self.stages
+                },
+            },
+        )
+
+
+def _cb_classes():
+    """Import SB3's ``CallbackList`` and this project's callbacks on demand."""
+    if not _CB:
+        from stable_baselines3.common.callbacks import CallbackList
+
+        from .callbacks import (
+            CurriculumCallback,
+            CurriculumCheckpointCallback,
+            MetricsCallback,
+            RewardComponentCallback,
+        )
+
+        _CB.update({
+            "CallbackList": CallbackList,
+            "CurriculumCallback": CurriculumCallback,
+            "CurriculumCheckpointCallback": CurriculumCheckpointCallback,
+            "MetricsCallback": MetricsCallback,
+            "RewardComponentCallback": RewardComponentCallback,
+        })
+    return _CB

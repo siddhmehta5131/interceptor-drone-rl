@@ -21,7 +21,7 @@ import json
 import os
 import tempfile
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Mapping, Optional, Union
 
 __all__ = ["CheckpointManager"]
 
@@ -136,6 +136,29 @@ class CheckpointManager:
             return True
         except Exception:  # pragma: no cover - best-effort
             return False
+
+    # -- C-3 / D-28: `_training_meta.json` next to each checkpoint -----------
+    @staticmethod
+    def training_meta_path(model_path: Union[str, Path]) -> Path:
+        """``<checkpoint>.training_meta.json`` beside a model zip (C-3)."""
+        p = Path(model_path)
+        return p.with_name(p.stem + ".training_meta.json")
+
+    def save_training_meta(self, model_path: Union[str, Path], payload: Mapping[str, Any]) -> Path:
+        """Record the architecture a checkpoint was trained with (C-3).
+
+        The payload is the ``{model_id, algo, hyperparameters, net_arch,
+        config_hash}`` block the plan requires, plus the full model definition
+        so a continuation run can rebuild the exact same architecture without
+        the original ``model.yaml``.
+        """
+        path = self.training_meta_path(model_path)
+        self._atomic_write_json(path, dict(payload))
+        return path
+
+    def load_training_meta(self, model_path: Union[str, Path]) -> Optional[Dict[str, Any]]:
+        """Read the ``_training_meta.json`` sitting next to ``model_path``."""
+        return self._atomic_read_json(self.training_meta_path(model_path))
 
     @classmethod
     def load_model(

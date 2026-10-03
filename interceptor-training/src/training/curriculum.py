@@ -31,11 +31,11 @@ from __future__ import annotations
 
 import math
 from collections import deque
-from typing import Deque, Dict, List, Optional
+from typing import Deque, Dict, List, Optional, Tuple
 
 from ..envs.stage_config import StageConfig
 
-__all__ = ["EpisodeSuccess", "CurriculumScheduler"]
+__all__ = ["EpisodeSuccess", "CurriculumScheduler", "valid_predecessors"]
 
 # result strings returned by CurriculumScheduler.on_episode_end / peak()
 RUNNING = "running"
@@ -43,6 +43,25 @@ ADVANCE = "advance"
 CAPPED = "capped"
 ROLLBACK = "rollback"
 TERMINAL_RESULTS = (ADVANCE, CAPPED, ROLLBACK)
+
+
+def valid_predecessors(first_stage: int) -> Tuple[int, ...]:
+    """Stages a source run may have last completed before training ``first_stage``.
+
+    D-27: a continuation call is only meaningful when the source ended on the
+    stage immediately before the requested one, or on the requested stage
+    itself (more budget for the same stage).  Anything else would silently
+    jump the curriculum, so the caller reports ``skipped`` instead.
+
+    >>> valid_predecessors(1)
+    (1,)
+    >>> valid_predecessors(3)
+    (2, 3)
+    """
+    n = int(first_stage)
+    if n <= 1:
+        return (1,)
+    return (n - 1, n)
 
 
 def episode_success(stage: StageConfig, stats: Dict) -> bool:

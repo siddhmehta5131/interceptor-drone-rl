@@ -4,10 +4,10 @@ curriculum (stable_baselines3 required at import time).
 TensorBoard layout (plan §8):
 
 * ``reward_components/{r_alive,r_alt,r_tilt,r_angvel,r_thrust,r_smooth,
-  r_velocity_alignment,r_progress_delta,r_time_penalty,r_kill_bonus,
+  r_velocity_alignment,r_progress_delta,r_facing,r_time_penalty,r_kill_bonus,
   r_miss_distance,r_crash,r_oob,r_time_bonus}``  -- per-rollout step means
 * ``reward/episode_total``                          -- mean episode reward
-* ``metrics/{alt_err,tilt,angvel_norm,miss_distance,time_to_intercept}``
+* ``metrics/{alt_err,tilt,angvel_norm,facing_error,miss_distance,time_to_intercept}``
 * ``curriculum/{current_stage,success_rate,episodes_in_window,required_rate}``
 
 SB3 loggers dump at rollout end for on-policy algos; for off-policy
@@ -43,6 +43,7 @@ REWARD_COMPONENT_KEYS: tuple = (
     "r_smooth",
     "r_velocity_alignment",
     "r_progress_delta",
+    "r_facing",
     "r_time_penalty",
     "r_kill_bonus",
     "r_miss_distance",
@@ -55,6 +56,7 @@ METRIC_KEYS: tuple = (
     "alt_err",
     "tilt",
     "angvel_norm",
+    "facing_error",
     "miss_distance",
     "time_to_intercept",
 )

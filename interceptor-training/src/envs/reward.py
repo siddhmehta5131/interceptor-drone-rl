@@ -28,14 +28,14 @@ from typing import Dict, Optional
 import numpy as np
 
 from ..physics.constants import PH_C_HOVER
-from .stage_config import RewardConfig
+from .stage_config import FACING_CUTOFF_M, RewardConfig
 
 __all__ = ["RewardComputer", "TERMINAL_INFO_KEYS"]
 
 # Keys guaranteed present in the info dict of every step (last-step values).
 TERMINAL_INFO_KEYS = (
     "r_alive", "r_alt", "r_tilt", "r_angvel", "r_thrust", "r_smooth",
-    "r_velocity_alignment", "r_progress_delta", "r_kill_bonus",
+    "r_velocity_alignment", "r_progress_delta", "r_facing", "r_kill_bonus",
     "r_time_penalty", "r_miss_distance",
     "alt_err", "tilt", "angvel_norm", "miss_distance",
     "time_to_intercept", "killed", "crashed", "out_of_bounds",
@@ -72,6 +72,7 @@ class RewardComputer:
         prev_distance: Optional[float] = None,
         target_visible: bool = False,
         los_world: Optional[np.ndarray] = None,
+        facing_error: float = 0.0,
     ) -> tuple:
         """Return ``(reward, terminated, components, metrics)``.
 
@@ -99,6 +100,7 @@ class RewardComputer:
         # ---- target-relative terms (stages 2+) -----------------------------
         comp["r_velocity_alignment"] = 0.0
         comp["r_progress_delta"] = 0.0
+        comp["r_facing"] = 0.0
         if distance is not None and target_visible:
             # velocity alignment: max(0, cos angle between v and LOS)
             align = 0.0
@@ -115,6 +117,13 @@ class RewardComputer:
                     progress = progress / max(float(distance), 1.0)
                     progress = float(np.clip(progress, -1.0, 1.0))
             comp["r_progress_delta"] = cfg.k_progress_delta * progress
+
+            # D-5: shape the FINAL approach attitude.  The penalty is gated to
+            # the last FACING_CUTOFF_M so it never fights the cruise-phase
+            # terms, and it is the yaw error (nose vs. line of sight), not the
+            # full attitude error, that is penalised.
+            if cfg.k_facing > 0.0 and distance <= FACING_CUTOFF_M:
+                comp["r_facing"] = -cfg.k_facing * abs(float(facing_error))
 
         # ---- terminal bonuses ----------------------------------------------
         # Plan §5.5: the kill bonus is a single term, optionally scaled by
@@ -154,6 +163,7 @@ class RewardComputer:
             "tilt": tilt,
             "angvel_norm": angvel_n,
             "miss_distance": float(distance) if distance is not None else float("nan"),
+            "facing_error": float(facing_error),
             "time_to_intercept": float(step_count),
             "killed": bool(killed),
             "crashed": bool(crashed),

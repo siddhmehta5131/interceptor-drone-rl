@@ -20,7 +20,6 @@
 | VERBATIM_MAX_TOTAL_BYTES | 1,500,000 |
 | SECRET_POLICY | REDACT |
 | EXECUTION_POLICY | READ_ONLY_INTROSPECTION |
-| File version | v5.0 |
 
 ### Table of Contents
 
@@ -74,7 +73,7 @@
 2. **Classification rules:** Files classified by content inspection and role: `.py` files with `import gymnasium`/`stable_baselines3` as source; `.yaml` as config; `.md` as doc; `.ipynb` as notebook; `.png` as binary/generated; `.txt` (requirements) as config; `.txt` (results) as data; `.json` as data; `.docx`/`.pdf` as doc (binary); `Dockerfile`/`docker-compose.yml` as script; `.gitkeep` as generated; `.log` as log; `desktop.ini` as other.
 3. **Python version:** `cpython-314` in `__pycache__` filenames indicates Python 3.14. `CURRENT_WORK.md:L48` states "Python 3.14". [[GAP:G-001]]
 4. **Two distinct sub-projects:** The repository contains (a) a root-level physics simulator + interactive demos (`src/simulation.py`, `src/visualiser.py`, `hover_env.py`, `swift_*.py`) and (b) a Dockerized RL training pipeline under `interceptor-training/`. Both are documented.
-5. **`default_run.yaml` stages list:** The smoke test at `interceptor-training/scripts/smoke_test.py:L401` asserts `cfg.config_stages("ppo_baseline") == [1, 2, 3, 4, 5, 6, 7]`, but the shipped `default_run.yaml:L42` declares `stages: [1, 2]`. Resolved by D-20: `default_run.yaml` is retired and its content moves to the model file and config file (D-9); the smoke test uses its own model file and config file (D-7). Logged in §13.
+5. **`default_run.yaml` stages list:** The smoke test at `interceptor-training/scripts/smoke_test.py:L401` asserts `cfg.config_stages("ppo_baseline") == [1, 2, 3, 4, 5, 6, 7]`, but the shipped `default_run.yaml:L42` declares `stages: [1, 2]`. The YAML is a subset; the smoke test expects a richer YAML than the one shipped. Logged in §13.
 6. **Duplicate files:** Several file pairs have identical SHA-256 hashes (e.g., `swift_rl_env.py` and `swift_rl_env_latest.py`, `swift_physics_headless_rlvec.py` and `swift_physics_headless_rlvec_latest.py`, `swift_physics_headless_wind.py` and `swift_physics_headless_wind_latest.py`). These are snapshot copies; documented in §1.5.
 
 ### Counters
@@ -489,7 +488,7 @@ No APIs, Hugging Face models, or external datasets are accessed at runtime. The 
 
 **Generation:** NOT APPLICABLE — not a generative model.
 
-The archive also references SAC, TD3, and a deep PPO variant in `CURRENT_WORK.md:L187-L188` but the shipped `default_run.yaml` contains only `ppo_baseline`. The smoke test at `smoke_test.py:L401` expects additional configs `ppo_5layer_deep` with `obs_history: {frames: 5, skip: 3}`, which D-20 resolves by giving the smoke test its own model file and config file (not yet created). [[GAP:G-007]]
+The archive also references SAC, TD3, and a deep PPO variant in `CURRENT_WORK.md:L187-L188` but the shipped `default_run.yaml` contains only `ppo_baseline`. The smoke test at `smoke_test.py:L401` expects additional configs `ppo_5layer_deep` with `obs_history: {frames: 5, skip: 3}`, indicating a richer YAML exists externally. [[GAP:G-007]]
 
 ---
 
@@ -796,7 +795,7 @@ pip install numpy scipy gymnasium pyyaml   # minimum deps for smoke test
 python scripts/smoke_test.py
 ```
 
-Expected output: `8 passed, 0 failed`. Requires `hover_env.py` at repo root on `sys.path` and, per D-20, the smoke model file and config file (not yet created). [SRC] `CURRENT_WORK.md:L108-L113`.
+Expected output: `8 passed, 0 failed`. Requires `hover_env.py` at repo root on `sys.path`. [SRC] `CURRENT_WORK.md:L108-L113`.
 
 ### 7.2 Container Build & Training
 
@@ -895,7 +894,7 @@ Optional extensions (wind, ground effect) are injected into `deriv()`. Wind modi
 
 ### 8.2 Target Generator (`interceptor-training/src/envs/target_generator.py`)
 
-**Decided (D-4, D-5, D-13; pending implementation):** Stages 5-7 use one fixed polynomial per episode, drawn at reset and computed backwards from start point, end point and episode length so the path ends exactly at the episode end; target paths are independent of the drone. **As shipped (still applies to `evasive`, Stage 8, disabled per D-6):** Integrates target kinematics with first-order Euler (not RK4): `vel += acc·dt; pos += vel·dt; acc += jerk·dt`. Re-samples maneuver segments periodically (1s segments for order 2-3, 0.3-1.0s for evasive). Constrains speed ≤ 30 m/s. Containment: when target exceeds `world_radius`, position is clamped to the boundary and radial velocity is reflected. [SRC] `target_generator.py:L1-L250`, `BUGS.md:L67-L74`.
+Integrates target kinematics with first-order Euler (not RK4): `vel += acc·dt; pos += vel·dt; acc += jerk·dt`. Re-samples maneuver segments periodically (1s segments for order 2-3, 0.3-1.0s for evasive). Constrains speed ≤ 30 m/s. Containment: when target exceeds `world_radius`, position is clamped to the boundary and radial velocity is reflected. [SRC] `target_generator.py:L1-L250`, `BUGS.md:L67-L74`.
 
 **Target types and kinematic orders:**
 
@@ -975,8 +974,6 @@ Optional extensions (wind, ground effect) are injected into `deriv()`. Wind modi
 
 All stages: `k_angvel=0.02`, `omega_safe=3.0`, `k_smooth=0.05`, `k_crash=200.0`, `k_oob=200.0`, `obs_noise_std=0.01`, `kill_radius=0.5` (S3+), `lookahead_enabled=True` (S3+). [SRC] `stage_config.py:L189-L421`.
 
-**Decided changes (pending implementation):** Stage 8 (`evasive`) is disabled in current scope (D-6); the smoke test overrides this (D-8). The `Max Ep Steps` column becomes an episode length in seconds, a fixed value or a random range (min, max), as a multiple of `PH_DT` (D-13, D-14). Stale dependents: see §13.9.
-
 ### 9.3 Aerodynamic Coefficients
 
 | Array | Raw Values | Unit Correction | Evidence |
@@ -1048,7 +1045,7 @@ This draw order MUST be preserved for bit-exact parity with `hover_env.py`.
 | G-004 | MAJOR | §2.2 | No `pip freeze` or lockfile (`requirements.txt` uses `>=` constraints). Exact resolved versions of `stable-baselines3`, `gymnasium`, `numpy`, `scipy`, `tensorboard`, `pyyaml`, and their transitive deps are unknown. |
 | G-005 | MINOR | §2.7 | GPU model, VRAM, and CPU model of the original training host are not recorded. |
 | G-006 | MAJOR | §3 | No trained model weights are present in the archive. The only checkpoint referenced (`/data/results/ppo_baseline_final.zip`) was produced by a smoke run with ~2600 steps (no convergence). |
-| G-007 | BLOCKER | §3 | The shipped `default_run.yaml` only defines `ppo_baseline` with `stages: [1, 2]`, but the smoke test (`smoke_test.py:L401`) expects `cfg.config_stages("ppo_baseline") == [1, 2, 3, 4, 5, 6, 7]` and `cfg.config_obs_history("ppo_5layer_deep") == {"frames": 5, "skip": 3}`. Resolution decided (D-20): `default_run.yaml` is retired, its content moves to the model file and config file (D-9), and the smoke test gets its own model file and config file; the gap stays open until those files exist. |
+| G-007 | BLOCKER | §3 | The shipped `default_run.yaml` only defines `ppo_baseline` with `stages: [1, 2]`, but the smoke test (`smoke_test.py:L401`) expects `cfg.config_stages("ppo_baseline") == [1, 2, 3, 4, 5, 6, 7]` and `cfg.config_obs_history("ppo_5layer_deep") == {"frames": 5, "skip": 3}`. A richer YAML with all 4 configs (`ppo_baseline`, `sac_baseline`, `td3_baseline`, `ppo_5layer_deep`) and stages 1-7 is required but not present. |
 | G-008 | BLOCKER | §8.2 | The `target_generator.py` `_resample_maneuver` method uses specific random distributions and sampling strategies for acceleration/jerk whose exact parameters depend on `SpawnConfig` fields. The `maneuver_duration` for evasive targets (`0.3` to `1.0 s`) and the `flee_direction` computation are described in the docstring but require reading the full source for exact implementation. |
 | G-009 | MAJOR | §2.2 | `stable-baselines3[extra]` pulls in `opencv-python`, which is then replaced with `opencv-python-headless` in the Dockerfile. The exact version of `opencv-python-headless` installed is not pinned. |
 | G-010 | MAJOR | §4 | The `implementation_plan.md` (47 KiB) is referenced throughout the code as the source of truth for stage configs and reward formulas, but its full content was not embedded. A re-implementer needs it for the exact stage progression rationale. |
@@ -1067,7 +1064,7 @@ This draw order MUST be preserved for bit-exact parity with `hover_env.py`.
 |---|---|---|
 | G-003 | `<<<FILL: G-003>>>` | Pin Docker base image by digest: `pytorch/pytorch:2.7.0-cuda12.8-cudnn9-runtime@sha256:<digest>` |
 | G-004 | `<<<FILL: G-004>>>` | Run `pip freeze > requirements.lock` inside a fresh container build and commit the lockfile |
-| G-007 | `<<<FILL: G-007>>>` | Create a separate smoke model file and config file for `smoke_test.py` (D-20); `default_run.yaml` is retired, not extended |
+| G-007 | `<<<FILL: G-007>>>` | Extend `default_run.yaml` to include all 4 configs (`ppo_baseline` with stages 1-7, `sac_baseline`, `td3_baseline`, `ppo_5layer_deep`) as described in `CURRENT_WORK.md:L187-L189` |
 | G-010 | `<<<FILL: G-010>>>` | The `implementation_plan.md` is present in the archive (47 KiB). Read it in full to extract all stage definitions and reward formulas |
 | G-013 | `<<<FILL: G-013>>>` | Convert `.docx` files to text or extract content for review |
 
@@ -1095,7 +1092,7 @@ The core numerical contract: given the same `seed` and action sequence, `Interce
 ### 12.3 Acceptance Criteria
 
 A re-implementation is accepted if:
-1. `smoke_test.py` exits with code 0 (all 8 tests pass) against its model file and config file (D-20)
+1. `smoke_test.py` exits with code 0 (all 8 tests pass)
 2. Stage-1 produces `np.array_equal` observations and `==` rewards vs. `hover_env.py` for seed 12345
 3. The reward left-fold summation matches the archive's implementation (no compensated summation)
 4. `PH_C_HOVER ≈ 0.23253743635354834` and `PH_OMEGA_HOVER ≈ 1956.211093185006` within float64 precision
@@ -1107,11 +1104,11 @@ A re-implementation is accepted if:
 
 ### 13.1 Config / Test Mismatch
 
-Resolved by D-20 (pending implementation): the shipped `default_run.yaml` (`stages: [1, 2]`) is retired and its content moves to the model file and config file (D-9); `smoke_test.py` uses its own model file and config file (D-7). Those files do not exist yet; their locations, names and contents are OPEN. The stage list is an argument of `train_model(...)`, not a key in either file (D-21). Until they exist, the smoke test still fails against the shipped config. [SRC] `default_run.yaml:L42`, `smoke_test.py:L401-L402`.
+The shipped `default_run.yaml` declares `stages: [1, 2]` for `ppo_baseline`, but `smoke_test.py:L401` asserts `cfg.config_stages("ppo_baseline") == [1, 2, 3, 4, 5, 6, 7]` and expects a `ppo_5layer_deep` config. This means the smoke test fails against the shipped config. Either (a) the smoke test expects a different YAML than the one shipped, or (b) the shipped YAML is a subset used for a quick training run and the full YAML exists elsewhere. [SRC] `default_run.yaml:L42`, `smoke_test.py:L401-L402`.
 
 ### 13.2 `_target_alt` Property is Hard-Coded
 
-Decided (D-3, pending implementation): the target altitude comes from a `target_alt` entry in the config, a fixed numeric value or a random value within a user-set range; this replaces the hard-coded property. Scope: Stage 1 hover altitude only (D-50). As shipped, `InterceptorBaseEnv._target_alt` always returns `5.0` (a property, not a mutable field), so Stage 1 never randomizes altitude despite `hover_env.py` supporting `randomize_altitude`. Stale dependents: see §13.9. [SRC] `base_env.py:L423-L425`.
+`InterceptorBaseEnv._target_alt` always returns `5.0` (a property, not a mutable field). This means Stage 1 never randomizes altitude, despite `hover_env.py` supporting `randomize_altitude`. The base env delegates altitude-hold behavior to the fixed 5.0 m altitude. [SRC] `base_env.py:L423-L425`.
 
 ### 13.3 `run_summary.json` at Repo Root vs. Container Path
 
@@ -1136,32 +1133,6 @@ If `scipy.optimize.brentq` is unavailable, `PH_C_HOVER` is computed by brute-for
 ### 13.8 Known Bugs (Non-Blocking)
 
 All 12 bugs documented in `BUGS.md` are non-blocking. Items 11 and 12 were fixed in-tree. The remaining 10 affect only resume accounting, performance (not correctness), or container security hardening. [SRC] `BUGS.md:L1-L111`.
-
-### 13.9 Decided Changes Pending Implementation
-
-Decisions D-2 to D-58 (Decision Log) are not yet reflected in the body except where marked. These sections are stale until updated:
-
-| Decision | Stale sections |
-|---|---|
-| D-2, D-20 | §1.4 tree, §1.5 manifest, §0 Counters (smoke model file and config file paths undecided, so not written); for the retirement of `default_run.yaml` see also the D-9, D-10 row, §6.2 (`config_file` and `config_hash` span two files) and `config_loader.py` validation and `config_hash` |
-| D-3 | §5.1 `r_alt`, §5.3 index [12], §9 registry (`target_alt`), §10.1, §10.2, §12.2, §P02 |
-| D-4, D-13, D-14 | §8.2 table rows `order_2`/`order_3`, §5.2 `time_gate`, §5.3 lookahead, §9.2 columns and thresholds (Stage 1, Stages 5-7), §9 registry (episode length), §10.1, §10.2, §12.1 `target_generator_kinematics` and `all_stage_envs_run`, `BUGS.md` item 7 |
-| D-5, D-6, D-8 | §1.1 and §8.2 ("8-stage", `evasive`), §9.2 Stage 8 row, §P02 stage-list validation, §12.1 `all_stage_envs_run` |
-| D-7 | §1.2, §7.1, §12.1, §12.3 criterion 5, `BUGS.md` item 5 |
-| D-9, D-10 | §1.2, §1.3, §1.6, §2.4, §P02, §P03, §P04, §6.1-§6.4, §7, A.1, A.2, `docker-compose.yml`, §12.1 `config_loader_validation` |
-| D-11, D-12 | §3 model card, §5.3 (critic observation), §8, §9 registry, §12.1 |
-| D-15, D-16, D-17, D-18, D-19 | §3 model card (obs dim, critic input), §5.3 (history, lookahead and future paragraphs; fate of the shipped lookahead OPEN), §8.2 (true-future access), §9 registry (n, m, p, q, future source, predictor name), §9.2 `lookahead_enabled`, §P02 validation, §12.1 `obs_history_stacking`, `all_stage_envs_run` and a new test for D-17, D-11 and D-12 critic inputs; code: `obs_builder.py`, `base_env.py`, `target_generator.py`, new predictor module |
-| D-21, D-22, D-23, D-26, D-27 | `train_model` argument table (D-9, D-36: source, stage list, `name`, optional ids, optional `seed`), §P02 stage-list validation, §P03 step 3 (stage list now comes from the call; step 3d model selection), §6.1 (result and return structure keyed by model id), §6.2 (resume state), §6.4 (checkpoint and log layout keyed by `name` and model id), §7.2 (`--smoke-stages`), §3 model card (`stages` mention), §13.4, §12.1 `config_loader_validation`, the D-10 text, D-20 checklist (Session Handoff) |
-| D-24, D-25 | §8.3 decision logic, §P03 step 3g, §6.1 `result` values, §9 registry (new config key `on_capped`, D-30), §P02 validation, §12.1 `curriculum_advance_cap_rollback`, D-20 checklist (destination of the new key) |
-| D-28, D-29, D-31, D-32, D-34, D-35, D-36, D-45, D-46, D-47 | §6.1 (result: stage outcomes, `config_hash`, skipped and crashed models with plain-language reasons), §6.2 (resume state: rollback counts across calls, resume from last snapshot), §6.4 (last stage's final model on disk, SAC/TD3 replay buffer files), §P03 (continuation from saved settings, crash handling, skip rules), §8.3, §12.1 `config_loader_validation` and `curriculum_advance_cap_rollback`, D-20 checklist (Session Handoff) |
-| D-33 | §3 model card (weight transfer when the observation size changes, R-8), §P03 |
-| D-37 | §5.1 (any yaw term), §5.3 (critic observation), §8, §9 registry, §12.1 (with D-11, D-12) |
-| D-38, D-39, D-40, D-41, D-42, D-43 | §5.3 (history, future and lookahead paragraphs; `[18]` target visible flag and zero masking of hidden target fields), §5.1 `r_velocity_alignment` (`target_visible`), §9 registry (n, m, p, q in the config file; predictor), §9.2 `lookahead_enabled`, §12.1 `obs_history_stacking` and `all_stage_envs_run`; code: `obs_builder.py`, `base_env.py` (`target_visible`), new predictor module |
-| D-44, D-48, D-49, D-50, D-51, D-52 | §9 registry (range syntax `{min:, max:}`, free parameters of D-4/D-13), §P02 validation, §1.4, §1.5, §0 Counters and §7.1 (smoke file names OPEN), §5.1 `r_alt` and §5.3 index [12] (D-50, see D-3 row), §9.2 Stage 1 length and threshold 60.0 (D-52), §10.1, §10.2 |
-| D-53, D-54 | §3 model card (predictor input: own measured history since episode start, cleared at every reset; replaces the D-17 wording), §5.3 (history and future paragraphs: target fields in the current body frame measured from the current position, resolves the frame OPEN of D-41), §8.2 (true-future access), §9 registry (history source for the predictor), §12.1 `obs_history_stacking` and the D-17 test; code: `obs_builder.py` (must store past drone poses), `base_env.py`, new predictor module |
-| D-55, D-56 | §6.1 (stage outcome `stuck`, denied capped source), §8.3, §P03 (STUCK stops only that model; denial rule for a capped source model), §12.1 `curriculum_advance_cap_rollback`; the reason of D-24 ("user decides what to do next") is stale: retraining now means a new model id |
-| D-57 | §5.1 (new facing term from Stage 2), §5.3 (critic observation: facing error), §9.2 weight table (`k_facing` OPEN), §9 registry, §12.1 reward test and D-11, D-12 critic field list; code: `reward.py`, `stage_config.py` |
-| D-58 | none (ordering of work: FIX pass last) |
 
 ---
 
@@ -1373,146 +1344,3 @@ Hashes for all other files were observed during file reads but not all were reco
 ---
 
 *End of document.*
-
----
-
-## Change Log (append-only)
-
-- Version v1.0, session 2026-10-02
-- Changed: §0 Archive Identity : (no version row) -> `File version | v1.0` : version tracking
-- Changed: §0 Interpretation Log item 5 : "The YAML is a subset; the smoke test expects a richer YAML than the one shipped." -> resolved by D-1 : D-1
-- Changed: §3 last paragraph : "indicating a richer YAML exists externally" -> D-1 fixture config : D-1
-- Changed: §7.1 : requires only `hover_env.py` -> also the smoke fixture config : D-1
-- Changed: §11.1 G-007 : "A richer YAML with all 4 configs ... stages 1-7 is required but not present." -> resolution decided (D-1), gap stays open until fixture exists : D-1
-- Changed: §11.2 G-007 : "Extend `default_run.yaml` to include all 4 configs (`ppo_baseline` with stages 1-7, `sac_baseline`, `td3_baseline`, `ppo_5layer_deep`) as described in `CURRENT_WORK.md:L187-L189`" -> separate smoke fixture config : D-1
-- Changed: §12.3 criterion 1 : added "against its fixture config (D-1)" : D-1
-- Changed: §13.1 : "shipped YAML `stages: [1, 2]` vs smoke test `[1..7]` and `ppo_5layer_deep`, smoke test fails against shipped config" -> resolved by D-1 (fixture not yet created) : D-1
-- Changed: §13.2 : "`_target_alt` always returns `5.0`, Stage 1 never randomizes altitude" -> kept as "as shipped", decided config-driven `target_alt` added : D-3
-- Changed: §8.2 first paragraph : Euler/segment re-sampling text -> scoped "as shipped, still applies to `evasive`"; decided fixed polynomial per episode for Stages 5-7 added : D-4, D-5, D-13
-- Changed: §9.2 : note added after "All stages" paragraph (Stage 8 disabled, episode length in seconds) : D-6, D-8, D-13, D-14
-- Dependents updated: D-1 dependents 1-6 (§13.1, §11.1 G-007, §11.2 G-007, §3, §0 item 5, §12.3 criterion 1, §7.1)
-- Dependents flagged stale: D-1 dependent 7 (§1.4, §1.5, §0 Counters; fixture path undecided); all dependents of D-3 to D-14 (see §13.9)
-- Added: §13.9, Change Log, Decision Log, Session Handoff. Removed: none beyond the replaced text above.
-- Version v2.0, session 2026-10-02
-- Changed: §0 Archive Identity : `File version | v1.0` -> `File version | v2.0` : version tracking
-- Changed: §0 Interpretation Log item 5 : "Resolved by D-1: the smoke test uses its own fixture config; `default_run.yaml` is unchanged." -> "Resolved by D-20: `default_run.yaml` is retired and its content moves to the model file and config file (D-9); the smoke test uses its own model file and config file (D-7)." : D-20
-- Changed: §3 last paragraph : "D-1 resolves by giving the smoke test its own fixture config (fixture not yet created)" -> "D-20 resolves by giving the smoke test its own model file and config file (not yet created)" : D-20
-- Changed: §7.1 : "per D-1, the smoke fixture config (not yet created)" -> "per D-20, the smoke model file and config file (not yet created)" : D-20
-- Changed: §11.1 G-007 : "Resolution decided (D-1): the smoke test gets its own fixture config and `default_run.yaml` stays unchanged" -> "Resolution decided (D-20): `default_run.yaml` is retired, its content moves to the model file and config file (D-9), and the smoke test gets its own model file and config file" : D-20
-- Changed: §11.2 G-007 : "Create a separate smoke fixture config for `smoke_test.py` (D-1); `default_run.yaml` is not extended" -> "Create a separate smoke model file and config file for `smoke_test.py` (D-20); `default_run.yaml` is retired, not extended" : D-20
-- Changed: §12.3 criterion 1 : "against its fixture config (D-1)" -> "against its model file and config file (D-20)" : D-20
-- Changed: §13.1 : "Resolved by D-1: ... `default_run.yaml` ... is unchanged. The fixture file does not exist yet" -> "Resolved by D-20 (pending implementation): `default_run.yaml` is retired ... Those files do not exist yet" and the stage-list location marked OPEN : D-20
-- Changed: §13.9 intro : "Decisions D-3 to D-14" -> "Decisions D-2 to D-20" : D-15 to D-20
-- Changed: §13.9 row "D-1, D-2" -> "D-2, D-20" with the retirement of `default_run.yaml` cross-referenced : D-20
-- Dependents updated: D-1 dependents re-worded from D-1 to D-20 (§0 item 5, §3, §7.1, §11.1 G-007, §11.2 G-007, §12.3 criterion 1, §13.1)
-- Dependents flagged stale: D-2 and D-20 (§1.4, §1.5, §0 Counters, §6.2, `config_loader.py`); D-15 to D-19 (see §13.9 new row); all dependents of D-3 to D-14 (see §13.9)
-- Added: §13.9 row for D-15 to D-19; D-15 to D-20 in the Decision Log. Removed: D-1 statements from the body (superseded by D-20; the D-1 line stays in the Decision Log).
-- Version v3.0, session 2026-10-02
-- Changed: §0 Archive Identity : `File version | v2.0` -> `File version | v3.0` : version tracking
-- Changed: §13.1 : "as is whether the stage list lives in the config file or the model file" -> "The stage list is an argument of `train_model(...)`, not a key in either file (D-21)." : D-21
-- Changed: §13.9 intro : "Decisions D-2 to D-20" -> "Decisions D-2 to D-27" : D-21 to D-27
-- Dependents updated: none beyond §13.1
-- Dependents flagged stale: all dependents of D-21 to D-27 (see new §13.9 rows); D-20 checklist reworded in the Session Handoff (stage lists move to the `train_model` call, new capped-stage key)
-- Added: §13.9 rows for D-21 to D-27; D-21 to D-27 in the Decision Log. Removed: none.
-- Version v4.0, session 2026-10-02
-- Changed: §0 Archive Identity : `File version | v3.0` -> `File version | v4.0` : version tracking
-- Changed: §13.2 : added "Scope: Stage 1 hover altitude only (D-50)." : D-50
-- Changed: §13.9 intro : "Decisions D-2 to D-27" -> "Decisions D-2 to D-52" : D-28 to D-52
-- Changed: §13.9 row D-21, D-22, D-23, D-26, D-27 : "(D-9, PROPOSED: source, stage list, `name`, optional ids)" -> "(D-9, D-36: source, stage list, `name`, optional ids, optional `seed`)" : D-36
-- Changed: §13.9 row D-24, D-25 : "new config key for the capped-stage setting" -> "new config key `on_capped`, D-30" : D-30
-- Dependents updated: none beyond the changes above
-- Dependents flagged stale: all dependents of D-28 to D-52 (see new §13.9 rows); D-20 checklist reworded in the Session Handoff (key `on_capped`, n, m, p, q in the config file, no predictor artifact for `linear_ridge`)
-- Added: §13.9 rows for D-28 to D-52; D-28 to D-52 in the Decision Log. Removed: none.
-
-- Version v5.0, session 2026-10-02
-- Changed: §0 Archive Identity : `File version | v4.0` -> `File version | v5.0` : version tracking
-- Changed: §13.9 intro : "Decisions D-2 to D-52" -> "Decisions D-2 to D-58" : D-53 to D-58
-- Dependents updated: none beyond the changes above
-- Dependents flagged stale: all dependents of D-53 to D-58 (see new §13.9 rows); D-24 reason (§13.9 row D-55, D-56); D-12 critic field list (facing error, D-57)
-- Added: §13.9 rows for D-53 to D-58; D-53 to D-58 in the Decision Log. Removed: none from the body (D-17 and the `STUCK` assumption existed only in the Decision Log and the old Handoff; the D-17 line stays in the Decision Log, superseded by D-53).
-
-## Decision Log (append-only)
-
-- D-1: `smoke_test.py` uses its own fixture config; `default_run.yaml` (`stages: [1, 2]`) stays unchanged. Reason: shipped YAML is an intentional 2-stage run. (v1.0)
-- D-2: Update all 7 dependents of D-1 when the file is written. Reason: keep the file consistent. (v1.0)
-- D-3: Target altitude comes from a `target_alt` config entry, fixed value or random within a user-set range; replaces hard-coded `_target_alt = 5.0`. Reason: user controls altitude without touching code. (v1.0)
-- D-4: Stages 5, 6, 7 use one fixed polynomial per episode, newly drawn each episode, same order within a stage, no mid-episode re-draws. Reason: user's definition of an episode. (v1.0)
-- D-5: Target paths are independent of the drone in current scope; evasion is future scope. Reason: user scoping. (v1.0)
-- D-6: Stage 8 (`evasive`) stays as defined but is disabled in current scope. Reason: evasion is future scope (D-5). (v1.0)
-- D-7: Smoke test runs every model on every stage with tiny budgets; pass means completes without error. Reason: check that all models work on all stages, not learning. (v1.0)
-- D-8: Smoke test includes Stage 8 through a smoke-only override of D-6. Reason: exercises the dormant evasive code. (v1.0)
-- D-9: Three-artifact design: user-edited model files and config files plus one fixed run file that only calls `train_model(...)`; replaces `scripts/train.py`, the single-YAML structure and the Docker ENTRYPOINT. Reason: non-expert user workflow. The `train_model` argument table is PROPOSED, not decided. (v1.0)
-- D-10: One `train_model` call trains every model listed in the model file and returns several results. Reason: user choice. (v1.0)
-- D-11: Privileged-critic input list lives in the model file. Reason: it changes critic input size, so continuations cannot alter it. (v1.0)
-- D-12: Privileged-critic reference is re-solved every step from the drone's current state and given as an error (ideal minus current, body frame). Reason: stays valid when the drone deviates. (v1.0)
-- D-13: Target path is computed backwards from start point, end point and episode length so it ends exactly at episode end; episode length is a config parameter in seconds. Reason: exact end time. (v1.0)
-- D-14: Episode length accepts a fixed value or a random range (min, max) in seconds, drawn at each reset. Reason: user choice. (v1.0)
-- D-15: The actor does not see time remaining; only the critic does. Reason: a real target has no known episode end, and the best behaviour (intercept early) does not depend on it. (v2.0)
-- D-16: The source of the target's future samples is a config selector, `true` (ground truth from the simulator's target path) or `pred` (predictor). Reason: an oracle for comparison and a deployable mode, with the same input shape. (v2.0)
-- D-17: The predictor may use no information the actor does not have. Reason: it must run on a real drone. (v2.0)
-- D-18: The actor observes history (m past frames, spacing p) and future (n samples, spacing q); n, m, p, q are user-set parameters (user said config file; which file holds them is OPEN). Reason: user request. (v2.0)
-- D-19: `pred` offers two predictors selected by name, `const_vel` and `linear_ridge`; the predictor is a separate function with a fixed interface so a better one can replace it later. Reason: cheap stand-in for a learned predictor without changing the environment or the actor. (v2.0)
-- D-20: `default_run.yaml` is retired; all its content moves to the model file and config file (D-9); supersedes D-1. Condition: nothing may be lost (checklist in Session Handoff). Reason: D-9 replaces the single-YAML structure. (v2.0)
-- D-21: The stage list is an argument of `train_model(...)`, given together with the model source; it is not a key in the model file or the config file. Reason: user's original idea; resolves the OPEN stage-list location. (v3.0)
-- D-22: `train_model(...)` takes a `name` argument that names the log folder; the folder holds the periodic snapshots of every stage and the final model of every stage except the last; the call returns the final model of the last stage in the variable; passing that variable to the next call continues training from it. Reason: user workflow (`model1`, then `model2` from `model1`). (v3.0)
-- D-23: The returned model can be saved to a folder on disk and loaded back, so it survives closing the program. Reason: models are stored files (SB3 `.zip` today). (v3.0)
-- D-24: A stage that ends `CAPPED` (step budget reached, success threshold not reached) is never an error by itself: all snapshots and stage finals are still saved and the last stage's final model is still returned. Reason: keeps training time; user decides what to do next. (v3.0)
-- D-25: A setting in the config file controls what happens when a stage ends capped: `continue` (later stages keep training, default, matches shipped behaviour) or `stop` (the call ends there with the stage marked capped); syntax OPEN. Reason: user wants to decide per run, next to the `rollback` policy. (v3.0)
-- D-26: `train_model` takes one source, a model file or a previous result; it trains all models in that source by default, an optional list of ids trains only some; it returns a collection keyed by model id, reached as `model1.<id>` (primary) or `model1["<id>"]`; refines D-10. Reason: user choice. (v3.0)
-- D-27: When a call is given models whose last completed stage does not fit the requested stage list, it skips them, trains the rest, and lists each skipped model in the result with a plain-language reason. Reason: wastes less time than refusing the whole call. Whether it also covers a model that crashes is OPEN. (v3.0)
-- D-28: A continuation reuses the training settings saved inside the model; no setting can be overridden. Reason: every continuation stays comparable to the stage before it and `config_hash` stays meaningful. (v4.0)
-- D-29: The call also writes the last stage's final model to disk; location OPEN; refines D-22 and D-23. Reason: user choice. (v4.0)
-- D-30: The capped-stage setting is the config-file key `on_capped` with values `continue` or `stop`, next to `rollback`; resolves the syntax OPEN in D-25. Reason: user choice. (v4.0)
-- D-31: If one model crashes, the other models keep training and the crash is reported in plain words in the result; extends D-27. Reason: user choice, same treatment as skips. (v4.0)
-- D-32: The result carries each stage's outcome (advance, capped, stuck) and `config_hash`. Reason: user choice. (v4.0)
-- D-33: When a Stage-1-only model is asked to continue on Stage 2 (observations 14 to 76, R-8), the weights of the nodes present in both are kept, all new nodes get fresh weights, and where possible the old weights are retained somewhat more strongly than the new ones; the mechanism is OPEN. Reason: user choice; avoids refusing and avoids losing trained weights. (v4.0)
-- D-34: Confirmed: `model1` stays the stage-4 model after `model2` is made from it (`model2` holds the later stage, such as 5, 6 or 7); a call returns only the models it trained; the log folder has one subfolder per model id; a model id is a user-chosen label that is a valid Python name. Reason: user confirmation of four v3.0 assumptions. (v4.0)
-- D-35: A model with any capped stage, between or final, is not continued: if a call is given such a model as source, it is skipped and the models made from it are not trained (`model2` from a capped `model1` is not trained); extends D-27; replaces the v3.0 assumption that a call's first stage may be the capped stage again. Reason: user choice. (v4.0)
-- D-36: `train_model` arguments: model source, stage list, `name`, optional ids, optional `seed`; the capped-stage setting is config-only (D-30); refines the PROPOSED argument table of D-9; the exact meaning of `seed` is OPEN. Reason: user: a seed is useful. (v4.0)
-- D-37: Yaw reference: the drone faces the target; its front aims at the target. Reason: user choice. (v4.0)
-- D-38: n, m, p, q live in the config file only; refines D-18 (resolves its OPEN file question). Reason: user choice. (v4.0)
-- D-39: The shipped lookahead (`lookahead_enabled`, `predicted_pos()`) is retired. Reason: default accepted; the future samples of D-16 to D-19 replace it. (v4.0)
-- D-40: The drone receives the target's information continuously, with noise; there is no perception model, so there is no target-not-visible case and no coasting rule. Reason: user statement. (v4.0)
-- D-41: Each future sample contains the same target fields as the current sample; the frame of the future samples is OPEN (current body frame was proposed); replaces the proposal "position only". Reason: user choice. (v4.0)
-- D-42: Smoke Stage 8 runs under `pred` only, because `true` mode has no Stage 8 path; refines D-8 and D-16. Reason: user confirmation. (v4.0)
-- D-43: `linear_ridge` is analytic: purely mathematical, with no RL, deep learning or fitted model and no data-fitted artifact; refines D-19. Reason: user requirement. (v4.0)
-- D-44: The names "config" (training baseline) and "model" are kept; paths unchanged. Reason: user confirmation. (v4.0)
-- D-45: Rollback counts carry over across calls: a later call remembers earlier counts. Reason: user choice. (v4.0)
-- D-46: If the program dies mid-stage, a later call resumes from the last snapshot. Reason: user choice. (v4.0)
-- D-47: For SAC and TD3, the replay buffer is saved and reloaded on continuation. Reason: user choice; large files accepted. (v4.0)
-- D-48: Random ranges in the config are written `{min:, max:}`, and both the min value and the max value can be drawn, not only values between them. Reason: user left the syntax to Claude; named keys are self-explanatory for a non-expert. (v4.0)
-- D-49: There is one default smoke model file and one default smoke config file, with simple names; names and paths OPEN; refines D-7 and D-20. Reason: user choice. (v4.0)
-- D-50: `target_alt` (D-3) covers the Stage 1 hover altitude only, not target z in Stages 2+; refines D-3. Reason: user choice. (v4.0)
-- D-51: The free parameters of D-4 and D-13 (polynomial for degree 2 and 3, start and end points, speed cap) are each either a fixed input value or random within a range, like `target_alt` (D-3); values OPEN. Reason: user choice. (v4.0)
-- D-52: Stage 1 keeps a fixed episode length, so its reward-sum threshold of 60.0 stays valid; refines D-14 (the random range does not apply to Stage 1); the T-to-steps rounding rule stays OPEN for other stages. Reason: user choice. (v4.0)
-- D-53: The predictor may use all of the drone's own measurements of the target since the episode start (its own longer history); it may not use simulator truth; the history is cleared at every reset; supersedes D-17. Reason: a real drone can store its own past measurements; D-17 would forbid it because the actor sees only m frames. (v5.0)
-- D-54: Past and future target fields are converted into the drone's current body frame, measured from its current position; only target fields are converted; no extra config mode; resolves the frame OPEN in D-41. Reason: a turning drone otherwise makes a still target look moving. (v5.0)
-- D-55: `STUCK` stops only that model; the other models continue; consistent with D-31. Reason: user answered repeatedly; removes the earlier assumption that it stops the whole call. (v5.0)
-- D-56: A capped model given as source is denied with a plain message and nothing else happens: no training, no fresh start; refines D-35; the reason of D-24 is stale (retraining means a new model id). Reason: user choice. (v5.0)
-- D-57: A facing reward is added from Stage 2, and the critic reference also uses facing; refines D-37. The reward uses the horizontal angle between the nose and the direction to the target and switches off under about 0.5 m horizontal distance; the weight `k_facing` is OPEN. Reason: the actor must learn to fly toward the target while looking at it, starting with directional flight in Stage 2. (v5.0)
-- D-58: The FIX pass is done last, after the design topics. Reason: user choice. (v5.0)
-
-## Session Handoff (OVERWRITTEN every session, always the last block in the file)
-- Version v5.0, written at WRAP UP of the fifth design-review session (2026-10-02). The session ended abruptly; this WRAP UP was redone from the exported transcript and the v4.0 file. The `src.zip` and `CURRENT_WORK.md` uploads of that session were not available at WRAP UP, so source facts below come from the transcript and are not re-verified.
-- Topic: answers to the v4.0 open list. Finished; nothing was mid-discussion. The user asked "is it done"; the session replied it is not done (R-1 below).
-- Decided this session: D-53 to D-58. D-53 supersedes D-17; D-54 resolves the frame OPEN of D-41; D-55 removes the `STUCK` assumption; D-56 refines D-35 and makes the reason of D-24 stale; D-57 refines D-37; D-58 orders the FIX pass last. IDs were provisional in the session and are final here.
-- Open, needs the user: real sensor (target position only, or position and velocity; the actor currently receives both, 19 numbers per frame, noise 0.01 per the transcript); `k_facing` weight and the exact horizontal cutoff (about 0.5 m) of D-57; whether to fix R-1 before any training (the session recommended fixing first) and upload `hover_env.py` plus the identification data it was fitted from; add an absolute altitude field to the actor observation in Stages 2+ (R-9, PROPOSED).
-- Still PROPOSED, not decided (never confirmed): remove the visible flag [18] or keep it as constant 1; reward always uses the true target position (removes R-10); predictor `linear_ridge` as closed-form ridge on the window or history with one strength value in the config; D-33 mechanism (copy matching weights by input name, new inputs start at zero or small; Stage 1 [12:14] differ from Stage 2); a changed n or m between calls refused with a plain message (D-38); `seed` as one seed per call defaulting to `global.seed` and recorded in `config_hash` (D-36); last final model written to the log folder of `name`, in the model's own subfolder, stage number in the file name (D-29); smoke files `smoke_model.yaml` and `smoke_config.yaml` next to the other configs (D-49); round T to the nearest step (D-52); Stage 5-7 thresholds per step or success rate instead of a reward sum.
-- Reported from the source in the session (unverified here): `PH_DT = 0.01` s, so episode steps = T / 0.01 (shipped episodes 1000 to 3000 steps); `xy_limit` equals `world_radius`; target z 0 to 40.0 in target stages; target fields noised at 0.01 (module docstring, value in `stage_config.py` unchecked); shipped lookahead on in Stages 3-8; visible flag 0 only in Stage 1; `CURRENT_WORK.md` does not contain the hyperparameters of `sac_baseline`, `td3_baseline`, `ppo_5layer_deep` (only history m3/s2 and m5/s3 for the deep PPO), so they stay unknown unless the user gives them.
-- R-1 reported as confirmed by running the uploaded code (not re-verified here): motor speed falls as the thrust command rises; hover at cmd 0.2325 (the `constants.py` comment says about 0.37); cmd 1.0 gave vz -1.79 m/s after 0.2 s, cmd 0.1 gave +0.97 m/s; motors cut off below cmd 0.02; roll, pitch and yaw loops not tested. Consequence: a policy may learn in this simulator but will not transfer to a real drone. The session scored the spec 60/100 (about 80 if R-1 is fixed and altitude is added). R-7 (smoke run does no PPO update) also stands.
-- Not yet checked in source: R-1 `pipeline.py:L99-L110` and `constants.py:L121-L122` in detail, `A` and `v_max`, noise values in `stage_config.py`, D-51 values, `n_steps`/`batch_size` check.
-- Open (carried): privileged-critic field list and one-line definitions of the D-11/D-12 terms (user said yes to a draft; now also includes the facing error, D-57); values for the D-51 free parameters; `evaluate_model(...)` (later session); the review findings and the FIX pending list below are unchanged from v4.0 and not fixed in the body.
-- TO-DO (user): upload the `interceptor-training` source folder in a later session. Needed for: R-1 (`pipeline.py:L99-L110`, `constants.py:L121-L122`), reference limits `A` and `v_max`, `z_lo`/`z_hi`, target observation noise, truncation vs termination, SB3 asymmetric critic, thresholds for Stage 1 and Stages 5-7, Python 3.14 support, SB3 `n_steps`/`batch_size` on continuation (`orchestrator.py:L357-L394`), `target_visible` (D-40, R-12).
-- Open (needs source or measurement): the TO-DO items above, SB3 algorithm count, native Python vs Docker.
-- Review findings verified by calculation (not yet fixed in body): R-1 ESC polynomial as written in §8.1/§9.1 decreases with command (Ω_ss 2400.8 at cmd 0.02, 1956.2 at 0.2325, 472.2 at 1.0; max T/W 1.51; `PH_OMEGA_MAX = 2800` never reached); needs `pipeline.py:L99-L110` and `constants.py:L121-L122`.
-- R-2 §3 "80 gradient updates" should be 640 (32768/512 = 64 minibatches x 10 epochs). R-3 §0 Counters: manifest has 92 rows, not 91; READ-FULL 72 / SAMPLED 8 / EXCLUDED 12; EMBEDDED 30 / NOT-VERBATIM 50 / BINARY 7 / GLOB 5; Appendix A holds 4 blocks. R-5 root `requirements.txt` `pygame==2.5.8` does not exist on PyPI (latest 2.6.1). R-6 §13.3 `run_summary.json:L2` should be L3.
-- Review findings needing source: R-7 smoke run probably does no PPO update (32768 samples per rollout vs budgets of 1000 or less; A.4 steps 784/872/968); R-8 Stage 1 to 2 obs 14 to 76, no weight transfer; R-9 Stage 2+ actor has no absolute altitude; R-10 lookahead point vs true distance in observation vs reward; R-11 no observation or reward normalisation recorded; R-12 undocumented: action mapping, env step vs `PH_DT`, `target_visible`, `xy_limit` vs `world_radius`.
-- Also: R-13 Stage 1 obs [13] duplicates [8]; R-14 host Python 3.14 vs torch 2.7.0 wheels ([RECALLED]) and unpinned container numpy; R-15 target RNG `(seed or 0)`; R-16 `PH_J` 27 g values vs `PH_M = 0.04085` ([RECALLED]); R-17 G-015 also device `cuda` vs `cpu`; R-18 §13.8 claim vs BUGS items 5 and 7; R-19 naming (`success_rate`, "Stage A/B/2-9", `r_time_bonus` vs `r_time_penalty`, `current_stage` vs `stage_num`); R-20 evidence tags in §2.1 and §2.7(b).
-- Ledger issues: D-3 scope resolved (D-50); D-4/D-13 free parameters are fixed or ranged (D-51), values undefined; the D-14 Stage 1 threshold conflict is resolved by a fixed Stage 1 length (D-52), the T-to-steps rounding rule stays open for other stages; new reset draws must be conditional to keep Stage 1 parity.
-- FIX pending (one question each; from v1.0): BUGS items 12, 11 (test), 2/1, 8, 3, 5, 10; README mass; BLOCKER ratings of G-008, G-011, G-017; `CAPPED` vs `ADVANCE` priority test; §13.8 fixed-bug count; §6.2 write method; §6.2 `episode_buffer` type; §13.5 Monitor wording.
-- Also observed at the start of the third session (not fixed): the Table of Contents omits the Change Log, Decision Log and Session Handoff and "End of document" sits before them; Appendix C says "30+ constants" and "8 anomalies" against 24 rows in §9.1 and 9 subsections in §13.
-- D-20 condition checklist: unchanged from v4.0; add the facing weight `k_facing` (D-57) to the stage and reward configuration destinations.
-- Stale: see §13.9 (D-2 to D-58). The D-17 and D-24 reasons are superseded or stale as recorded above.
-- Recommended next topic: decide R-1 (fix before training or not), then the real-sensor question, then the PROPOSED list above, then the privileged-critic field list; the FIX pass last (D-58).
-- First question next session: should R-1 be fixed before any further design work, and can you upload `hover_env.py` and the identification data?
-- Working agreements: unchanged from v4.0, plus: the user wants only items that need their input asked, as short questions; do not re-ask answered items; "default" means accept the recommendation; the user confirms a batch with "confirm and add to ledger".

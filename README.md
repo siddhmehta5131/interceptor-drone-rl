@@ -1,157 +1,243 @@
-﻿# RL-Based Autonomous Interceptor Drone — Flight Simulator
+# RL-Based Autonomous Interceptor Drone
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python)
-![NumPy](https://img.shields.io/badge/NumPy-Simulation-013243?logo=numpy)
-![Matplotlib](https://img.shields.io/badge/Matplotlib-Visualisation-11557c)
-![License](https://img.shields.io/badge/License-MIT-yellow)
+![PyTorch](https://img.shields.io/badge/PyTorch-2.7.0-EE4C2C?logo=pytorch)
+![StableBaselines3](https://img.shields.io/badge/SB3-2.x-green)
+![Docker](https://img.shields.io/badge/Docker-GPU-2496ED?logo=docker)
 
-A **real-time physics-based quadrotor flight simulator** controlled via a USB gamepad. The simulator implements a full 9-stage rigid-body dynamics pipeline calibrated to the Crazyflie 2.0/2.1 nano-quadrotor, with aerodynamic coefficients fitted from real PX4 flight-log data.
-
-Built as the simulation backbone for a reinforcement-learning based autonomous interceptor drone project (BTP).
+A **reinforcement-learning training pipeline** for an autonomous interceptor drone. A Crazyflie 2.0-calibrated rigid-body physics simulator is combined with an 8-stage curriculum that teaches a quadrotor to hover, track, and intercept a manoeuvring target.
 
 ---
 
-## 🧠 Architecture
-
-The simulation pipeline follows a paper-derived, modular architecture where each stage is a pure function with documented inputs and outputs:
+## 🏗️ Architecture
 
 ```
-Gamepad input (thrust, roll, pitch, yaw)
-    │
-    ▼
-Stage A ─── Rate PID Controller ─────────→ torque command u
-Stage B ─── Mixer ────────────────────────→ per-motor commands
-Stage 2 ─── ESC / Battery Model ──────────→ steady-state motor speeds
-Stage 3 ─── Motor Dynamics (1st-order) ───→ actual motor speeds + derivatives
-Stage 4 ─── Propeller Force/Torque ───────→ per-prop thrust + drag
-Stage 5 ─── Force Aggregation ────────────→ total body wrench
-Stage 6 ─── Gyroscopic Torques ───────────→ reaction + inertial coupling
-Stage 7 ─── Aerodynamic Drag Model ───────→ polynomial drag (fitted from PX4)
-Stage 8 ─── Newton-Euler Dynamics ────────→ state derivatives
-Stage 9 ─── Euler Integration ────────────→ new position + attitude
-    │
-    ▼
-Live 3D matplotlib visualisation (position trail + body-frame arrows)
+run.py                     ← one-file user script
+  │
+  ├── configs/model.yaml   ← define algorithms, network shape, critic fields
+  ├── configs/config.yaml  ← training settings, observation layout, target params
+  │
+  └── train_model(source, stages, name, ...)  →  TrainResult
+         │
+         ├── per model_id: build env → build policy → run curriculum
+         └── returns TrainResult[model_id] with the final trained model
 ```
 
----
+### Eight-stage curriculum
 
-## ✨ Features
-
-- 🎮 **Live gamepad control** — fly the drone with any USB controller (tested on Amkette Evo Gamepad Pro 4)
-- 📐 **Paper-derived physics** — all equations follow standard rigid-body + propeller aerodynamics theory
-- 📊 **Real-world calibration** — mass, inertia, arm length from Crazyflie 2.0 published data
-- 🌊 **Fitted aero model** — drag coefficients from least-squares regression on 15 PX4 flight logs
-- 🔋 **ESC polynomial** — battery/motor model fitted to real ESC telemetry
-- 🏠 **Room boundary simulation** — floor collision + wall/ceiling detection
-- 📈 **Dual live visualisation** — 3D trajectory + 4-channel input bar chart
-
----
-
-## 🗂️ Project Structure
-
-```
-rl-drone-flight-simulator/
-├── src/
-│   ├── simulation.py       # Full 9-stage physics pipeline + live loop
-│   └── visualiser.py       # Standalone visualisation utilities
-├── docs/
-│   └── coefficient_fitting.md
-├── requirements.txt
-├── .gitignore
-└── README.md
-```
-
-### Module Breakdown
-
-| File | Purpose |
-|------|---------|
-| `src/visualiser.py` | 3 standalone functions: `plot_trajectory()`, `plot_input_bars()`, `read_gamepad()` — fully decoupled from physics |
-| `src/simulation.py` | 10 stage functions (PID → Mixer → ESC → Motors → Props → Forces → Gyro → Aero → Dynamics → Integration) + calibration constants + live loop |
+| Stage | Type | Target | Obs dim (ppo_baseline) |
+|---|---|---|---|
+| 1 | Hover | None | 14 |
+| 2 | Directional flight | Linear path | 105 |
+| 3 | Intercept (static approach) | Linear path | 105 |
+| 4 | Intercept (timed) | Linear path | 105 |
+| 5 | Polynomial order-1 intercept | Polynomial | 105 |
+| 6 | Polynomial order-2 intercept | Polynomial | 105 |
+| 7 | Polynomial order-3 intercept | Polynomial | 105 |
+| 8 | Evasive (smoke-only) | Evasive | 105 |
 
 ---
 
-## ⚙️ Prerequisites
+## 🚀 Quick start
 
-- Python 3.10+
-- A USB gamepad / joystick (any standard dual-stick layout)
-- Display capable of running matplotlib interactively
-
----
-
-## 🔨 Setup
+### Option A — Docker (recommended, GPU training)
 
 ```bash
-# 1. Clone the repo
-git clone https://github.com/siddhmehta5131/rl-drone-flight-simulator
-cd rl-drone-flight-simulator
+# 1. Clone
+git clone https://github.com/siddhmehta5131/interceptor-drone-rl.git
+cd interceptor-drone-rl/interceptor-training
 
-# 2. Create virtual environment
-python -m venv venv
-source venv/bin/activate       # Windows: venv\Scripts\activate
+# 2. Build image
+docker build -t interceptor-drone-rl:v6.0 .
 
-# 3. Install dependencies
+# 3. Run smoke test (no GPU required)
+docker run --rm interceptor-drone-rl:v6.0 --smoke
+
+# 4. Train (requires NVIDIA GPU + nvidia-docker)
+docker run --gpus all --rm \
+  -v $(pwd)/data:/data \
+  interceptor-drone-rl:v6.0 \
+  --source configs/model.yaml --stages 1 2 3 4 --name experiment_1
+```
+
+### Option B — run.py (host Python, development)
+
+```bash
+cd interceptor-training
 pip install -r requirements.txt
+python run.py
 ```
 
----
+Edit `run.py` to configure your experiment:
 
-## 🚀 Usage
-
-### Run the full simulation
-```bash
-cd src
-python simulation.py
-```
-
-Two windows open:
-1. **3D Trajectory** — drone position trail + body-frame coordinate arrows
-2. **Input Bar Chart** — live thrust/roll/pitch/yaw from the gamepad
-
-Push the left stick up for thrust. Right stick controls roll/pitch. Close either window to exit.
-
-### Use the visualiser standalone
 ```python
-from visualiser import plot_trajectory, plot_input_bars, read_gamepad
+from src.api import train_model
 
-# In your own simulation loop:
-thrust, roll, pitch, yaw = read_gamepad()
-plot_input_bars({"thrust": thrust, "roll": roll, "pitch": pitch, "yaw": yaw})
-plot_trajectory(my_position, my_quaternion)
+# Train through stages 1–4
+model1 = train_model(
+    source="configs/model.yaml",
+    stages=[1, 2, 3, 4],
+    name="experiment_1",
+    config="configs/config.yaml",
+)
+
+# Continue on stages 5–7 from the result
+model2 = train_model(
+    source=model1,
+    stages=[5, 6, 7],
+    name="experiment_2",
+)
+
+# Save the final model
+model2.ppo_baseline.save("my_models/intercept_v1")
 ```
 
 ---
 
-## 🔧 Physical Parameters
+## 📁 Repository layout
+
+```
+interceptor-training/
+├── run.py                      ← one-file training runner (edit this)
+├── configs/
+│   ├── model.yaml              ← model definitions (algo, arch, critic fields)
+│   ├── config.yaml             ← training settings (rollback, obs layout, ...)
+│   ├── smoke_model.yaml        ← smoke test model definitions
+│   └── smoke_config.yaml       ← smoke test config
+├── scripts/
+│   ├── train.py                ← Docker ENTRYPOINT / CLI
+│   ├── evaluate.py             ← evaluation script
+│   └── smoke_test.py           ← 12-test no-SB3 verification suite
+└── src/
+    ├── api.py                  ← train_model() public function
+    ├── results.py              ← TrainResult / ModelResult types
+    ├── envs/                   ← Gymnasium environments (8-stage curriculum)
+    ├── physics/                ← rigid-body dynamics pipeline (RK4)
+    ├── prediction/             ← const_vel + linear_ridge target predictors
+    ├── training/               ← orchestrator, callbacks, curriculum, checkpointing
+    └── utils/                  ← config/model loaders, logger
+hover_env.py                    ← Stage-1 parity reference (AltitudeHoldEnv)
+```
+
+---
+
+## ⚙️ Configuration
+
+### `configs/model.yaml` — model definitions
+
+```yaml
+ppo_baseline:
+  algo: PPO
+  policy: MlpPolicy
+  net_arch: {pi: [256, 256, 128], vf: [256, 256, 128]}
+  activation: ReLU
+  obs_history: {frames: 3, skip: 2}
+  hyperparameters:
+    n_steps: 4096
+    batch_size: 512
+    gamma: 0.995
+    learning_rate: 3.0e-4
+  privileged_critic:            # critic-only inputs (actor never sees these)
+    - time_remaining
+    - facing_error
+    - target_true_pos
+    - target_true_vel
+```
+
+### `configs/config.yaml` — training settings
+
+```yaml
+global:
+  seed: 42
+  device: cpu            # or cuda
+  data_dir: /data
+  n_parallel_envs: 8
+
+on_capped: continue      # 'continue' or 'stop' when a stage hits its step budget
+
+observation:
+  history_frames: 3      # m past frames
+  history_skip: 2        # p spacing
+  future_samples: 3      # n future samples
+  future_skip: 5         # q spacing
+  future_source: true    # 'true' (ground truth) or 'pred' (predictor)
+  predictor: const_vel   # 'const_vel' or 'linear_ridge'
+
+target_alt: 5.0          # Stage-1 hover altitude in metres (or {min: 3, max: 7})
+```
+
+---
+
+## 🔧 `train_model()` API
+
+```python
+from src.api import train_model
+
+result = train_model(
+    source,               # path to model.yaml OR a previous TrainResult
+    stages,               # list[int] — e.g. [1, 2, 3, 4]
+    name,                 # str — names the log folder under data/runs/
+    *,
+    config="configs/config.yaml",
+    model_ids=None,       # optional list — train only these model ids
+    seed=None,            # override global seed for this call
+    resume=True,          # auto-resume from last checkpoint on restart
+)
+
+# Access results by model id
+result.ppo_baseline.final_model    # SB3 model object
+result["ppo_baseline"].stages      # {1: StageOutcome, 2: StageOutcome, ...}
+result.ppo_baseline.status         # 'completed' | 'capped' | 'stuck' | ...
+result.ppo_baseline.save("path/")  # save to disk
+```
+
+---
+
+## 🔬 Physical parameters
 
 | Parameter | Value | Source |
-|-----------|-------|--------|
-| Mass | 27 g | Crazyflie 2.0 (Forster thesis) |
-| Inertia Ixx/Iyy | 1.4 × 10⁻⁵ kg·m² | Published |
-| Inertia Izz | 2.17 × 10⁻⁵ kg·m² | Published |
-| Arm length | 39.7 mm | Published |
-| Lift coefficient c_l | 5.0 × 10⁻⁸ N·(rad/s)⁻² | Tuned for hover at 50% stick |
-| Drag coefficient c_d | 1.25 × 10⁻⁹ N·m·(rad/s)⁻² | Forster ratio |
+|---|---|---|
+| Mass | **40.85 g** (0.04085 kg) | `constants.py:PH_M` |
+| Inertia Ixx/Iyy | 1.4 × 10⁻⁵ kg·m² | Crazyflie 2.0 published |
+| Inertia Izz | 2.17 × 10⁻⁵ kg·m² | Crazyflie 2.0 published |
+| Arm length | 39.7 mm | Crazyflie 2.0 published |
+| Physics step `PH_DT` | 0.01 s | `constants.py` |
+| Hover command `PH_C_HOVER` | 0.23253743635354834 | Computed from ESC polynomial |
+| Lift coefficient | 5.0 × 10⁻⁸ N·(rad/s)⁻² | Tuned |
+| Drag coefficient | 1.25 × 10⁻⁹ N·m·(rad/s)⁻² | Forster ratio |
 | Motor time constant | 20 ms | Best estimate |
-| PID gains (Kp) | [0.15, 0.15, 0.20] | Median across 15 PX4 logs |
-| Aero drag coefficients | 6 polynomials | Fitted via least-squares |
-| ESC polynomial | 5 coefficients | Fitted to ESC telemetry |
+
+> ⚠️ **Known limitation (Bug #13):** The fitted ESC polynomial is monotonically
+> decreasing — increasing throttle reduces motor speed. The simulator is valid for
+> RL training but policies will not transfer to a real drone without re-identification.
+> See `BUGS.md` for details.
 
 ---
 
-## 🐛 Bugs Fixed (from development versions)
+## 🧪 Smoke test
 
-1. **Division by zero in `mixer()`** — when all motors command the same value (`cmd_max_val == c_cmd`), the scaling denominator is zero. Added `abs(denom) > 1e-9` guard.
-2. **Double-step motor integration** — `rigid_body_dynamics` was receiving `Omega_new` (already integrated in Stage 3) and then Euler-integrating it again in Stage 9. Fixed to pass old `Omega`.
-3. **Reverse-spinning motors** — `Omega` could go negative during fast transients. Clamped with `np.maximum(Omega, 0.0)`.
-4. **ESC command inversion** — the fitted ESC polynomial maps cmd=0 → max speed (firmware convention). Added `cmd_esc = 1 - cmd` to align with the simulation's convention.
-5. **Throttle-cut ESC bypass** — the ESC polynomial has a non-zero intercept at cmd=0, causing phantom lift. When throttle is cut, the entire ESC model is now bypassed.
-6. **Duplicate `n_axes` call** — `joy.get_numaxes()` was called twice in `read_gamepad()`. Removed duplicate.
-7. **Global aero coefficients** — `aerodynamic_force_torque()` accepted an `aero_coeffs` parameter but used module globals. Rewritten to accept all 6 coefficient arrays explicitly.
+Runs 12 tests with no GPU/torch required (numpy + scipy + gymnasium + pyyaml only):
+
+```bash
+cd interceptor-training
+pip install numpy scipy gymnasium pyyaml
+python scripts/smoke_test.py
+# Expected: 12 passed, 0 failed
+```
+
+Tests cover: Stage-1 physics parity · all 8 env obs dims · history+future stacking ·
+polynomial target paths · predictors · reward terms · curriculum advance/cap/rollback ·
+result objects + eligibility · checkpoint layout · weight transfer · config/model
+loading + hashing · future_source true vs pred equivalence.
+
+---
+
+## 🐛 Known bugs
+
+See [`BUGS.md`](BUGS.md) — 13 items documented; items 11–12 fixed, remainder non-blocking.
 
 ---
 
 ## 📄 License
 
-MIT © 2025 **Siddh Mehta**
-
+No license — all rights reserved.

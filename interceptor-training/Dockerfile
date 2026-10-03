@@ -23,10 +23,15 @@ RUN pip uninstall -y opencv-python && pip install --no-cache-dir --default-timeo
 COPY src/ ./src/
 COPY scripts/ ./scripts/
 COPY configs/ ./configs/
+COPY run.py ./run.py
 
 # Host-mounted volume: checkpoints/, tb_logs/, curriculum_state/, results/.
 # The host also maps its local configs directory onto /data/configs.
 VOLUME /data
 
+# `python scripts/train.py` is the CLI wrapper around train_model(); the
+# one-file runner is `python run.py`.  There is no longer a single default run
+# YAML (it was split into model.yaml + config.yaml, plan A-5), so the default
+# invocation just prints the CLI help.
 ENTRYPOINT ["python", "scripts/train.py"]
-CMD ["--config", "/data/configs/default_run.yaml"]
+CMD ["--help"]

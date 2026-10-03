@@ -1,0 +1,47 @@
+# smoke_model.yaml -- model definitions used by scripts/smoke_test.py.
+#
+# Two models: the shipped baseline and a deliberately deeper/wider variant
+# that exercises a different net_arch and a different observation history so
+# the config loader's validation surface is covered.
+
+ppo_baseline:
+  algo: PPO
+  policy: MlpPolicy
+  net_arch: {pi: [256, 256, 128], vf: [256, 256, 128]}
+  activation: ReLU
+  obs_history: {frames: 3, skip: 2}
+  hyperparameters:
+    n_steps: 4096
+    batch_size: 512
+    gamma: 0.995
+    learning_rate: 3.0e-4
+    gae_lambda: 0.95
+    clip_range: 0.2
+    ent_coef: 0.005
+    n_epochs: 10
+    max_grad_norm: 0.5
+    vf_coef: 0.5
+  privileged_critic:
+    - time_remaining
+    - facing_error
+    - target_true_pos
+    - target_true_vel
+
+ppo_5layer_deep:
+  algo: PPO
+  policy: MlpPolicy
+  net_arch: {pi: [256, 256, 256, 256, 128], vf: [256, 256, 256, 256, 128]}
+  activation: ReLU
+  obs_history: {frames: 5, skip: 3}
+  hyperparameters:
+    n_steps: 4096
+    batch_size: 512
+    gamma: 0.995
+    learning_rate: 3.0e-4
+    gae_lambda: 0.95
+    clip_range: 0.2
+    ent_coef: 0.005
+    n_epochs: 10
+    max_grad_norm: 0.5
+    vf_coef: 0.5
+  privileged_critic: []

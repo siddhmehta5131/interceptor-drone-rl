@@ -1,0 +1,68 @@
+# config.yaml -- training settings (user-edited).
+#
+# Model architecture lives in `model.yaml`.  This file holds everything that
+# is NOT architecture: run-wide settings, the rollback policy, how a capped
+# stage is handled, the observation history/future layout, the Stage-1 hover
+# altitude, and optional per-stage overrides.
+#
+# Top-level sections
+# ------------------
+#   global       run-wide settings (seed, device, data_dir, ...)
+#   rollback     curriculum rollback policy (plan §6.2)
+#   on_capped    'continue' | 'stop' -- what to do when a stage hits its budget
+#   observation  history / future stacking layout and the future source
+#   target_alt   Stage-1 hover altitude: a number, or {min:, max:}
+#   stages       per-stage overrides merged onto the built-in stage table
+#
+# Value ranges
+# ------------
+# Any value documented as "number or {min:, max:} range" accepts either form;
+# a bare number is treated as a fixed value.
+
+global:
+  seed: 42
+  device: cpu                  # auto | cpu | cuda (PPO+MlpPolicy is faster on CPU)
+  data_dir: /data              # host-mounted volume (see docker-compose.yml)
+  n_parallel_envs: 8
+  checkpoint_interval_steps: 50000
+  tensorboard: true
+  execution_mode: sequential   # only sequential is supported
+
+rollback:
+  max_attempts: 2              # max rollbacks per stage
+  retry_budget_scale: 0.5      # re-entered stage runs on 50% of its budget
+  threshold_scale: 0.5         # rollback threshold = 50% of success_rate
+  min_steps_scale: 0.25        # rollback only after 25% of max_training_steps
+
+# What to do when a stage exhausts its step budget without reaching the
+# required success rate.  'continue' advances to the next stage anyway;
+# 'stop' stops training THAT model and reports status='capped'.
+on_capped: continue
+
+# Observation history and future.
+#   m = history_frames, p = history_skip   (past)
+#   n = future_samples,  q = future_skip    (future, in env steps)
+# Actor observation = frame_dim * (1 + m) + 7 * n
+observation:
+  history_frames: 3
+  history_skip: 2
+  future_samples: 3
+  future_skip: 5
+  # 'true'  -- future target states come from the simulator ground truth
+  # 'pred'  -- future target states come from the predictor below
+  future_source: true
+  predictor: const_vel         # const_vel | linear_ridge
+
+# Stage-1 hover altitude: fixed number or {min:, max:} range.
+# A fixed value preserves Stage-1 parity with the reference hover_env.py.
+target_alt: 5.0
+
+# Per-stage overrides merged onto the built-in STAGES table.
+# Empty here = use the exact built-in defaults.
+# Example:
+#   stages:
+#     stage_6:
+#       episode_length_s: {min: 25.0, max: 35.0}
+#       reward:
+#         k_facing: 0.20
+stages: {}
