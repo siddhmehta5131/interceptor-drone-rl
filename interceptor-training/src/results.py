@@ -296,6 +296,10 @@ class ModelResult:
             return int(self._last_stage)
         return max(self.stages) if self.stages else None
 
+    @last_stage.setter
+    def last_stage(self, value: Optional[int]) -> None:
+        self._last_stage = value
+
     @property
     def total_steps(self) -> int:
         if self.steps:
