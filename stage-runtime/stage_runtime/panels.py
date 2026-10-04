@@ -98,16 +98,22 @@ class StagePanel:
         self.ax3d.set_zlim(0, 12)
         self.ax3d.view_init(elev=cfg.camera.elevation_deg, azim=cfg.camera.azimuth_deg)
         self.ax3d.grid(True, alpha=0.25)
-        (self._body,) = self.ax3d.plot([], [], [], marker="o", color="#111111", ms=6,
-                                       zorder=6)
-        # Drone wireframe
-        (self._arm1,) = self.ax3d.plot([], [], [], color="#444444", lw=2.0, zorder=5)
-        (self._arm2,) = self.ax3d.plot([], [], [], color="#444444", lw=2.0, zorder=5)
-        (self._front_dir,) = self.ax3d.plot([], [], [], color="#d62728", lw=3.0, zorder=6)
-        (self._rear_rotors,) = self.ax3d.plot([], [], [], marker="o", ms=4,
-                                              color="#444444", ls="none", zorder=7)
-        (self._front_rotors,) = self.ax3d.plot([], [], [], marker="o", ms=5,
-                                               color="#d62728", ls="none", zorder=7)
+        # ---- Drone artists (created once) ----
+        BODY_C, REAR_C, FRONT_C, GEAR_C = "#2b2b2b", "#555555", "#d62728", "#888888"
+        
+        (self._body_top,) = self.ax3d.plot([], [], [], color=BODY_C, lw=1.8, zorder=5)
+        (self._arms_rear,) = self.ax3d.plot([], [], [], color=REAR_C, lw=3.0, solid_capstyle="round", zorder=5)
+        (self._arms_front,) = self.ax3d.plot([], [], [], color=FRONT_C, lw=3.0, solid_capstyle="round", zorder=5)
+        (self._motors,) = self.ax3d.plot([], [], [], color="#111111", lw=5.0, zorder=6)
+        (self._props_rear,) = self.ax3d.plot([], [], [], color=REAR_C, lw=1.2, alpha=0.9, zorder=7)
+        (self._props_front,) = self.ax3d.plot([], [], [], color=FRONT_C, lw=1.2, alpha=0.9, zorder=7)
+        (self._gear,) = self.ax3d.plot([], [], [], color=GEAR_C, lw=2.0, zorder=4)
+        (self._camera,) = self.ax3d.plot([], [], [], color="#1f77b4", lw=2.0, marker="o", ms=5, markevery=[1], zorder=8)
+        (self._nose,) = self.ax3d.plot([], [], [], color=FRONT_C, lw=3.5, marker=">", ms=6, markevery=[1], zorder=8)
+        (self._body,) = self.ax3d.plot([], [], [], marker="o", color="#111111", ms=4, ls="none", zorder=6)
+        
+        # ---- Build body-frame geometry once ----
+        self._build_drone_geometry()
         (self._target,) = self.ax3d.plot([], [], [], marker="^", ms=9,
                                           color="#ff7f0e", ls="none", zorder=7)
         (self._target_pred,) = self.ax3d.plot([], [], [], marker="x", ms=7,
@@ -181,6 +187,95 @@ class StagePanel:
 
     # -- helpers ---------------------------------------------------------
 
+    def _build_drone_geometry(self):
+        NAN = np.full((1, 3), np.nan)
+
+        def join(*segments):
+            """Stack polylines, separated by NaN rows so they don't connect."""
+            out = []
+            for s in segments:
+                out.append(np.asarray(s, float))
+                out.append(NAN)
+            return np.vstack(out[:-1])
+
+        def circle(c, r, n=24, z=0.0):
+            t = np.linspace(0, 2 * np.pi, n + 1)
+            return np.c_[c[0] + r * np.cos(t), c[1] + r * np.sin(t), np.full(n + 1, c[2] + z)]
+
+        arm = 0.22
+        d = arm * np.cos(np.pi / 4)
+        z_hub = 0.0
+        rotors = {
+            "fr": np.array([ d, -d, z_hub]),
+            "fl": np.array([ d,  d, z_hub]),
+            "rl": np.array([-d,  d, z_hub]),
+            "rr": np.array([-d, -d, z_hub]),
+        }
+        prop_r, prop_z = 0.085, 0.045
+
+        # Fuselage: elongated octagon-ish hull, tapered toward the nose
+        hull_xy = np.array([
+            [ 0.115,  0.000], [ 0.075,  0.055], [-0.020,  0.065], [-0.095,  0.045],
+            [-0.095, -0.045], [-0.020, -0.065], [ 0.075, -0.055], [ 0.115,  0.000],
+        ])
+        top = np.c_[hull_xy, np.full(len(hull_xy), 0.035)]
+        bot = np.c_[hull_xy, np.full(len(hull_xy), -0.025)]
+        struts = [np.array([top[i], bot[i]]) for i in range(0, len(hull_xy) - 1)]
+        # Battery hatch line on the top deck
+        hatch = np.array([[-0.07, 0.0, 0.036], [0.03, 0.0, 0.036]])
+        self._g_body = join(top, bot, hatch, *struts)
+
+        # Arms: center → hub (front ones red)
+        c0 = np.array([0.0, 0.0, 0.005])
+        self._g_arms_front = join([c0, rotors["fr"]], [c0, rotors["fl"]])
+        self._g_arms_rear  = join([c0, rotors["rl"]], [c0, rotors["rr"]])
+
+        # Motor cans: short vertical stubs at each hub
+        self._g_motors = join(*[[h, h + [0, 0, prop_z]] for h in rotors.values()])
+
+        # Propellers: circle + two-blade cross
+        def prop(h):
+            c = h + np.array([0, 0, prop_z])
+            a = np.array([prop_r, 0, 0]); b = np.array([0, prop_r, 0])
+            return [circle(c, prop_r), np.array([c - a, c + a]), np.array([c - b, c + b])]
+        self._g_props_front = join(*prop(rotors["fr"]), *prop(rotors["fl"]))
+        self._g_props_rear  = join(*prop(rotors["rl"]), *prop(rotors["rr"]))
+
+        # Landing skids: two rails with legs
+        gz = -0.11
+        legs, rails = [], []
+        for s in (+1, -1):
+            y = s * 0.075
+            legs += [np.array([[ 0.06, y, -0.025], [ 0.08, s * 0.095, gz]]),
+                     np.array([[-0.06, y, -0.025], [-0.08, s * 0.095, gz]])]
+            rails.append(np.array([[ 0.12, s * 0.095, gz], [-0.12, s * 0.095, gz]]))
+        self._g_gear = join(*legs, *rails)
+
+        # Camera gimbal under the nose: mount → ball (markevery=[1] marks the lens)
+        self._g_camera = np.array([[0.095, 0.0, -0.02], [0.13, 0.0, -0.055], [0.15, 0.0, -0.055]])
+        # Nose arrow: points forward from the hull
+        self._g_nose = np.array([[0.115, 0.0, 0.02], [0.30, 0.0, 0.02]])
+        self._g_center = np.array([[0.0, 0.0, 0.0]])
+
+    def _set(self, artist, pts_local, p, R):
+        w = p + pts_local @ R.T          # row-vector form of p + R @ pt
+        artist.set_data(w[:, 0], w[:, 1])
+        artist.set_3d_properties(w[:, 2])
+
+    def _update_drone(self, p, R):
+        p = np.asarray(p, float).reshape(3)
+        R = np.asarray(R, float).reshape(3, 3)
+        self._set(self._body_top,   self._g_body,        p, R)
+        self._set(self._arms_front, self._g_arms_front,  p, R)
+        self._set(self._arms_rear,  self._g_arms_rear,   p, R)
+        self._set(self._motors,     self._g_motors,      p, R)
+        self._set(self._props_front,self._g_props_front, p, R)
+        self._set(self._props_rear, self._g_props_rear,  p, R)
+        self._set(self._gear,       self._g_gear,        p, R)
+        self._set(self._camera,     self._g_camera,      p, R)
+        self._set(self._nose,       self._g_nose,        p, R)
+        self._set(self._body,       self._g_center,      p, R)
+
     def _set_sphere(self, center: np.ndarray, radius: float) -> None:
         if getattr(self, "_kill_sphere_artist", None) is not None:
             self._kill_sphere_artist.remove()
@@ -225,42 +320,8 @@ class StagePanel:
         if f.include_target and f.target_pos is not None:
             self._trail_target.append(np.asarray(f.target_pos, dtype=np.float64))
 
-        # drone marker (a small sphere-ish dot) + body triad
-        self._body.set_data([p[0]], [p[1]])
-        self._body.set_3d_properties([p[2]])
         # drone model update
-        arm = 0.22
-        dx = arm * np.cos(np.pi / 4.0)
-        dy = arm * np.sin(np.pi / 4.0)
-        
-        # local coordinates
-        local_fr = np.array([dx, -dy, 0.0])
-        local_fl = np.array([dx, dy, 0.0])
-        local_rr = np.array([-dx, -dy, 0.0])
-        local_rl = np.array([-dx, dy, 0.0])
-        local_front = np.array([arm * 1.5, 0.0, 0.0])
-        
-        # world coordinates
-        fr = p + R @ local_fr
-        fl = p + R @ local_fl
-        rr = p + R @ local_rr
-        rl = p + R @ local_rl
-        front_tip = p + R @ local_front
-        
-        self._arm1.set_data([rl[0], fr[0]], [rl[1], fr[1]])
-        self._arm1.set_3d_properties([rl[2], fr[2]])
-        
-        self._arm2.set_data([rr[0], fl[0]], [rr[1], fl[1]])
-        self._arm2.set_3d_properties([rr[2], fl[2]])
-        
-        self._front_dir.set_data([p[0], front_tip[0]], [p[1], front_tip[1]])
-        self._front_dir.set_3d_properties([p[2], front_tip[2]])
-        
-        self._rear_rotors.set_data([rl[0], rr[0]], [rl[1], rr[1]])
-        self._rear_rotors.set_3d_properties([rl[2], rr[2]])
-        
-        self._front_rotors.set_data([fl[0], fr[0]], [fl[1], fr[1]])
-        self._front_rotors.set_3d_properties([fl[2], fr[2]])
+        self._update_drone(p, R)
 
         if f.include_target and f.target_pos is not None:
             tp = np.asarray(f.target_pos, dtype=np.float64)
