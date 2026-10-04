@@ -23,7 +23,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Tuple, Union
 
-from ..envs.stage_config import STAGES, StageConfig
+from ..envs.stage_config import STAGES, SpawnConfig, StageConfig
 
 __all__ = [
     "ConfigError",
@@ -103,10 +103,12 @@ def _require(cond: bool, msg: str) -> None:
 # ---------------------------------------------------------------------------
 
 def parse_range(value: Any, name: str) -> Tuple[float, float]:
-    """Parse a fixed value or a ``{min:, max:}`` mapping into a ``(lo, hi)`` tuple.
+    """Parse a fixed value or a range into a ``(lo, hi)`` tuple.
 
-    A bare number collapses to ``(v, v)`` so callers never need to special-case
-    the fixed form.
+    Accepted spellings: a bare number, a two-element YAML sequence
+    ``[lo, hi]`` and the mapping form ``{min: lo, max: hi}``.  A bare number
+    collapses to ``(v, v)`` so callers never need to special-case the fixed
+    form.
     """
     if isinstance(value, bool):
         raise ConfigError(f"{name}: expected number or {{min:, max:}}, got bool")
@@ -120,12 +122,24 @@ def parse_range(value: Any, name: str) -> Tuple[float, float]:
         if lo > hi:
             raise ConfigError(f"{name}: min ({lo}) > max ({hi})")
         return (lo, hi)
-    raise ConfigError(f"{name}: expected number or {{min:, max:}}, got {value!r}")
+    if isinstance(value, (list, tuple)) and len(value) == 2:
+        try:
+            lo, hi = float(value[0]), float(value[1])
+        except (TypeError, ValueError) as exc:
+            raise ConfigError(f"{name}: range entries must be numbers, got {value!r}") from exc
+        if lo > hi:
+            raise ConfigError(f"{name}: min ({lo}) > max ({hi})")
+        return (lo, hi)
+    raise ConfigError(
+        f"{name}: expected a number, a [lo, hi] pair or {{min:, max:}}, got {value!r}"
+    )
 
 
 def is_range(value: Any) -> bool:
-    """True when ``value`` is a ``{min:, max:}`` mapping (as opposed to fixed)."""
-    return isinstance(value, Mapping) and "min" in value and "max" in value
+    """True when ``value`` is a range (mapping with min/max, or a 2-item pair)."""
+    if isinstance(value, Mapping):
+        return "min" in value and "max" in value
+    return isinstance(value, (list, tuple)) and len(value) == 2
 
 
 # ---------------------------------------------------------------------------

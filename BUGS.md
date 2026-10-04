@@ -9,6 +9,12 @@ fixed mid-task (per task instructions).
 in-container smoke ran successfully. Two runtime bugs found and fixed (items
 11–12). Items 1–10 unchanged from prior review.
 
+**Last reviewed 2026-10-04 (D-2 → D-58 implementation, host smoke suite):**
+`scripts/smoke_test.py` was rewritten and now runs 12/12 green; it exposed five
+defects in the new code, all fixed in-tree (items 14–18). Item 8 was fixed as
+part of Phase D. Item 13 (R-1) is documented as a known limitation, with a
+diagnostic in `interceptor-training/scripts/esc_diagnostic.py`.
+
 ---
 
 ## 1. Mid-rollback resume retrains the retry stage from transfer weights
@@ -73,11 +79,14 @@ so the two disagree slightly over a 0.3–1.0 s manoeuvre segment — negligible
 at 100 Hz with ≤ 30 m/s targets. Keeping the target on Euler is adequate
 for its purpose (a moving goal, not a physical plant simulation).
 
-## 8. `Monitor` overwrites its CSV on resume (`override_existing=True`)
+## 8. `Monitor` overwrites its CSV on resume (`override_existing=True`) — FIXED
 **Area:** `src/envs/base_env.py` (`make_env_factory`) / orchestrator
-**Impact:** Low. On resume, `Monitor(filename=...)` truncates the previous
-`monitor.csv` for the same seed. Checkpoints and run state are unaffected;
-only the raw per-episode CSV history of the interrupted run is lost.
+**Impact:** Low. On resume, `Monitor(filename=...)` truncated the previous
+`monitor.csv` for the same seed. Checkpoints and run state were unaffected;
+only the raw per-episode CSV history of the interrupted run was lost.
+**Fix (Phase D, 2026-10-03):** `make_env_factory` now builds the monitor with
+`override_existing=False`, so an interrupted stage's episode CSV is appended to
+instead of truncated.
 
 ## 9. `J_inv` recomputed per acceleration component per step
 **Area:** `src/physics/pipeline.py` (dynamics)
@@ -128,3 +137,61 @@ break the bit-exact Stage-1 parity with `hover_env.py` (a hard requirement).
 drone; replace coefficients; recompute `PH_C_HOVER`; reset Stage-1 parity baseline.
 **Acceptable for current scope:** Yes — training goal is algorithmic validation,
 not immediate sim-to-real transfer.
+
+---
+
+## 14. `scripts/smoke_test.py` had no `__main__` guard — FIXED
+**Area:** `interceptor-training/scripts/smoke_test.py`
+**Impact:** Would have been silent. The rewritten suite defined every test and
+`_run_all()` but ended without `if __name__ == "__main__": sys.exit(_run_all())`,
+so `python scripts/smoke_test.py` exited 0 with no output and no tests executed.
+**Fix (2026-10-04):** added the guard. The suite now reports
+`12 passed, 0 failed` and returns a non-zero exit code on any failure.
+
+## 15. `parse_range` rejected the `[lo, hi]` YAML sequence form — FIXED
+**Area:** `src/utils/config_loader.py` (`parse_range`, `is_range`)
+**Impact:** Config-authoring friction. Only a bare number or `{min:, max:}`
+was accepted, although the D-2 path knobs (`path_end_distance`,
+`path_speed_cap`) are naturally written as YAML pairs and the shipped
+`smoke_config.yaml` used the mapping form. A list raised
+`expected number or {min:, max:}`. **Fix:** `parse_range` now also accepts any
+two-element sequence and returns a `(lo, hi)` tuple; `is_range` reports both
+spellings.
+
+## 16. Stage-override spawn aliases bypassed range normalisation — FIXED
+**Area:** `src/utils/config_loader.py` (`_coerce_stage_overrides`)
+**Impact:** Inconsistent types. The flat stage aliases (`path_end_distance`,
+`path_speed_cap`, `path_shape`) and the nested `spawn:` sub-block were applied
+with a raw `setattr`, so a YAML list stayed a `list` while the built-in defaults
+were `(lo, hi)` tuples. Consumers that unpack or index worked either way, but
+`config_hash` and round-tripped configs disagreed with the defaults.
+**Fix:** new `_assign_stage_field` routes the six range-valued spawn fields
+through `parse_range` for both spellings, and `_STAGE_RANGE_SPAWN_FIELDS`
+documents the set.
+
+## 17. `load_models` rejected the pre-split `models:` wrapper — FIXED
+**Area:** `src/utils/model_loader.py` (`load_models`)
+**Impact:** Files written in the old single-run-config shape
+(`models: {id: {...}}` or `configs: {id: {...}}`) failed with a confusing
+`models: algo must be one of ['PPO','SAC','TD3'], got ''` — the wrapper key was
+being parsed as a model id. **Fix:** a single-key `models:`/`configs:` mapping is
+now unwrapped before validation, and a genuinely missing `algo` reports
+`missing required key 'algo'`.
+
+## 18. Stray `interceptor-training/src.zip` in the tree
+**Area:** `interceptor-training/src.zip` (151 KB)
+**Impact:** None at runtime, but it duplicates `interceptor-training/src/` inside
+the package directory. It is not referenced by the Dockerfile, the compose file
+or any script. **Action:** delete before the Phase I repository sync; if a zipped
+source snapshot is wanted for release notes, publish it as a release asset
+instead of committing it.
+
+## 19. `future_source` is stored as the string `"true"`/`"pred"`, not a bool
+**Area:** `src/utils/config_loader.py` (`FUTURE_SOURCES`, `ObservationConfig`)
+**Impact:** Cosmetic/API sharp edge. YAML `future_source: true` loads as the
+string `"true"` (the parser lower-cases and validates against
+`FUTURE_SOURCES = ("true", "pred")`), so `cfg.observation.future_source is True`
+is `False` even though `== "true"` works. Stage 8 configs must use `pred`, and a
+`false` value is rejected outright. **Acceptable:** Yes — one spelling for both
+the YAML boolean and the `"pred"` sentinel keeps `str` comparisons valid; callers
+should compare against `FUTURE_SOURCES`, not against a bool.

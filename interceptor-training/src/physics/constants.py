@@ -140,7 +140,7 @@ def _hover_cmd(u_bat: float = 4.2) -> float:
         return float(g[np.argmin(np.abs(om - PH_OMEGA_HOVER))])
 
 
-PH_C_HOVER = _hover_cmd()   # ~0.37 -- collective command at hover equilibrium
+PH_C_HOVER = _hover_cmd()   # 0.23253743635354834 -- collective command at hover
 
 # ---------------------------------------------------------------------------
 # Domain-randomization nominal values + default ranges

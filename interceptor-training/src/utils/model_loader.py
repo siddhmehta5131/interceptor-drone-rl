@@ -156,7 +156,12 @@ def _validate(model_id: str, c: Mapping[str, Any]) -> ModelDef:
         f"(letters/digits/underscore, not a keyword and not a dunder name)",
     )
 
-    algo = str(c.get("algo", "")).upper()
+    algo_raw = c.get("algo")
+    _require(
+        algo_raw is not None,
+        f"{model_id}: missing required key 'algo' (one of {sorted(_ALGOS)})",
+    )
+    algo = str(algo_raw).upper()
     _require(algo in _ALGOS, f"{model_id}: algo must be one of {sorted(_ALGOS)}, got {algo!r}")
     algo = algo
 
@@ -261,6 +266,10 @@ def model_def_from_dict(
 def load_models(path: Union[str, Path]) -> Dict[str, ModelDef]:
     """Load and validate every model definition in ``path``.
 
+    The canonical layout is a flat ``model_id -> definition`` mapping.  A
+    single-key ``models:``/``configs:`` wrapper (the pre-split run-config
+    shape) is also accepted so old files keep loading.
+
     Raises :class:`ConfigError` with a user-facing message on any problem.
     """
     import yaml
@@ -274,6 +283,13 @@ def load_models(path: Union[str, Path]) -> Dict[str, ModelDef]:
         raise ConfigError(f"{p}: invalid YAML -- {exc}") from exc
     if not isinstance(raw, Mapping):
         raise ConfigError(f"{p}: top level must be a mapping of model_id -> definition")
+    if len(raw) == 1 and next(iter(raw)) in ("models", "configs"):
+        inner = raw[next(iter(raw))]
+        _require(
+            isinstance(inner, Mapping),
+            f"{p}: '{next(iter(raw))}' must be a mapping of model_id -> definition",
+        )
+        raw = inner
 
     out: Dict[str, ModelDef] = {}
     for model_id, block in raw.items():

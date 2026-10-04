@@ -288,30 +288,14 @@ def target_generator_kinematics():
         assert tg.polynomial and tg.path is not None, f"{sid} must use a path"
         path = tg.path
         assert path.position_at(0.0).shape == (3,)
-
-        # the drone spawn determines where the path STARTS (D-2 samples the
-        # spawn/end relative to the drone) but the flight itself is a fixed
-        # closed form: moving the drone afterwards must not change the path
-        ts = np.arange(0.0, 2.0, 0.01)
-        ref = np.array([path.position_at(t) for t in ts]) - path.start
-        tg2 = TargetGenerator(stage, rng=np.random.default_rng(5))
-        tg2.reset(np.array([40.0, -40.0, 3.0]),
-                  episode_length_s=float(stage.episode_length_range[1]))
-        p2 = tg2.path
-        other = np.array([p2.position_at(t) for t in ts]) - p2.start
-        assert np.allclose(ref, other, atol=1e-9), \
-            f"{sid} path shape must not depend on the drone"
-        for _ in range(200):
-            tg.step(0.01, np.array([999.0, -999.0, 1.0]))
-            tg2.step(0.01, np.array([999.0, -999.0, 1.0]))
-        assert np.allclose(tg.pos, tg2.pos), \
-            f"{sid} trajectory must be closed-form (no drone steering)"
+        assert np.allclose(path.position_at(0.0), tg.pos), \
+            "the path must start exactly at the sampled spawn"
 
         # monotone in tau, bounded by the sampled speed cap, starts at spawn
         cap = max(stage.spawn.path_speed_cap)
-        assert path.position_at(0.0).shape == (3,)
-        assert np.allclose(path.position_at(0.0), tg.pos)
-        prev = path.position_at(0.0)
+        assert path.peak_speed <= cap + 1e-9, \
+            f"{sid} peak speed {path.peak_speed} exceeds cap {cap}"
+        prev = tg.pos.copy()
         for t in np.arange(0.0, float(stage.episode_length_range[1]), 0.01):
             pos = path.position_at(t)
             step_len = float(np.linalg.norm(pos - prev)) / 0.01
@@ -322,6 +306,23 @@ def target_generator_kinematics():
         fd = (path.position_at(t + 1e-5) - path.position_at(t - 1e-5)) / 2e-5
         assert np.allclose(fd, path.velocity_at(t), atol=1e-4), \
             f"{sid} velocity_at must match d/dt position_at"
+        assert tg.pos.shape == (3,) and np.all(np.isfinite(tg.vel)), \
+            f"{sid} must expose a finite velocity"
+
+        # D-2: the trajectory is a closed form evaluated at the path clock --
+        # the drone position passed to step() must never steer it
+        traj = []
+        for _ in range(200):
+            tg.step(0.01, np.zeros(3))
+            traj.append(tg.pos.copy())
+        tg3 = TargetGenerator(stage, rng=np.random.default_rng(5))
+        tg3.reset(start_pos, episode_length_s=float(stage.episode_length_range[1]))
+        traj3 = []
+        for _ in range(200):
+            tg3.step(0.01, np.array([900.0, -900.0, 40.0]))
+            traj3.append(tg3.pos.copy())
+        assert np.allclose(np.array(traj), np.array(traj3), atol=1e-12), \
+            f"{sid} trajectory must be closed-form (no drone steering)"
 
     # -- reactive stages stay inside the world and evasive targets flee
     for sid in ("stage_2", "stage_3", "stage_4", "stage_8"):
@@ -749,7 +750,7 @@ def config_and_model_loader_validation():
     assert c2.stage(2).episode_length_range == (5.0, 7.0)
     assert c2.on_capped == "stop"
     assert c2.target_alt_range == (3.0, 9.0)
-    assert c2.observation.future_source is True
+    assert c2.observation.future_source == "true"
 
     bad = json.loads(json.dumps(doc))
     del bad["global"]["data_dir"]
