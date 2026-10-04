@@ -1,0 +1,62 @@
+{
+  "schema": "stage-demo/1",
+  "stage": 8,
+  "title": "Stage 8 - Intercept an evasive target (steers away from the drone)",
+  "notes": "The evasive target reacts to the drone, so it has no closed-form path: future_source must stay \"pred\" here. Set control to \"model\" (or pass --model) to fly it with a trained policy.",
+  "control": "instructions",
+  "seed": 1008,
+  "segments": 3,
+  "segment_seconds": 3.0,
+  "reset_each_segment": true,
+  "target_alt": 5.0,
+  "instructions": {
+    "mode": "guidance",
+    "target": "target",
+    "max_tilt_deg": 40.0,
+    "max_speed": 13.0,
+    "lead_time_s": 0.5,
+    "gains": {
+      "k_pos": 0.8,
+      "k_vel": 2.7,
+      "k_rate": 0.55,
+      "k_thrust_z": 0.095,
+      "k_thrust_vz": 0.105,
+      "k_thrust_ff": 0.105,
+      "k_yaw": 0.6
+    }
+  },
+  "model": {
+    "path": "",
+    "algo": "PPO",
+    "model_id": "ppo_baseline",
+    "deterministic": true
+  },
+  "observation": {
+    "history_frames": 3,
+    "history_skip": 2,
+    "future_samples": 3,
+    "future_skip": 2,
+    "predictor": "const_vel",
+    "future_source": "pred",
+    "privileged_fields": [],
+    "auto_fit": true
+  },
+  "camera": {
+    "mode": "follow",
+    "distance": 24.0,
+    "azimuth_deg": 50.0,
+    "elevation_deg": 26.0,
+    "zoom": 1.0
+  },
+  "video": {
+    "name": "stage_08_evasive",
+    "format": "mp4",
+    "fps": 20,
+    "width_in": 12.8,
+    "height_in": 7.2,
+    "dpi": 100,
+    "bitrate": 4000,
+    "trail": 220,
+    "sidecar": true
+  }
+}

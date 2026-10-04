@@ -1,0 +1,44 @@
+{
+  "stage": 1,
+  "title": "Stage 1 - Hover / attitude hold",
+  "control": "instructions",
+  "controller": "guidance (hover), k_pos=0.55, k_vel=2.2, max_tilt=20.0 deg",
+  "config_file": "C:\\Users\\ADMIN\\Desktop\\projects\\RL based autonomous interceptor drone\\stage-runtime\\configs\\stage\\stage_01.json",
+  "seed": 1001,
+  "segments": 1,
+  "segment_seconds": 0.5,
+  "total_sim_seconds": 0.5,
+  "video": {
+    "path": "out\\stage_01_hover.png",
+    "format": "png",
+    "fps": 20,
+    "frame_stride": 5,
+    "frames": 5,
+    "duration_s": 0.25
+  },
+  "checkpoint": null,
+  "checkpoint_meta": null,
+  "observation": {
+    "history_frames": 0,
+    "history_skip": 1,
+    "future_samples": 0,
+    "future_skip": 1,
+    "predictor": "const_vel",
+    "future_source": "true",
+    "privileged_fields": []
+  },
+  "episodes": [
+    {
+      "segment": 1,
+      "seed": 1001,
+      "steps": 29,
+      "reward_sum": -216.959897,
+      "min_distance_m": null,
+      "max_tilt_deg": 65.845,
+      "killed": false
+    }
+  ],
+  "wall_seconds": 2.412,
+  "python": "3.14.6",
+  "platform": "Windows-11"
+}

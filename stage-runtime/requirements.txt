@@ -1,0 +1,5 @@
+numpy>=2.0.0
+gymnasium>=1.0.0
+matplotlib>=3.9.0
+imageio>=2.34.0
+imageio-ffmpeg>=0.5.1

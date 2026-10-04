@@ -1,0 +1,56 @@
+{
+  "schema": "stage-demo/1",
+  "stage": 3,
+  "title": "Stage 3 - Intercept a static target (kill radius 0.5 m)",
+  "notes": "First interception stage: the target holds position and a kill is scored inside 0.5 m. The orange wireframe is the kill sphere.",
+  "control": "instructions",
+  "seed": 1003,
+  "segments": 2,
+  "segment_seconds": 3.0,
+  "reset_each_segment": true,
+  "target_alt": 5.0,
+  "instructions": {
+    "mode": "guidance",
+    "target": "target",
+    "max_tilt_deg": 30.0,
+    "max_speed": 8.0,
+    "lead_time_s": 0.0,
+    "gains": {
+      "k_pos": 0.7,
+      "k_vel": 2.4,
+      "k_rate": 0.5,
+      "k_thrust_z": 0.09,
+      "k_thrust_vz": 0.1,
+      "k_thrust_ff": 0.1,
+      "k_yaw": 0.6
+    }
+  },
+  "observation": {
+    "history_frames": 3,
+    "history_skip": 2,
+    "future_samples": 3,
+    "future_skip": 2,
+    "predictor": "const_vel",
+    "future_source": "true",
+    "privileged_fields": [],
+    "auto_fit": true
+  },
+  "camera": {
+    "mode": "follow",
+    "distance": 16.0,
+    "azimuth_deg": 40.0,
+    "elevation_deg": 20.0,
+    "zoom": 1.0
+  },
+  "video": {
+    "name": "stage_03_static_kill",
+    "format": "mp4",
+    "fps": 20,
+    "width_in": 12.8,
+    "height_in": 7.2,
+    "dpi": 100,
+    "bitrate": 4000,
+    "trail": 220,
+    "sidecar": true
+  }
+}

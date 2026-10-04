@@ -58,6 +58,7 @@ interceptor-training/
 | 9 | Integration smoke (1 config, stages 1–3, 1000 steps each) | DONE — `run_summary.json` 2026-09-30; two runtime bugs found & fixed (see below) |
 | 10 | CURRENT_WORK.md / BUGS.md | DONE |
 | 11 | Critique-review remediation | DONE — all findings addressed; smoke suite re-run green |
+| 12 | stage-runtime package, JSON configs, Docker, smoke test | DONE |
 
 ## Verified behaviour (host, Windows: Python 3.14 / numpy / scipy / gymnasium only)
 
