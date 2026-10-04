@@ -5,8 +5,7 @@ was verified. Plan phases: **A** config split · **B** public API · **C** engin
 **D** environment · **E** observations/policy · **F** predictors · **G** rewards ·
 **H** smoke/fixes/docs · **I** repo sync, Docker, push.
 
-Overall completion: **95 %** (Phases A–I done except Docker validation). Remaining:
-Docker build, container smoke run and a fresh-clone check.
+Overall completion: **100 %** (Phases A–I complete).
 
 ---
 
@@ -364,3 +363,42 @@ scratch workspace, which still holds the legacy Swift/PyBullet simulators.
 
 **Verified:** `python scripts/smoke_test.py` re-run **from the synced repository**
 (not the workspace) -> `12 passed, 0 failed` (exit 0).
+
+---
+
+## 2026-10-04 - Phase I: Docker build, container validation and fresh-clone check
+
+**Why:** the SB3 paths (policy construction, `learn`, `PPO.load`, checkpoint
+sidecars, TensorBoard events) cannot be exercised on the Windows host, which has
+no torch. Phase I closes that gap and proves a fresh clone of the published
+repository is trainable.
+
+**Changed**
+- No source changes; one new defect was found and logged as `BUGS.md` item 20
+  (`--config` / `--models` default to `/data/configs/...` and fail outside
+  the compose mount; workaround is to pass the repo-relative paths).
+- Docker Desktop was not running on this host, so it was started before the build.
+
+**Verified**
+- `docker build -t interceptor-drone:v6.0 .` from the repository's
+  `interceptor-training/` -> exit 0 (base image
+  `pytorch/pytorch:2.7.0-cuda12.8-cudnn9-runtime`, daemon 29.8.1, linux, 4 CPUs).
+- Container smoke train, `--smoke --smoke-models ppo_baseline --smoke-stages 1,2
+  --smoke-steps 512`, artefacts written to a host-mounted `/data`:
+  exit 0, `974 steps in 12.8 s`, stage 2 seeded from the stage-1 checkpoint with
+  `copied 25, padded 4` (14 -> 105 observation columns, 12-column shared
+  prefix), both stages `capped` as expected for a 512-step budget.
+  Full artefact tree present: per-stage `*.zip` + `*.training_meta.json`,
+  `results/ppo_baseline/ppo_baseline.{zip,result.json}`,
+  `run_state.json`, `retries.json`, monitor CSVs and TensorBoard event files.
+- `scripts/evaluate.py --run <run> --stage 2 --episodes 5` -> exit 0; the saved
+  asymmetric policy reloaded through `PPO.load`, rolled out deterministically
+  and wrote `eval_ppo_baseline_stage_2.json`. (Metrics are meaningless for a
+  512-step model; the point of the run is the load/predict path.)
+- Full suite inside the image (torch 2.7.0 + SB3 present): `12 passed, 0 failed`.
+- Fresh `git clone` of `https://github.com/siddhmehta5131/interceptor-drone-rl.git`
+  into a new directory -> HEAD `254f621`, 62 files. Suite passes `12/12` on the
+  host **and** in the container, and a container smoke train from the clone exits 0.
+
+**Pushed:** commit `254f621` on `main`; tag `v6.0` (annotated) remains on
+`2a04093` and was not moved.

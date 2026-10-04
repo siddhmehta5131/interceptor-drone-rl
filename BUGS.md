@@ -195,3 +195,16 @@ is `False` even though `== "true"` works. Stage 8 configs must use `pred`, and a
 `false` value is rejected outright. **Acceptable:** Yes — one spelling for both
 the YAML boolean and the `"pred"` sentinel keeps `str` comparisons valid; callers
 should compare against `FUTURE_SOURCES`, not against a bool.
+## 20. Default `--config` / `--models` point at `/data/configs` and fail outside the compose mount
+**Area:** `interceptor-training/scripts/evaluate.py` (`DEFAULT_CONFIG`,
+`DEFAULT_MODEL_FILE`), same pattern in `scripts/train.py`
+**Impact:** Low, but confusing. Outside the compose layout (bare
+`docker run`, a fresh clone, an IDE run configuration) `/data/configs` does
+not exist, so `scripts/evaluate.py --run /data/runs/<id>` aborts with
+`ConfigError: config file not found: /data/configs/config.yaml` before it ever
+looks at the run directory. Reproduced during the Phase I Docker validation.
+**Workaround:** pass `--config configs/config.yaml --models configs/model.yaml`
+(relative to `interceptor-training/`), which then works unchanged.
+**Suggested fix:** when the default path is absent, fall back to
+`Path(__file__).resolve().parents[1] / 'configs' / <file>`, or make the loader
+raise a message that names the fallback path.

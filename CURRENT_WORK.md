@@ -1,11 +1,16 @@
 # CURRENT_WORK — RL-based Autonomous Interceptor Drone Training Pipeline
 
-Implementation of `implementation_plan.md` v1.0. All deliverables live in
-`interceptor-training/`. Status: **all phases complete — code complete, host-side
-smoke suite green (8/8), critique-review remediation merged, in-container CUDA
-smoke passed (Phase 9), repo published on GitHub as
-`siddhmehta5131/interceptor-drone-rl`, beginner Docker setup guide shipped.
-Ready for real multi-stage training.**
+Implementation of `implementation_plan.md` v1.0, then of the D-2 → D-58 design
+decisions (`implementation_plan_d2_d58.md`). All deliverables live in
+`interceptor-training/`. Status: **all phases complete.** The two-file config
+system (`configs/model.yaml` + `configs/config.yaml`), the public
+`train_model()` API, the asymmetric actor-critic policy, the predictors and the
+rewritten orchestrator are implemented; the host-side suite passes **12/12**;
+the Docker image builds, a container smoke train completes with stage-to-stage
+weight transfer, `evaluate.py` reloads the saved asymmetric policy, and a fresh
+clone of `siddhmehta5131/interceptor-drone-rl` reproduces all of it. Tag `v6.0`.
+See `IMPLEMENTATION_PROGRESS.md` for the per-task log and `BUGS.md` for the open
+defects.
 
 ---
 
@@ -16,15 +21,24 @@ interceptor-training/
 ├─ Dockerfile                 # pytorch/pytorch:2.7.0-cuda12.8-cudnn9-runtime
 ├─ docker-compose.yml         # nvidia runtime, GPU reservation, ./data:/data
 ├─ requirements.txt           # torch/SB3/gymnasium/numpy/scipy/tensorboard/pyyaml
-├─ configs/default_run.yaml   # global + 4 algo configs (ppo, sac, td3, ppo_deep)
+├─ configs/model.yaml          # architecture only: model_id -> algo/net_arch/
+│                              #   obs_history/hyperparameters/privileged_critic
+├─ configs/config.yaml         # training settings: seed, device, rollback policy,
+│                              #   observation history/future, per-stage overrides
+├─ run.py                      # public API demo (train_model / results / plots)
 ├─ src/
 │  ├─ physics/   constants, quaternion, aero, pipeline   (port of hover_env._ph_*)
 │  ├─ envs/      stage_config, obs_builder, reward, target_generator, base_env
-│  ├─ training/  curriculum, checkpoint_manager, callbacks, orchestrator
-│  └─ utils/     config_loader, logger
+│  ├─ prediction/ const_vel, linear_ridge + registry
+│  ├─ training/  curriculum, checkpoint_manager, callbacks, orchestrator,
+│  │             asymmetric_policy, weight_transfer
+│  ├─ utils/     config_loader, model_loader, logger
+│  ├─ api.py     # train_model(source, stages, name, ...) -> TrainResult
+│  └─ results.py # ModelResult / TrainResult containers
 ├─ scripts/train.py           # entrypoint (+ --smoke for in-container smoke)
 ├─ scripts/evaluate.py        # model evaluation against a stage
-├─ scripts/smoke_test.py      # host-side no-SB3 verification suite (8 tests)
+├─ scripts/smoke_test.py      # host-side no-SB3 verification suite (12 groups)
+├─ scripts/esc_diagnostic.py  # read-only Omega_ss sweep behind decision R-1
 └─ data/                      # host-mounted volume skeleton (checkpoints/,
                               # tb_logs/, curriculum_state/, results/)
 ```
@@ -242,3 +256,32 @@ on it).
   new `plan_2026-10-02.md`. Nothing else; no backups taken yet (S-00 is
   the first Phase 2 step); no deletions; no git/push/docker actions.
 - Status: **GATE — waiting for literal "APPROVED"** before Phase 2.
+## Session log - D-2 to D-58 implemented, v6.0 published (2026-10-04)
+
+- Decisions D-2 through D-58 of `implementation_plan_d2_d58.md` are implemented
+  in `interceptor-training/`: config split (A), public API and results (B),
+  orchestrator rewrite (C), environment (D), observations/policy (E), predictors
+  (F), reward terms (G) and smoke/fixes/docs (H). Repository sync, Docker build,
+  container validation and a fresh-clone check closed Phase I.
+- Authoritative repository is
+  `C:\Users\ADMIN\Desktop\projects\github_repos\rl-drone-flight-simulator`
+  (branch `main`, remote `https://github.com/siddhmehta5131/interceptor-drone-rl.git`).
+  The working directory holding this log is the scratch workspace and keeps the
+  legacy Swift/PyBullet simulators; it is **not** the published source.
+- Published state: `main` at `254f621`; annotated tag `v6.0` on `2a04093`.
+- Validation: `scripts/smoke_test.py` 12/12 on the host, inside the image and
+  from a fresh clone; container smoke train `974 steps / 12.8 s` on CPU with
+  stage-2 weights transferred from stage 1 (`copied 25, padded 4`);
+  `scripts/evaluate.py` reloads the asymmetric policy and writes its JSON.
+- Docker Desktop had to be started manually before the build; the daemon is
+  29.8.1 (linux, 4 CPUs, 3.9 GB RAM, no NVIDIA runtime), so GPU paths
+  (`device: cuda`, the compose `runtime: nvidia` block) remain unverified.
+- New known defect, logged not fixed: `BUGS.md` item 20 - `--config`/
+  `--models` default to `/data/configs/...` and fail outside the compose
+  mount; pass the repo-relative paths as a workaround.
+- Scratch edits that were reverted during the clean sync (kept outside the repo
+  in `%TEMP%/rl_target_scratch_config/`): `device: cuda`,
+  `on_capped: stop` and `future_samples: 0` in `configs/config.yaml`, and a
+  `td3_baseline` block in `configs/model.yaml`.
+- Next work, if requested: run the real 8-stage curriculum training on a GPU host
+  (stages 1-8 budgets total ~63 M steps), then evaluate and tag a release.
