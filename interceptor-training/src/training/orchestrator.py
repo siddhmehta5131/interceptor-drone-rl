@@ -368,7 +368,7 @@ class Orchestrator:
                     model_id, mdef, stage, vec, cm, idx, stage_cfgs, prior,
                     reentry, resume_state,
                 )
-                CallbackList, cur_cb = self._curriculum_callbacks(sched, cm, stage_id)
+                callbacks, cb = self._curriculum_callbacks(sched, cm, stage_id)
                 remaining = max(1, budget - int(model.num_timesteps))
 
                 self.log.info(
@@ -378,12 +378,12 @@ class Orchestrator:
                 model.learn(
                     total_timesteps=remaining,
                     reset_num_timesteps=False,
-                    callback=cb,
+                    callback=callbacks,
                     tb_log_name=f"{algo}_{stage_id}",
                     log_interval=self._log_interval,
                     progress_bar=False,
                 )
-                result = cur_cb.stage_finished or CAPPED
+                result = cb.stage_finished or CAPPED
                 steps_here = int(model.num_timesteps)
                 rate = float(sched.rate())
                 total_steps += steps_here
