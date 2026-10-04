@@ -98,12 +98,17 @@ def _smoke_config(path: str, stages, steps: int, data_dir=None):
     from src.utils.config_loader import load_config
 
     cfg = load_config(path)
+    budget = max(1, int(steps))
     for n in stages:
         key = f"stage_{int(n)}"
+        # Patch the pre-built StageConfig object directly.
+        # (stage_overrides is applied at load time; mutating it afterward has
+        # no effect on cfg.stages which the orchestrator reads.)
+        if key in cfg.stages:
+            cfg.stages[key].max_training_steps = budget
+        # Also update stage_overrides so recompute_hash() sees the change.
         overrides = dict(cfg.stage_overrides.get(key, {}))
-        overrides["max_training_steps"] = max(1, int(steps))
-        # A smoke run must march forward even when a stage cannot reach its
-        # success target, and it must not spend budget on rollback retries.
+        overrides["max_training_steps"] = budget
         cfg.stage_overrides[key] = overrides
     if data_dir:
         cfg.global_cfg["data_dir"] = data_dir
