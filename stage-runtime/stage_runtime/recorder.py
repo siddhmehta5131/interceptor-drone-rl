@@ -16,6 +16,7 @@ import matplotlib
 matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt  # noqa: E402
+import matplotlib.animation      # noqa: E402
 
 
 class RecorderError(RuntimeError):
@@ -29,7 +30,7 @@ def ffmpeg_available() -> bool:
     except ImportError:
         return False
     try:
-        matplotlib.animation.ffmpeg = imageio_ffmpeg.get_ffmpeg_exe()
+        matplotlib.rcParams['animation.ffmpeg_path'] = imageio_ffmpeg.get_ffmpeg_exe()
     except Exception:            # pragma: no cover - depends on wheel layout
         return False
     return matplotlib.animation.writers.is_available("ffmpeg")
@@ -83,10 +84,10 @@ class FrameRecorder:
                 bitrate=self.bitrate,
                 metadata={"title": self.path.stem, "artist": "interceptor-stage-runtime"},
             )
-            self._writer.setup(clear=False)
+            self._is_setup = False
         elif self.fmt == "gif":
             self._writer = matplotlib.animation.PillowWriter(fps=self.fps)
-            self._writer.setup(clear=False)
+            self._is_setup = False
         elif self.fmt == "png":
             self._writer = None      # numbered files, written in `grab`
         else:
@@ -98,7 +99,10 @@ class FrameRecorder:
             out = self.path.with_name(f"{self.path.stem}_{self.count:05d}.png")
             fig.savefig(out, dpi=self.dpi)
         else:
-            self._writer.grab_frame(fig)
+            if not getattr(self, "_is_setup", True):
+                self._writer.setup(fig, str(self.path), dpi=self.dpi)
+                self._is_setup = True
+            self._writer.grab_frame()
         self.count += 1
 
     def close(self) -> None:

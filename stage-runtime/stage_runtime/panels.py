@@ -107,7 +107,7 @@ class StagePanel:
                                           color="#ff7f0e", ls="none", zorder=7)
         (self._target_pred,) = self.ax3d.plot([], [], [], marker="x", ms=7,
                                               color="#9467bd", ls="none", zorder=7)
-        self._kill_sphere = self._plot_sphere()
+        self._kill_sphere_artist = None
         self._trail_drone = deque(maxlen=self.trail)
         self._trail_target = deque(maxlen=self.trail)
         (self._line_drone,) = self.ax3d.plot([], [], [], color="#1f77b4", lw=1.4,
@@ -177,22 +177,20 @@ class StagePanel:
 
     # -- helpers ---------------------------------------------------------
 
-    def _plot_sphere(self):
-        u = np.linspace(0.0, 2.0 * np.pi, 40)
-        v = np.linspace(0.0, np.pi, 20)
-        x = np.outer(np.cos(u), np.sin(v))
-        y = np.outer(np.sin(u), np.sin(v))
-        z = np.outer(np.ones_like(u), np.cos(v))
-        return self.ax3d.plot_wireframe(x, y, z, color="#d62728", lw=0.4, alpha=0.35)
-
     def _set_sphere(self, center: np.ndarray, radius: float) -> None:
+        if getattr(self, "_kill_sphere_artist", None) is not None:
+            self._kill_sphere_artist.remove()
+            self._kill_sphere_artist = None
+            
         if radius <= 0.0:
-            self._kill_sphere.set_visible(False)
             return
-        self._kill_sphere.set_visible(True)
-        self._kill_sphere.set_xyz((x + center[0]) * radius,
-                                  (y + center[1]) * radius,
-                                  (z + center[2]) * radius)
+            
+        u = np.linspace(0.0, 2.0 * np.pi, 20)
+        v = np.linspace(0.0, np.pi, 10)
+        x = center[0] + radius * np.outer(np.cos(u), np.sin(v))
+        y = center[1] + radius * np.outer(np.sin(u), np.sin(v))
+        z = center[2] + radius * np.outer(np.ones_like(u), np.cos(v))
+        self._kill_sphere_artist = self.ax3d.plot_wireframe(x, y, z, color="#d62728", lw=0.4, alpha=0.35)
 
     def _camera(self, p: np.ndarray) -> None:
         """Follow / fixed / overview box around the drone and the target."""
@@ -252,7 +250,7 @@ class StagePanel:
         else:
             self._target.set_visible(False)
             self._target_pred.set_visible(False)
-            self._kill_sphere.set_visible(False)
+            self._set_sphere(np.zeros(3), 0.0)
 
         if len(self._trail_drone) > 1:
             arr = np.asarray(self._trail_drone)

@@ -5,7 +5,7 @@ was verified. Plan phases: **A** config split · **B** public API · **C** engin
 **D** environment · **E** observations/policy · **F** predictors · **G** rewards ·
 **H** smoke/fixes/docs · **I** repo sync, Docker, push.
 
-Overall completion: **100 %** (Phases A–I complete).
+Overall completion: **100 %** (Phases A–I complete, Phase J `stage-runtime` added).
 
 ---
 
@@ -402,3 +402,11 @@ repository is trainable.
 
 **Pushed:** commit `254f621` on `main`; tag `v6.0` (annotated) remains on
 `2a04093` and was not moved.
+
+## Session log � Phase J stage-runtime (2026-10-04)
+
+- Wrote the stage-runtime package to run standalone environments.
+- Created Dockerfile and docker-compose.yml to isolate dependencies (matplotlib, imageio-ffmpeg).
+- Host validation: Smoke test successfully completed; successfully rendered Stage 1 to PNG frames.
+- Docker validation: Smoke test passed; Stages 1, 3, and 8 were successfully rendered to MP4 (10, 5, and 66 frames respectively) via imageio-ffmpeg.
+- Synced the stage-runtime directory to the published interceptor-drone-rl repository and pushed changes to main.
