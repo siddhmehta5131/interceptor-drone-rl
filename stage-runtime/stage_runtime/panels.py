@@ -108,7 +108,7 @@ class StagePanel:
         (self._props_rear,) = self.ax3d.plot([], [], [], color=REAR_C, lw=1.2, alpha=0.9, zorder=7)
         (self._props_front,) = self.ax3d.plot([], [], [], color=FRONT_C, lw=1.2, alpha=0.9, zorder=7)
         (self._gear,) = self.ax3d.plot([], [], [], color=GEAR_C, lw=2.0, zorder=4)
-        (self._camera,) = self.ax3d.plot([], [], [], color="#1f77b4", lw=2.0, marker="o", ms=5, markevery=[1], zorder=8)
+        (self._camera_gimbal,) = self.ax3d.plot([], [], [], color="#1f77b4", lw=2.0, marker="o", ms=5, markevery=[1], zorder=8)
         (self._nose,) = self.ax3d.plot([], [], [], color=FRONT_C, lw=3.5, marker=">", ms=6, markevery=[1], zorder=8)
         (self._body,) = self.ax3d.plot([], [], [], marker="o", color="#111111", ms=4, ls="none", zorder=6)
         
@@ -272,7 +272,7 @@ class StagePanel:
         self._set(self._props_front,self._g_props_front, p, R)
         self._set(self._props_rear, self._g_props_rear,  p, R)
         self._set(self._gear,       self._g_gear,        p, R)
-        self._set(self._camera,     self._g_camera,      p, R)
+        self._set(self._camera_gimbal, self._g_camera,   p, R)
         self._set(self._nose,       self._g_nose,        p, R)
         self._set(self._body,       self._g_center,      p, R)
 
