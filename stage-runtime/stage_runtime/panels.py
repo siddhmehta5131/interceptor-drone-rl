@@ -98,11 +98,16 @@ class StagePanel:
         self.ax3d.set_zlim(0, 12)
         self.ax3d.view_init(elev=cfg.camera.elevation_deg, azim=cfg.camera.azimuth_deg)
         self.ax3d.grid(True, alpha=0.25)
-        (self._body,) = self.ax3d.plot([], [], [], color="#111111", lw=3.0,
-                                       solid_capstyle="round", zorder=6)
-        (self._body_x,) = self.ax3d.plot([], [], [], color="#d62728", lw=1.6)
-        (self._body_y,) = self.ax3d.plot([], [], [], color="#2ca02c", lw=1.6)
-        (self._body_z,) = self.ax3d.plot([], [], [], color="#1f77b4", lw=1.6)
+        (self._body,) = self.ax3d.plot([], [], [], marker="o", color="#111111", ms=6,
+                                       zorder=6)
+        # Drone wireframe
+        (self._arm1,) = self.ax3d.plot([], [], [], color="#444444", lw=2.0, zorder=5)
+        (self._arm2,) = self.ax3d.plot([], [], [], color="#444444", lw=2.0, zorder=5)
+        (self._front_dir,) = self.ax3d.plot([], [], [], color="#d62728", lw=3.0, zorder=6)
+        (self._rear_rotors,) = self.ax3d.plot([], [], [], marker="o", ms=4,
+                                              color="#444444", ls="none", zorder=7)
+        (self._front_rotors,) = self.ax3d.plot([], [], [], marker="o", ms=5,
+                                               color="#d62728", ls="none", zorder=7)
         (self._target,) = self.ax3d.plot([], [], [], marker="^", ms=9,
                                           color="#ff7f0e", ls="none", zorder=7)
         (self._target_pred,) = self.ax3d.plot([], [], [], marker="x", ms=7,
@@ -164,9 +169,8 @@ class StagePanel:
             transform=self.ax_hud.transAxes,
         )
         self._legend = [
-            Line2D([0], [0], color="#d62728", lw=1.6, label="body x (forward)"),
-            Line2D([0], [0], color="#2ca02c", lw=1.6, label="body y (right)"),
-            Line2D([0], [0], color="#1f77b4", lw=1.6, label="body z (up)"),
+            Line2D([0], [0], color="#d62728", lw=2.5, label="drone front"),
+            Line2D([0], [0], color="#444444", lw=2.0, label="drone arms"),
             Line2D([0], [0], marker="^", color="w", markerfacecolor="#ff7f0e",
                    ls="none", ms=8, label="target"),
             Line2D([0], [0], marker="x", color="w", markerfacecolor="#9467bd",
@@ -224,13 +228,39 @@ class StagePanel:
         # drone marker (a small sphere-ish dot) + body triad
         self._body.set_data([p[0]], [p[1]])
         self._body.set_3d_properties([p[2]])
+        # drone model update
         arm = 0.22
-        for line, axis, colour_axis in (
-            (self._body_x, 0, None), (self._body_y, 1, None), (self._body_z, 2, None)
-        ):
-            tip = p + arm * R[:, axis]
-            line.set_data([p[0], tip[0]], [p[1], tip[1]])
-            line.set_3d_properties([p[2], tip[2]])
+        dx = arm * np.cos(np.pi / 4.0)
+        dy = arm * np.sin(np.pi / 4.0)
+        
+        # local coordinates
+        local_fr = np.array([dx, -dy, 0.0])
+        local_fl = np.array([dx, dy, 0.0])
+        local_rr = np.array([-dx, -dy, 0.0])
+        local_rl = np.array([-dx, dy, 0.0])
+        local_front = np.array([arm * 1.5, 0.0, 0.0])
+        
+        # world coordinates
+        fr = p + R @ local_fr
+        fl = p + R @ local_fl
+        rr = p + R @ local_rr
+        rl = p + R @ local_rl
+        front_tip = p + R @ local_front
+        
+        self._arm1.set_data([rl[0], fr[0]], [rl[1], fr[1]])
+        self._arm1.set_3d_properties([rl[2], fr[2]])
+        
+        self._arm2.set_data([rr[0], fl[0]], [rr[1], fl[1]])
+        self._arm2.set_3d_properties([rr[2], fl[2]])
+        
+        self._front_dir.set_data([p[0], front_tip[0]], [p[1], front_tip[1]])
+        self._front_dir.set_3d_properties([p[2], front_tip[2]])
+        
+        self._rear_rotors.set_data([rl[0], rr[0]], [rl[1], rr[1]])
+        self._rear_rotors.set_3d_properties([rl[2], rr[2]])
+        
+        self._front_rotors.set_data([fl[0], fr[0]], [fl[1], fr[1]])
+        self._front_rotors.set_3d_properties([fl[2], fr[2]])
 
         if f.include_target and f.target_pos is not None:
             tp = np.asarray(f.target_pos, dtype=np.float64)
