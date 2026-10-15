@@ -1,0 +1,14 @@
+﻿__pycache__/
+*.pyc
+*.pyo
+.env
+data/
+*.zip
+*.tar.gz
+models and meta data stage 1-8.zip
+final_videos/
+*.mp4
+*.avi
+.idea/
+.vscode/
+desktop.ini

@@ -1,0 +1,57 @@
+{
+  "stage": 3,
+  "title": "Stage 3 - Intercept a static target (kill radius 0.5 m)",
+  "control": "instructions",
+  "controller": "guidance (target), k_pos=0.7, k_vel=2.4, max_tilt=30.0 deg",
+  "config_file": "/app/stage-runtime/configs/stage/stage_03.json",
+  "seed": 1003,
+  "segments": 2,
+  "segment_seconds": 3.0,
+  "total_sim_seconds": 6.0,
+  "video": {
+    "path": "/app/stage-runtime/out/stage_03_static_kill.mp4",
+    "format": "mp4",
+    "fps": 20,
+    "frame_stride": 5,
+    "frames": 5,
+    "duration_s": 0.25,
+    "bytes": 110098,
+    "codec": "h264",
+    "width": 1280,
+    "height": 720
+  },
+  "checkpoint": null,
+  "checkpoint_meta": null,
+  "observation": {
+    "history_frames": 3,
+    "history_skip": 2,
+    "future_samples": 3,
+    "future_skip": 2,
+    "predictor": "const_vel",
+    "future_source": "true",
+    "privileged_fields": []
+  },
+  "episodes": [
+    {
+      "segment": 1,
+      "seed": 1003,
+      "steps": 17,
+      "reward_sum": -208.56609,
+      "min_distance_m": 11.4037,
+      "max_tilt_deg": 64.021,
+      "killed": false
+    },
+    {
+      "segment": 2,
+      "seed": 2003,
+      "steps": 13,
+      "reward_sum": -218.217412,
+      "min_distance_m": 26.3192,
+      "max_tilt_deg": 65.603,
+      "killed": false
+    }
+  ],
+  "wall_seconds": 3.769,
+  "python": "3.12.15",
+  "platform": "Linux-6.18.40.1-microsoft-standard-WSL2-x86_64-with-glibc2.41"
+}

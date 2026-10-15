@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  stage-runtime:
+    build:
+      context: ..
+      dockerfile: stage-runtime/Dockerfile
+    volumes:
+      - ../interceptor-training:/app/interceptor-training:ro
+      - .:/app/stage-runtime
+    environment:
+      - STAGE_OUT_DIR=/app/stage-runtime/out
+      - STAGE_DATA_ROOTS=/app/interceptor-training/data

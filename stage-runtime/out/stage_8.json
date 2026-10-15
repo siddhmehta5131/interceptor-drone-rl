@@ -1,0 +1,66 @@
+{
+  "stage": 8,
+  "title": "Stage 8 - Intercept an evasive target (steers away from the drone)",
+  "control": "instructions",
+  "controller": "guidance (target), k_pos=0.8, k_vel=2.7, max_tilt=40.0 deg",
+  "config_file": "/app/stage-runtime/configs/stage/stage_08.json",
+  "seed": 1008,
+  "segments": 3,
+  "segment_seconds": 3.0,
+  "total_sim_seconds": 9.0,
+  "video": {
+    "path": "/app/stage-runtime/out/stage_08_evasive.mp4",
+    "format": "mp4",
+    "fps": 20,
+    "frame_stride": 5,
+    "frames": 66,
+    "duration_s": 3.3,
+    "bytes": 1162369,
+    "codec": "h264",
+    "width": 1280,
+    "height": 720
+  },
+  "checkpoint": null,
+  "checkpoint_meta": null,
+  "observation": {
+    "history_frames": 3,
+    "history_skip": 2,
+    "future_samples": 3,
+    "future_skip": 2,
+    "predictor": "const_vel",
+    "future_source": "pred",
+    "privileged_fields": []
+  },
+  "episodes": [
+    {
+      "segment": 1,
+      "seed": 1008,
+      "steps": 110,
+      "reward_sum": -202.269872,
+      "min_distance_m": 49.0501,
+      "max_tilt_deg": 1.031,
+      "killed": false
+    },
+    {
+      "segment": 2,
+      "seed": 2008,
+      "steps": 110,
+      "reward_sum": -202.31183,
+      "min_distance_m": 25.0518,
+      "max_tilt_deg": 3.579,
+      "killed": false
+    },
+    {
+      "segment": 3,
+      "seed": 3008,
+      "steps": 110,
+      "reward_sum": -202.005295,
+      "min_distance_m": 37.0048,
+      "max_tilt_deg": 0.882,
+      "killed": false
+    }
+  ],
+  "wall_seconds": 27.641,
+  "python": "3.12.15",
+  "platform": "Linux-6.18.40.1-microsoft-standard-WSL2-x86_64-with-glibc2.41"
+}

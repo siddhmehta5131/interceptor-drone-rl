@@ -1,0 +1,56 @@
+{
+  "schema": "stage-demo/1",
+  "stage": 6,
+  "title": "Stage 6 - Intercept an accelerating target (order 2)",
+  "notes": "The target re-samples its acceleration every segment, so the pure constant-velocity predictor lags; the observation block can be switched to a ridge predictor.",
+  "control": "instructions",
+  "seed": 1006,
+  "segments": 2,
+  "segment_seconds": 3.0,
+  "reset_each_segment": true,
+  "target_alt": 5.0,
+  "instructions": {
+    "mode": "guidance",
+    "target": "target",
+    "max_tilt_deg": 35.0,
+    "max_speed": 11.0,
+    "lead_time_s": 0.5,
+    "gains": {
+      "k_pos": 0.7,
+      "k_vel": 2.5,
+      "k_rate": 0.5,
+      "k_thrust_z": 0.09,
+      "k_thrust_vz": 0.1,
+      "k_thrust_ff": 0.1,
+      "k_yaw": 0.6
+    }
+  },
+  "observation": {
+    "history_frames": 3,
+    "history_skip": 2,
+    "future_samples": 3,
+    "future_skip": 2,
+    "predictor": "linear_ridge",
+    "future_source": "true",
+    "privileged_fields": [],
+    "auto_fit": true
+  },
+  "camera": {
+    "mode": "follow",
+    "distance": 20.0,
+    "azimuth_deg": 45.0,
+    "elevation_deg": 24.0,
+    "zoom": 1.0
+  },
+  "video": {
+    "name": "stage_06_accelerating",
+    "format": "mp4",
+    "fps": 20,
+    "width_in": 12.8,
+    "height_in": 7.2,
+    "dpi": 100,
+    "bitrate": 4000,
+    "trail": 220,
+    "sidecar": true
+  }
+}

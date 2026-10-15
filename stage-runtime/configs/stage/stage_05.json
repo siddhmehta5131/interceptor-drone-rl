@@ -1,0 +1,56 @@
+{
+  "schema": "stage-demo/1",
+  "stage": 5,
+  "title": "Stage 5 - Intercept a constant-velocity target",
+  "notes": "The target follows a straight closed-form path; the guidance law leads it, which is what makes the intercept non-trivial.",
+  "control": "instructions",
+  "seed": 1005,
+  "segments": 2,
+  "segment_seconds": 3.0,
+  "reset_each_segment": true,
+  "target_alt": 5.0,
+  "instructions": {
+    "mode": "guidance",
+    "target": "target",
+    "max_tilt_deg": 32.0,
+    "max_speed": 10.0,
+    "lead_time_s": 0.4,
+    "gains": {
+      "k_pos": 0.7,
+      "k_vel": 2.5,
+      "k_rate": 0.5,
+      "k_thrust_z": 0.09,
+      "k_thrust_vz": 0.1,
+      "k_thrust_ff": 0.1,
+      "k_yaw": 0.6
+    }
+  },
+  "observation": {
+    "history_frames": 3,
+    "history_skip": 2,
+    "future_samples": 3,
+    "future_skip": 2,
+    "predictor": "const_vel",
+    "future_source": "true",
+    "privileged_fields": [],
+    "auto_fit": true
+  },
+  "camera": {
+    "mode": "follow",
+    "distance": 18.0,
+    "azimuth_deg": 45.0,
+    "elevation_deg": 22.0,
+    "zoom": 1.0
+  },
+  "video": {
+    "name": "stage_05_constant_velocity",
+    "format": "mp4",
+    "fps": 20,
+    "width_in": 12.8,
+    "height_in": 7.2,
+    "dpi": 100,
+    "bitrate": 4000,
+    "trail": 220,
+    "sidecar": true
+  }
+}

@@ -1,0 +1,50 @@
+# model.yaml -- model definitions (user-edited).
+#
+# Each top-level key is a `model_id`.  A model_id must be a valid Python
+# identifier (letters/digits/underscore, not starting with a digit) so that
+# it can be used as an attribute on the `TrainResult` returned by
+# `train_model()` (e.g. `result.ppo_baseline`).
+#
+# This is the ONLY place where model architecture lives.  Training settings
+# (seed, rollback policy, observation history/future, episode target
+# altitude, per-stage overrides) live in `config.yaml`.
+#
+# Fields
+# ------
+#   algo            PPO | SAC | TD3
+#   policy          MlpPolicy (only supported policy)
+#   net_arch        {pi: [...], vf: [...]}   (vf -> qf for SAC/TD3)
+#                   A bare list [256, 256] is expanded to {pi: [...], vf: ...}
+#   activation      ReLU | Tanh | ELU
+#   obs_history     {frames: m, skip: p}     -- past-frame stacking
+#   hyperparameters Algorithm hyperparameters passed straight to SB3
+#   privileged_critic  Optional list of critic-only observation fields the
+#                   actor never sees (asymmetric actor-critic, D-11).
+#                   Supported names:
+#                     time_remaining    normalised time left in the episode
+#                     facing_error      yaw error to the target (radians)
+#                     target_true_pos   ideal-minus-observed relative x/y/z
+#                     target_true_vel   ideal-minus-observed relative vx/vy/vz
+
+ppo_baseline:
+  algo: PPO
+  policy: MlpPolicy
+  net_arch: {pi: [256, 256, 128], vf: [256, 256, 128]}
+  activation: ReLU
+  obs_history: {frames: 3, skip: 2}
+  hyperparameters:
+    n_steps: 4096
+    batch_size: 512
+    gamma: 0.995
+    learning_rate: 3.0e-4
+    gae_lambda: 0.95
+    clip_range: 0.2
+    ent_coef: 0.005
+    n_epochs: 10
+    max_grad_norm: 0.5
+    vf_coef: 0.5
+  privileged_critic:
+    - time_remaining
+    - facing_error
+    - target_true_pos
+    - target_true_vel

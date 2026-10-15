@@ -1,0 +1,69 @@
+{
+  "model_id": "ppo_baseline",
+  "algo": "PPO",
+  "hyperparameters": {
+    "n_steps": 1024,
+    "batch_size": 512,
+    "gamma": 0.995,
+    "learning_rate": 0.0003,
+    "gae_lambda": 0.95,
+    "clip_range": 0.2,
+    "ent_coef": 0.005,
+    "n_epochs": 10,
+    "max_grad_norm": 0.5,
+    "vf_coef": 0.5
+  },
+  "net_arch": {
+    "pi": [
+      256,
+      256,
+      128
+    ],
+    "vf": [
+      256,
+      256,
+      128
+    ]
+  },
+  "config_hash": "5755808ced6c18e3a3dab6e480e8ff2bd04a58a5523ac948f296b950eca1d17d",
+  "model_def": {
+    "model_id": "ppo_baseline",
+    "algo": "PPO",
+    "policy": "MlpPolicy",
+    "net_arch": {
+      "pi": [
+        256,
+        256,
+        128
+      ],
+      "vf": [
+        256,
+        256,
+        128
+      ]
+    },
+    "activation": "ReLU",
+    "obs_history": {
+      "frames": 3,
+      "skip": 2
+    },
+    "hyperparameters": {
+      "n_steps": 1024,
+      "batch_size": 512,
+      "gamma": 0.995,
+      "learning_rate": 0.0003,
+      "gae_lambda": 0.95,
+      "clip_range": 0.2,
+      "ent_coef": 0.005,
+      "n_epochs": 10,
+      "max_grad_norm": 0.5,
+      "vf_coef": 0.5
+    },
+    "privileged_critic": [
+      "time_remaining",
+      "facing_error",
+      "target_true_pos",
+      "target_true_vel"
+    ]
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "schema": "stage-demo/1",
+  "stage": 1,
+  "title": "Physics simulator - scripted manoeuvre (RK4)",
+  "notes": "Model-free guided flight through a fixed script: climb, cardinal translations (left/right/front/back), outward spiral, circle, inward spiral, descent. Uses the training environment's RK4 physics pipeline (command_from_action -> PID rate control -> RK4 step) with the fixed GuidanceLaw, no learned policy.",
+  "control": "instructions",
+  "seed": 1001,
+  "segments": 1,
+  "segment_seconds": 47.0,
+  "reset_each_segment": true,
+  "target_alt": 5.0,
+  "stage_overrides": {
+    "episode_length_s": 60.0
+  },
+  "instructions": {
+    "mode": "guidance",
+    "target": "hover",
+    "max_tilt_deg": 35.0,
+    "max_speed": 6.0,
+    "max_stick": 0.30,
+    "lead_time_s": 0.0,
+    "gains": {
+      "k_pos": 0.90,
+      "k_vel": 3.5,
+      "k_rate": 0.42,
+      "k_thrust_z": 0.075,
+      "k_thrust_vz": 0.085,
+      "k_thrust_ff": 0.085,
+      "k_yaw": 0.6
+    }
+  },
+  "observation": {
+    "history_frames": 0,
+    "history_skip": 1,
+    "future_samples": 0,
+    "future_skip": 1,
+    "predictor": "const_vel",
+    "future_source": "true",
+    "privileged_fields": [],
+    "auto_fit": true
+  },
+  "camera": {
+    "mode": "follow",
+    "distance": 16.0,
+    "azimuth_deg": 35.0,
+    "elevation_deg": 22.0,
+    "zoom": 1.0
+  },
+  "video": {
+    "name": "physics_simulator_maneuver",
+    "format": "mp4",
+    "fps": 20,
+    "width_in": 12.8,
+    "height_in": 7.2,
+    "dpi": 100,
+    "bitrate": 4000,
+    "trail": 940,
+    "sidecar": false
+  }
+}

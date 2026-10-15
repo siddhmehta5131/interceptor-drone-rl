@@ -1,0 +1,22 @@
+version: "3.8"
+
+services:
+  interceptor-train:
+    build: .
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    volumes:
+      # Host data directory (checkpoints, tb_logs, curriculum_state, results)
+      - ./data:/data
+      # Host configs are mounted read-write onto /data/configs so the run
+      # YAML can be edited without rebuilding the image.
+      - ./configs:/data/configs
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]

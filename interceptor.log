@@ -1,0 +1,57 @@
+2026-09-30 13:04:51 INFO    [interceptor.train] config=/data/configs/default_run.yaml data_dir=/data
+2026-09-30 13:04:51 INFO    [interceptor.orchestrator] run_id=20260930-130451 device=cuda data_dir=/data
+2026-09-30 13:04:51 INFO    [interceptor.orchestrator] SMOKE mode: config=ppo_baseline stages=[1, 2, 3] steps/stage=1000
+2026-09-30 13:04:51 INFO    [interceptor.orchestrator] === config ppo_baseline | algo PPO | device cuda | stages [1, 2, 3]
+2026-09-30 13:04:51 INFO    [interceptor.orchestrator] -- stage stage_1 (Hover/Attitude) budget=1000 retries=0 reentry=False
+2026-09-30 13:04:52 WARNING [interceptor.orchestrator] SubprocVecEnv unavailable -- using DummyVecEnv
+2026-09-30 13:04:52 INFO    [interceptor.orchestrator] learning: remaining=1000 (already 0)
+2026-09-30 13:04:53 INFO    [interceptor.orchestrator] stage stage_1 result=capped steps=784 success_rate=0.000
+2026-09-30 13:04:53 WARNING [interceptor.orchestrator] stage stage_1 capped -- did not converge
+2026-09-30 13:04:53 INFO    [interceptor.orchestrator] -- stage stage_2 (Directional Flight/Waypoint) budget=1000 retries=0 reentry=False
+2026-09-30 13:04:53 WARNING [interceptor.orchestrator] SubprocVecEnv unavailable -- using DummyVecEnv
+2026-09-30 13:04:53 INFO    [interceptor.orchestrator] learning: remaining=1000 (already 0)
+2026-09-30 13:04:53 INFO    [interceptor.orchestrator] stage stage_2 result=capped steps=872 success_rate=0.000
+2026-09-30 13:04:53 WARNING [interceptor.orchestrator] stage stage_2 capped -- did not converge
+2026-09-30 13:04:53 INFO    [interceptor.orchestrator] -- stage stage_3 (Static Target Intercept) budget=1000 retries=0 reentry=False
+2026-09-30 13:04:53 WARNING [interceptor.orchestrator] SubprocVecEnv unavailable -- using DummyVecEnv
+2026-09-30 13:04:54 INFO    [interceptor.orchestrator] transferred weights from PPO_stage_2_final.zip
+2026-09-30 13:04:54 INFO    [interceptor.orchestrator] learning: remaining=1000 (already 0)
+2026-09-30 13:04:54 INFO    [interceptor.orchestrator] stage stage_3 result=capped steps=968 success_rate=0.000
+2026-09-30 13:04:54 WARNING [interceptor.orchestrator] stage stage_3 capped -- did not converge
+2026-09-30 13:04:54 INFO    [interceptor.orchestrator] config ppo_baseline COMPLETED final_model=/data/results/ppo_baseline_final.zip
+2026-09-30 13:04:54 INFO    [interceptor.orchestrator] run_summary written to /data/results/run_summary.json
+2026-09-30 13:04:54 INFO    [interceptor.train] === TRAINING SUMMARY ===
+2026-09-30 13:04:54 INFO    [interceptor.train] {
+  "run_id": "20260930-130451",
+  "config_file": "/data/configs/default_run.yaml",
+  "config_hash": "4ff52e718eca859d5bd542768f797eb1c23c99f3d3df3b0c17f3aa39c2f76c09",
+  "device": "cuda",
+  "data_dir": "/data",
+  "started": "2026-09-30 13:04:51",
+  "configs": {
+    "ppo_baseline": {
+      "algo": "PPO",
+      "stages": {
+        "1": {
+          "result": "capped",
+          "steps": 784,
+          "success_rate": 0.0
+        },
+        "2": {
+          "result": "capped",
+          "steps": 872,
+          "success_rate": 0.0
+        },
+        "3": {
+          "result": "capped",
+          "steps": 968,
+          "success_rate": 0.0
+        }
+      },
+      "final_model": "/data/results/ppo_baseline_final.zip",
+      "steps": 2624
+    }
+  },
+  "finished": "2026-09-30 13:04:54",
+  "wall_seconds": 2.7
+}

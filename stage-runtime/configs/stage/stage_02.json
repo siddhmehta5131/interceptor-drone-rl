@@ -1,0 +1,56 @@
+{
+  "schema": "stage-demo/1",
+  "stage": 2,
+  "title": "Stage 2 - Directional flight to a sampled waypoint",
+  "notes": "Static waypoint: the drone has to fly there and settle. Success in training is a final distance <= 2.0 m.",
+  "control": "instructions",
+  "seed": 1002,
+  "segments": 2,
+  "segment_seconds": 3.0,
+  "reset_each_segment": true,
+  "target_alt": 5.0,
+  "instructions": {
+    "mode": "guidance",
+    "target": "waypoint",
+    "max_tilt_deg": 25.0,
+    "max_speed": 6.0,
+    "lead_time_s": 0.0,
+    "gains": {
+      "k_pos": 0.55,
+      "k_vel": 2.2,
+      "k_rate": 0.42,
+      "k_thrust_z": 0.075,
+      "k_thrust_vz": 0.085,
+      "k_thrust_ff": 0.085,
+      "k_yaw": 0.6
+    }
+  },
+  "observation": {
+    "history_frames": 3,
+    "history_skip": 2,
+    "future_samples": 3,
+    "future_skip": 2,
+    "predictor": "const_vel",
+    "future_source": "true",
+    "privileged_fields": [],
+    "auto_fit": true
+  },
+  "camera": {
+    "mode": "follow",
+    "distance": 16.0,
+    "azimuth_deg": 35.0,
+    "elevation_deg": 20.0,
+    "zoom": 1.0
+  },
+  "video": {
+    "name": "stage_02_waypoint",
+    "format": "mp4",
+    "fps": 20,
+    "width_in": 12.8,
+    "height_in": 7.2,
+    "dpi": 100,
+    "bitrate": 4000,
+    "trail": 220,
+    "sidecar": true
+  }
+}
