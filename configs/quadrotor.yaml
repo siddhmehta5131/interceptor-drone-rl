@@ -8,6 +8,26 @@
 airframe: "Crazyflie 2.1 / NanoBench"
 primary_source: "Forster 2015; Bitcraze Crazyflie 2.x datasheet; NanoBench (Crazyswarm2) system identification"
 
+# Simulation rates, decision S8.  Everything downstream derives its step from
+# these four numbers; the physics step must divide the controller step exactly.
+rates:
+  physics:
+    value: 1000
+    unit: Hz
+    source: "implementation_plan.md decision S8: two RK4 steps per control step"
+  flight_controller:
+    value: 500
+    unit: Hz
+    source: "implementation_plan.md decision S8: matches the Crazyflie firmware loop"
+  guidance:
+    value: 50
+    unit: Hz
+    source: "implementation_plan.md decision S8: seeker update rate, matches legacy env"
+  kinematic_integration:
+    value: 200
+    unit: Hz
+    source: "implementation_plan.md decision S8: step below a quarter of the 20 ms actuator lag"
+
 mass:
   value: 0.04085
   unit: kg

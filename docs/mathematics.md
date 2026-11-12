@@ -488,17 +488,59 @@ Dryden longitudinal filter. Its continuous form is
 \tag{EQ-WIND-1}
 \]
 
-and the discrete update is `u += theta(mean-u)dt + sigma sqrt(dt) N(0,1)`.
-The mapping used by P3.6 is
+and the legacy discrete update is
+`u += theta(mean-u)dt + sigma sqrt(dt) N(0,1)`. It is retained as the mapping
+of the old `wind_ou_step`; the P3.6 generator uses the exact Dryden
+discretisation below.
+
+The MIL-HDBK-1797 low-altitude parameters, with `h` in metres and
+`h_ft = h/0.3048`, are
 
 \[
-\theta=V/(\sqrt{3}L_u),\qquad
-\sigma=\sigma_u\sqrt{2\theta},
+\sigma_w=0.1W_{20},\quad
+\sigma_u=\sigma_v=\frac{\sigma_w}{(0.177+0.000823h_{\rm ft})^{0.4}},
 \tag{EQ-WIND-2}
 \]
 
-with low-altitude `L_u` and `sigma_u` from MIL-HDBK-1797. The simulator uses a
-minimum airspeed of 5 m/s in the Dryden denominator.
+\[
+L_w=h,\qquad L_u=L_v=\frac{h}{(0.177+0.000823h_{\rm ft})^{1.2}},
+\]
+
+with the wind speed at 20 ft `W20` in the same units as `sigma_w`. A minimum
+airspeed `V = max(V_air, 5 m/s)` keeps the forming-filter time constants
+finite.
+
+The forming filters are
+
+\[
+\begin{aligned}
+H_u(s)&=\sigma_u\sqrt{\frac{2L_u}{\pi V}}\frac{1}{1+(L_u/V)s},\\
+H_v(s)&=\sigma_v\sqrt{\frac{L_v}{\pi V}}\frac{1+\sqrt3\,(L_v/V)s}{(1+(L_v/V)s)^2},
+\end{aligned}
+\tag{EQ-WIND-3}
+\]
+
+and `H_w` is `H_v` with `(sigma_w, L_w)`. With white-noise intensity `pi`
+their output variances are `sigma_u^2`, `sigma_v^2` and `sigma_w^2`
+respectively. `interceptor/sim/wind.py` discretises each filter exactly with
+the matrix exponential and realises the second-order noise with its exact
+covariance, so the variance is preserved at any step size.
+
+The discrete gust uses the 1-cosine shape
+
+\[
+U(t)=
+\begin{cases}
+\frac{U_{\rm ds}}{2}\left(1-\cos\frac{2\pi t}{T_g}\right), & 0\le t\le T_g,\\
+0, & \text{otherwise}.
+\end{cases}
+\tag{EQ-WIND-4}
+\]
+
+The existing `theta_range`/`sigma_range` entries in `configs/quadrotor.yaml`
+map the legacy OU parameters onto `EQ-WIND-1`. `tests/unit/test_dryden_wind.py`
+checks the parameters, the variances over 30 ten-minute realisations (5 %),
+the spectral shape against `EQ-WIND-3`, and the gust shape.
 
 ### 5A.4 Rate-loop PID
 
@@ -517,12 +559,141 @@ Crazyflie firmware gains verbatim.
 
 ---
 
-## 6-10. Forward references
+## 6. Quadrotor 6-DOF dynamics
 
-Sections 6 (6-DOF quadrotor), 7 (tracker), 8 (flight-control reward), 9
-(guidance reward and discount), and 10 (closed-loop bridge) are completed by
-the corresponding phases (P3, P5, P4, P5, P8). This file is generated as one
-document so the equation-reference check sees the final IDs.
+The simulator state is
+`x = (p, q, v, omega, Omega)` with position `p` and velocity `v` in the world
+frame, body rates `omega` and quaternion `q = [w, x, y, z]` (body to world),
+and four rotor speeds `Omega_j`. The implementation is
+`interceptor/sim/pipeline.py`; the rotor forces and aerodynamic polynomial are
+in `interceptor/sim/aero.py`.
 
-Equation IDs already reserved by later phases: `EQ-SIX-*`, `EQ-TRK-*`,
-`EQ-FC-*`, `EQ-GUIDE-*`, `EQ-BRIDGE-*`.
+### 6.1 Translation
+
+With body-frame propeller force `f_prop`, aerodynamic force `f_aero`, and
+gravity `g = (0, 0, -9.81) m/s^2`,
+
+\[
+\dot{\mathbf p}=\mathbf v,\qquad
+\dot{\mathbf v}=\frac{1}{m}R(\mathbf q)\left(\mathbf f_{\rm prop}+\mathbf f_{\rm aero}\right)+\mathbf g .
+\tag{EQ-SIX-1}
+\]
+
+Wind enters through the air-relative body velocity
+`v_rel = R(q)^T (v - v_wind)` (`EQ-WIND-1`, `EQ-AERO-8`). Ground effect scales
+the collective axis of `f_prop` by
+
+\[
+\kappa_{\rm ge}(z)=1+\kappa_{\max}\max\!\left(0,1-\frac{z}{h_{\rm ge}}\right),
+\tag{EQ-SIX-10}
+\]
+
+with `h_ge = 0.15 m` and `kappa_max = 0.20`.
+
+### 6.2 Rotation
+
+The body-frame angular momentum equation with a diagonal inertia `J` is
+
+\[
+J\dot{\boldsymbol\omega}=
+\boldsymbol\tau_{\rm prop}+\boldsymbol\tau_{\rm mot}
++\boldsymbol\tau_{\rm aero}-\boldsymbol\omega\times J\boldsymbol\omega ,
+\tag{EQ-SIX-2}
+\]
+
+where the last term is the inertial (gyroscopic) torque and the motor reaction
+torque is
+
+\[
+\boldsymbol\tau_{\rm mot}=J_{\rm mp}\sum_{j=1}^{4}\boldsymbol\zeta_j\dot\Omega_j ,
+\qquad \boldsymbol\zeta_j=\sigma_j\hat{\mathbf z},
+\tag{EQ-SIX-8}
+\]
+
+with `J_mp = 2.0e-9 kg m^2`, `sigma_j = +1, -1, +1, -1`, and `Omega_dot_j` the
+motor-lag derivative below.
+
+### 6.3 Quaternion kinematics
+
+\[
+\dot{\mathbf q}=\tfrac12\,\mathbf q\otimes
+\begin{bmatrix}0\\ \boldsymbol\omega\end{bmatrix},
+\qquad \|\mathbf q\|=1 .
+\tag{EQ-SIX-3}
+\]
+
+The integrator renormalises after every step, so the norm drift never
+accumulates.
+
+### 6.4 Rotor forces, torque assembly and motor lag
+
+Each rotor produces thrust along the body z axis and a reaction torque about
+the same axis:
+
+\[
+\mathbf f_j=c_l\Omega_j^2\hat{\mathbf z},\qquad
+\boldsymbol\tau_j=\sigma_j c_d\Omega_j^2\hat{\mathbf z},
+\tag{EQ-SIX-5}
+\]
+
+and the propeller contributions are assembled at the arm positions
+`r_j = (+/-a, +/-a, 0)`:
+
+\[
+\mathbf f_{\rm prop}=\sum_j\mathbf f_j,\qquad
+\boldsymbol\tau_{\rm prop}=\sum_j\left(\boldsymbol\tau_j+\mathbf r_j\times\mathbf f_j\right).
+\tag{EQ-SIX-4}
+\]
+
+The ESC maps a normalised command `c` and battery voltage `U` to the
+steady-state rotor speed
+
+\[
+\Omega_{\rm ss}(c,U)=b_0+b_1U+b_2\sqrt c+b_3c+b_4U\sqrt c,
+\qquad \Omega_{\rm ss}=0\ \text{for}\ c<c_{\rm cut},
+\tag{EQ-SIX-7}
+\]
+
+and each rotor follows a first-order lag
+
+\[
+\dot\Omega_j=\frac{\Omega_{{\rm ss},j}-\Omega_j}{\tau_m},
+\qquad \tau_m=0.02\,{\rm s}.
+\tag{EQ-SIX-6}
+\]
+
+The legacy simulator evaluated thrust at the half-step speed
+`Omega + dt/2 * Omega_dot`; that correction is retained for fixture parity but
+is first-order, so the validated path evaluates `EQ-SIX-5` at the RK4 stage
+state instead.
+
+### 6.5 Integration and rates
+
+The state is advanced with classical RK4 at step `h`,
+
+\[
+\begin{aligned}
+k_1&=f(x_n), & k_2&=f(x_n+\tfrac h2 k_1),\\
+k_3&=f(x_n+\tfrac h2 k_2), & k_4&=f(x_n+h k_3),\\
+x_{n+1}&=x_n+\tfrac h6(k_1+2k_2+2k_3+k_4),
+\end{aligned}
+\tag{EQ-SIX-9}
+\]
+
+with `q` renormalised and `Omega >= 0` after every step. The rates follow
+decision S8 in `configs/quadrotor.yaml`: physics 1000 Hz, flight controller
+500 Hz (two RK4 steps per control update), guidance 50 Hz, kinematic
+integration 200 Hz. `pipeline.control_step` enforces the integer sub-step
+ratio and holds the command constant across it. `pipeline.rk4` keeps the
+historical `dt = 0.01 s` default for the P1 fixtures.
+
+---
+
+## 7-10. Forward references
+
+Sections 7 (tracker), 8 (flight-control reward), 9 (guidance observation and
+reward) and 10 (closed-loop bridge) are completed by the corresponding phases
+(P5, P4, P5, P8).
+
+Equation IDs already reserved by later phases: `EQ-TRK-*`, `EQ-FC-*`,
+`EQ-GUIDE-*`, `EQ-BRIDGE-*`.

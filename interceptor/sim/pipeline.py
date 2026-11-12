@@ -68,6 +68,8 @@ __all__ = [
     "rigid_body",
     "deriv",
     "rk4",
+    "substeps",
+    "control_step",
     "command_from_action",
 ]
 
@@ -157,7 +159,7 @@ def pid(
     throttle_cut: bool,
     dt: float = PH_DT,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Rate PID (roll, pitch, yaw).  Port of ``hover_env._ph_pid``."""
+    """Rate PID (roll, pitch, yaw).  Port of ``hover_env._ph_pid`` (EQ-CTRL-3)."""
     e = omega_cmd - omega_prev
     p = PH_KP * e
     i = np.zeros(3) if throttle_cut else I_prev + PH_KI * e * dt
@@ -170,7 +172,7 @@ def pid(
 # ============================================================
 
 def mixer(u: np.ndarray, c_cmd: float) -> np.ndarray:
-    """Saturation-aware motor mixer.  Port of ``hover_env._ph_mixer``."""
+    """Saturation-aware motor mixer.  Port of ``hover_env._ph_mixer`` (EQ-SIX-4)."""
     raw = c_cmd + PH_MIX @ u
     vmax = float(np.max(raw))
     denom = vmax - c_cmd
@@ -187,7 +189,7 @@ def mixer(u: np.ndarray, c_cmd: float) -> np.ndarray:
 def esc(cmd: np.ndarray, U_bat: float) -> tuple[np.ndarray, float]:
     """ESC polynomial -> steady-state motor speeds (constant-voltage battery).
 
-    Port of ``hover_env._ph_esc``.
+    Port of ``hover_env._ph_esc``; equation EQ-SIX-7.
     """
     c = np.clip(cmd, 0.0, 1.0)
     oss = (PH_BAT[0] + PH_BAT[1] * U_bat
@@ -202,7 +204,10 @@ def esc(cmd: np.ndarray, U_bat: float) -> tuple[np.ndarray, float]:
 # ============================================================
 
 def prop_ft(Omega: np.ndarray, params: PhysicsParams) -> tuple[np.ndarray, np.ndarray]:
-    """Per-propeller thrust + reaction-drag torque.  Port of ``hover_env._ph_prop_ft``."""
+    """Per-propeller thrust + reaction-drag torque (EQ-SIX-5).
+
+    Port of ``hover_env._ph_prop_ft``.
+    """
     f = np.zeros((4, 3))
     tau = np.zeros((4, 3))
     for j in range(4):
@@ -217,7 +222,7 @@ def prop_ft(Omega: np.ndarray, params: PhysicsParams) -> tuple[np.ndarray, np.nd
 # ============================================================
 
 def aggregate(f_props: np.ndarray, tau_props: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    """Port of ``hover_env._ph_aggregate``."""
+    """Torque assembly at the arm positions (EQ-SIX-4).  Port of ``hover_env._ph_aggregate``."""
     f_tot = f_props.sum(axis=0)
     tau_tot = np.zeros(3)
     for j in range(4):
@@ -230,7 +235,10 @@ def aggregate(f_props: np.ndarray, tau_props: np.ndarray) -> tuple[np.ndarray, n
 # ============================================================
 
 def react(Omega_dot: np.ndarray, omega_B: np.ndarray, params: PhysicsParams) -> tuple[np.ndarray, np.ndarray]:
-    """Port of ``hover_env._ph_react``."""
+    """Rotor reaction torque (EQ-SIX-8) and the inertial gyroscopic term (EQ-SIX-2).
+
+    Port of ``hover_env._ph_react``.
+    """
     tau_mot = PH_J_MP * np.sum(PH_ZETA * Omega_dot[:, None], axis=0)
     tau_iner = -np.cross(omega_B, params.J @ omega_B)
     return tau_mot, tau_iner
@@ -279,8 +287,11 @@ def rigid_body(
     params: PhysicsParams,
     ge_gain: float = 1.0,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """State derivatives.  Port of ``hover_env._ph_rigid_body`` plus an
-    optional ground-effect thrust boost on the collective axis."""
+    """State derivatives (EQ-SIX-1, EQ-SIX-2, EQ-SIX-3, EQ-SIX-6).
+
+    Port of ``hover_env._ph_rigid_body`` plus the optional ground-effect
+    thrust boost of EQ-SIX-10 on the collective axis.
+    """
     r_wb = quat2rot(q_WB)
     p_dot = v_WB
     q_dot = 0.5 * quat_mult(q_WB, np.r_[0.0, omega_B])
@@ -308,11 +319,28 @@ def deriv(
     params: PhysicsParams,
     wind_W: Optional[np.ndarray] = None,
     ge_gain: float = 1.0,
+    dt: float = PH_DT,
+    predict_rotor: bool = True,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """Port of ``hover_env._ph_deriv`` (wind / ground-effect aware)."""
+    """Port of ``hover_env._ph_deriv`` (wind / ground-effect aware).
+
+    ``dt`` is the integration step (plan P3.1, defect F13; EQ-SIX-9).  It
+    defaults to the historical ``PH_DT`` so the P1 fixtures replay
+    bit-for-bit.
+
+    ``predict_rotor=True`` keeps the legacy half-step rotor-speed prediction
+    ``Omega + dt/2 * Omega_dot`` used for thrust and aero.  That prediction is
+    an O(dt) model correction, so it limits the scheme to first-order
+    convergence.  The validated 1000 Hz path (:func:`control_step`) disables
+    it and evaluates thrust at the RK4 stage state instead, which restores
+    fourth-order convergence (see ``tests/unit/test_sim_timestep.py``).
+    """
     Omega_ss, _ = esc(cmd, U_bat)
     Omega_dot = (Omega_ss - Omega) / PH_K_MOT
-    Omega_eff = np.maximum(Omega + 0.5 * PH_DT * Omega_dot, 0.0)
+    if predict_rotor:
+        Omega_eff = np.maximum(Omega + 0.5 * dt * Omega_dot, 0.0)
+    else:
+        Omega_eff = np.maximum(Omega, 0.0)
     f_ps, t_ps = prop_ft(Omega_eff, params)
     f_p, tau_p = aggregate(f_ps, t_ps)
     tau_m, tau_i = react(Omega_dot, omega, params)
@@ -338,21 +366,82 @@ def rk4(
     params: PhysicsParams,
     wind_W: Optional[np.ndarray] = None,
     ge_gain: float = 1.0,
+    dt: float = PH_DT,
+    predict_rotor: bool = True,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Port of ``hover_env._ph_rk4``.  ``cmd``/``U_bat``/``wind_W``/``ge_gain``
-    are held fixed (zero-order hold) across the four sub-steps."""
+    are held fixed (zero-order hold) across the four sub-steps.
+
+    ``dt`` is the physical integration step (plan P3.1, defect F13); it
+    defaults to ``PH_DT`` so the recorded fixtures replay unchanged.  Use
+    :func:`control_step` to advance one control interval at the S8 rate
+    (500 Hz control = 0.002 s) with the physics at 1000 Hz.
+
+    ``predict_rotor`` is forwarded to :func:`deriv`; leave it ``True`` for
+    legacy/fixture parity and disable it for the fourth-order validated path.
+    """
     def _d(p_, q_, v_, om_, Om_):
-        return deriv(p_, q_, v_, om_, Om_, cmd, U_bat, params, wind_W, ge_gain)
+        return deriv(p_, q_, v_, om_, Om_, cmd, U_bat, params, wind_W, ge_gain,
+                     dt, predict_rotor)
 
     s = [p, q, v, omega, Omega]
     k1 = list(_d(*s))
-    k2 = list(_d(*[s[i] + 0.5 * PH_DT * k1[i] for i in range(5)]))
-    k3 = list(_d(*[s[i] + 0.5 * PH_DT * k2[i] for i in range(5)]))
-    k4 = list(_d(*[s[i] + PH_DT * k3[i] for i in range(5)]))
-    out = [s[i] + (PH_DT / 6.0) * (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i]) for i in range(5)]
+    k2 = list(_d(*[s[i] + 0.5 * dt * k1[i] for i in range(5)]))
+    k3 = list(_d(*[s[i] + 0.5 * dt * k2[i] for i in range(5)]))
+    k4 = list(_d(*[s[i] + dt * k3[i] for i in range(5)]))
+    out = [s[i] + (dt / 6.0) * (k1[i] + 2 * k2[i] + 2 * k3[i] + k4[i]) for i in range(5)]
     out[1] = normalize_quat(out[1])
     out[4] = np.maximum(out[4], 0.0)
     return tuple(out)
+
+
+def substeps(control_dt: float, physics_dt: float) -> int:
+    """Number of physics steps in one control step (plan S8).
+
+    The ratio must be a positive integer; anything else is a configuration
+    error, not something to round silently.
+
+    Equation: EQ-SIX-9 (discrete sub-stepping of the RK4 state update).
+    """
+    ratio = float(control_dt) / float(physics_dt)
+    n = int(round(ratio))
+    if n < 1 or abs(ratio - n) > 1e-9:
+        raise ValueError(
+            f"control_dt={control_dt} is not an integer multiple of "
+            f"physics_dt={physics_dt} (ratio {ratio})"
+        )
+    return n
+
+
+def control_step(
+    state: tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray],
+    cmd: np.ndarray,
+    U_bat: float,
+    params: PhysicsParams,
+    control_dt: float = 0.002,
+    physics_dt: float = 0.001,
+    wind_W: Optional[np.ndarray] = None,
+    ge_gain: float = 1.0,
+    predict_rotor: bool = False,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Advance one control interval with N zero-order-hold physics steps.
+
+    Defaults are the plan S8 rates (500 Hz flight controller, 1000 Hz
+    physics), i.e. two RK4 steps per control update.  The command, wind and
+    ground-effect gain are held constant across the interval.
+
+    The legacy half-step rotor prediction is off by default here: at 1000 Hz
+    it changes the answer far below the integration error but it reduces the
+    scheme to first order, which would hide model errors in the convergence
+    study.  Pass ``predict_rotor=True`` for bit-for-bit legacy behaviour.
+    """
+    n = substeps(control_dt, physics_dt)
+    dt = float(control_dt) / n
+    s = state
+    for _ in range(n):
+        s = rk4(*s, cmd, U_bat, params, wind_W=wind_W, ge_gain=ge_gain,
+                dt=dt, predict_rotor=predict_rotor)
+    return s
 
 
 # ============================================================

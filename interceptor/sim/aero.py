@@ -43,7 +43,7 @@ _AERO_CLIP_T = 5.0
 def ground_effect_gain(z: float) -> float:
     """Multiplicative thrust correction near the floor (1.0 far away).
 
-    Port of ``swift_rl_env.ground_effect_gain`` (scalar).
+    Equation EQ-SIX-10.  Port of ``swift_rl_env.ground_effect_gain`` (scalar).
     """
     h = float(np.clip(z, 0.0, GROUND_EFFECT_HEIGHT))
     return 1.0 + GROUND_EFFECT_MAX_GAIN * (1.0 - h / GROUND_EFFECT_HEIGHT)
@@ -63,6 +63,8 @@ def aero_force_torque(
     tz_raw: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Body-frame aerodynamic forces/torques from air-relative velocity.
+
+    Entered from EQ-SIX-1 with ``v_rel = R(q)^T (v - v_wind)``.
 
     Parameters
     ----------
