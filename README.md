@@ -151,11 +151,10 @@ python scripts/smoke_test.py               # dependency-light 11-check harness
 │   │                             reward, intercept_env
 │   ├── prediction/             ← const_vel + kalman target predictors
 │   ├── training/               ← orchestrator, callbacks, curriculum, policy,
-│   │                             checkpoint_manager, weight_transfer
+│   │                             checkpoint_manager
 │   └── utils/                  ← config_loader, model_loader, logger
 ├── visualiser/                 ← renderer, animator, scene_builder, cli
-├── scripts/                    ← train, evaluate, visualise, smoke_test,
-│                                 download_models
+├── scripts/                    ← train, evaluate, visualise, smoke_test
 ├── tests/                      ← pytest suite (unit + integration)
 ├── models/                     ← interceptor_drone.obj, target_drone.obj
 └── data/                       ← runs/, videos/, evaluation/
@@ -268,8 +267,7 @@ privileged `optimal_*` fields.
 PyVista off-screen renderer with drone meshes, dashed trails, a yellow
 line-of-sight line, green (APN) / orange (RL) / white (total) command arrows, a
 kill-zone sphere and a live HUD. Camera modes: `chase`, `top-down`, `fixed`,
-`los`, `orbit`. Model meshes live in `models/`; `scripts/download_models.py`
-fetches real `.obj` files or writes placeholder quadcopters (see
+`los`, `orbit`. Model meshes are committed under `models/` (see
 `models/README.md` for attribution).
 
 ---

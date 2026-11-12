@@ -9,10 +9,8 @@ Source options (pick free / CC-licensed assets):
 - GrabCAD     https://grabcad.com/library?query=quadcopter
 - Sketchfab   https://sketchfab.com/tags/drone
 
-If a file is missing, `scripts/download_models.py` writes a **placeholder**
-quadcopter built from primitives so the visualiser still runs.  Drop a real
-OBJ at the same path to replace it (meshes are auto-scaled by
-`models.scale` in `configs/visualiser.yaml`).
+Both OBJ meshes are committed.  The visualiser auto-scales them using
+`models.scale` in `configs/visualiser.yaml`.
 
 ## Licence
 
