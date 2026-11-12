@@ -1,0 +1,22 @@
+Baseline recorded 2026-11-12 on Python 3.14.6, before consolidation (plan task P0.6)
+
+## pytest tests/ -q (all tests, including slow)
+.....................................................                    [100%]
+53 passed in 39.22s
+
+## python scripts/smoke_test.py
+
+=== smoke test report ===
+  [PASS] imports
+  [PASS] apn head-on
+  [PASS] apn crossing
+  [PASS] kinematic model
+  [PASS] stage config
+  [PASS] observation dims
+  [PASS] reward terms
+  [PASS] target generator
+  [PASS] optimal trajectory
+  [PASS] history stacking
+  [PASS] APN-only intercept
+
+11/11 passed

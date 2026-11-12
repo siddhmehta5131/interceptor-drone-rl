@@ -1,0 +1,25 @@
+# APN + RL Interceptor Drone — runtime + training dependencies (plan §18.1)
+#
+# Core numerics / environment
+numpy>=1.24
+scipy>=1.11
+gymnasium>=0.29
+pyyaml>=6.0
+
+# Reinforcement learning (Stable-Baselines3 pulls in torch; install a CUDA or
+# CPU torch build first if you need a specific one: https://pytorch.org/)
+stable-baselines3>=2.1
+torch>=2.0
+tensorboard>=2.14
+
+# Target-state prediction
+filterpy>=1.4
+
+# 3D visualisation + MP4 export
+pyvista>=0.43
+trimesh>=4.0
+imageio>=2.31
+imageio-ffmpeg>=0.4
+
+# Tests
+pytest>=7.0

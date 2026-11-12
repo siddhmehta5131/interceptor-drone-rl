@@ -1,0 +1,64 @@
+# visualiser.yaml -- PyVista 3D visualiser settings (plan §14).
+#
+# Used by `python -m visualiser` and `scripts/visualise.py`.
+
+# Output video resolution [width, height].
+resolution: [1920, 1080]
+
+# Output frame rate and quality (higher quality = slower / larger file).
+fps: 30
+quality: 10
+
+# Scene background: "sky" (gradient) | "black" | "white".
+background: sky
+
+# Ground plane.
+ground:
+  size: 200.0
+  color: "#3b4a3f"
+
+# Drone meshes (OBJ).  `scale` converts mesh units to metres.
+models:
+  interceptor: models/interceptor_drone.obj
+  target: models/target_drone.obj
+  scale: 0.01                 # default scale (used if a per-model one is absent)
+  interceptor_scale: 0.1612   # normalises interceptor mesh (~12.4 u) to ~2 m
+  target_scale: 0.5114        # normalises target mesh (~3.9 u) to ~2 m
+  fallback_size: 1.5          # half-extent of the box used when a mesh is missing
+  # Pre-rotation applied to each mesh at load time so it sits upright (+Z up)
+  # and nose-forward (+X).  Accepts a code from data/orientation_shots
+  # ("I08"/"T21"), a row-major 3x3 list, or "identity".
+  interceptor_rotation: I08
+  target_rotation: T21
+
+# Actor colours.
+colors:
+  interceptor: steelblue
+  target: crimson
+
+# Lighting.
+lighting:
+  intensity: 0.8
+  shadows: false             # off: headless/GLES hosts error on shadow shaders
+
+# Motion trails.
+trails:
+  max_points: 400
+  interceptor: "#4a90d9"
+  target: "#d94a4a"
+
+# Camera behaviour.
+camera:
+  mode: chase                 # chase | top_down | fixed | los | free
+  distance: 15.0              # chase camera distance behind the interceptor (m)
+  elevation: 8.0              # chase camera height above the interceptor (m)
+
+# Overlays / annotations.
+show:
+  los_line: true              # yellow interceptor -> target line
+  apn_arrow: true             # green APN command vector
+  rl_arrow: true              # orange RL residual vector
+  total_arrow: true           # white total command vector
+  kill_zone: true             # translucent sphere at the kill radius
+  hud: true                   # text overlay (range, closing velocity, t_go)
+  axes: true                  # world axes widget

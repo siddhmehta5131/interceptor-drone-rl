@@ -1,0 +1,66 @@
+# config.yaml -- run-wide training settings for the APN + RL interceptor.
+#
+# Model architecture lives in `model.yaml`; the curriculum lives in
+# `stages.yaml`.  This file holds everything else: run-wide settings, the
+# rollback policy, how a capped stage is handled, the observation layout, the
+# interceptor kinematic limits and the APN guidance constants.
+#
+# Any value documented as a "{min:, max:}" range accepts either that form or a
+# bare scalar (treated as a fixed value).
+
+global:
+  seed: 42
+  device: cpu                  # auto | cpu | cuda
+  data_dir: data/runs
+  n_parallel_envs: 8
+  checkpoint_interval_steps: 100000
+  tensorboard: true
+  execution_mode: train        # train | evaluate
+
+rollback:
+  max_attempts: 2              # max rollbacks per stage
+  retry_budget_scale: 0.5      # re-entered stage runs on 50% of its budget
+  threshold_scale: 0.5         # rollback threshold = 50% of success_rate
+  min_steps_scale: 0.25        # rollback only after 25% of max_training_steps
+
+# What to do when a stage exhausts its budget without reaching its threshold.
+#   'continue' -- advance to the next stage anyway
+#   'stop'     -- stop training that model and report status='capped'
+on_capped: stop
+
+# Observation layout (plan §7).  frame_dim is fixed at 16.
+#   m = history_frames, p = history_skip    (past)
+#   n = future_samples,  q = future_skip    (future, in env steps)
+# Actor observation = 16 * (1 + m) + 7 * n
+observation:
+  frame_dim: 16
+  history_frames: 3
+  history_skip: 2
+  future_samples: 3
+  future_skip: 5
+  # 'true' -- future target states from the simulator ground truth (oracle)
+  # 'pred' -- future target states from the predictor below
+  future_source: pred
+  predictor: const_vel         # const_vel | kalman
+
+# Interceptor kinematic limits (velocity-command model; plan §6).
+interceptor:
+  v_max: 50.0                  # m/s
+  a_max: 15.0                  # m/s^2
+  omega_max: 3.0               # rad/s
+  speed_ratio: 1.5             # interceptor / target speed design ratio
+  dt: 0.02                     # simulation timestep (s)
+
+# Augmented Proportional Navigation constants (plan §2.3).
+apn:
+  N_prime: 4.0                 # navigation constant
+  t_go_min: 0.05               # minimum time-to-go clamp (s)
+  t_go_max: 20.0               # maximum time-to-go clamp (s) -- numerical guard
+
+# Optional per-stage overrides merged onto the built-in stage table.
+# Empty here = use the exact defaults from stages.yaml.
+# Example:
+#   stages:
+#     stage_2:
+#       apn_N_prime: 4.5
+stages: {}

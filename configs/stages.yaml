@@ -1,0 +1,168 @@
+# stages.yaml -- 3-stage curriculum for the APN + RL interceptor.
+#
+# This file is the authoritative stage table; `src/envs/stage_config.py`
+# loads it at import time and falls back to identical built-in defaults when
+# the file is missing.  Ranges accept a scalar, a [lo, hi] pair, or
+# {min: .., max: ..}.
+#
+# Stage semantics
+# ---------------
+#   target_type : static | order_1 | order_2 | order_3 | evasive
+#   obs.rl_action_scale : absolute m/s^2 added on top of the APN command
+#                         (= fraction_of_a_max * a_max, a_max = 15 m/s^2)
+#
+#  stage_1  static     scale 0.1*a_max = 1.5   success kill>0.95
+#  stage_2  polynomial scale 0.3*a_max = 4.5   success kill>0.90
+#  stage_3  evasive    scale 0.5*a_max = 7.5   success kill>0.75
+
+stages:
+
+  stage_1:
+    name: Static Target
+    target_type: static
+    target_visible: true
+    world_radius: 150.0
+    episode_length_s: {min: 3.0, max: 5.0}
+    max_training_steps: 2000000
+    success_metric: kill_rate
+    threshold: 0.95
+    window: 100
+    success_rate: 0.95
+    rollback_threshold: 0.5
+    apn_N_prime: 4.0
+    apn_t_go_min: 0.05
+    reward:
+      k_progress: 1.0
+      k_progress_normalize: true
+      k_LOS_rate: 0.1
+      k_energy: 0.02
+      k_rl_residual: 0.05
+      k_smooth: 0.03
+      k_time_penalty: 0.001
+      k_closing_vel: 0.1
+      k_kill_bonus: 100.0
+      k_miss_distance_scale: true
+      k_time_bonus_scale: true
+      k_crash_penalty: -50.0
+      k_ZEM: 0.05
+    spawn:
+      target_distance_range: {min: 20.0, max: 60.0}
+      altitude_range: {min: 5.0, max: 50.0}
+      interceptor_speed_range: {min: 15.0, max: 25.0}
+      target_speed_range: {min: 0.0, max: 0.0}
+      target_accel_range: {min: 0.0, max: 0.0}
+      cone_half_angle_deg: 45.0
+    intercept:
+      kill_radius: 1.0
+      world_radius: 150.0
+    obs:
+      frame_dim: 16
+      history_frames: 3
+      history_skip: 2
+      future_samples: 3
+      future_skip: 5
+      future_source: pred
+      predictor: const_vel
+      rl_action_scale: 1.5
+
+  stage_2:
+    name: Dynamic Target
+    target_type: order_1
+    target_visible: true
+    world_radius: 200.0
+    episode_length_s: {min: 5.0, max: 10.0}
+    max_training_steps: 5000000
+    success_metric: kill_rate
+    threshold: 0.90
+    window: 100
+    success_rate: 0.90
+    rollback_threshold: 0.5
+    apn_N_prime: 4.0
+    apn_t_go_min: 0.05
+    reward:
+      k_progress: 1.0
+      k_progress_normalize: true
+      k_LOS_rate: 0.1
+      k_energy: 0.02
+      k_rl_residual: 0.05
+      k_smooth: 0.03
+      k_time_penalty: 0.001
+      k_closing_vel: 0.1
+      k_kill_bonus: 100.0
+      k_miss_distance_scale: true
+      k_time_bonus_scale: true
+      k_crash_penalty: -50.0
+      k_ZEM: 0.05
+    spawn:
+      target_distance_range: {min: 30.0, max: 80.0}
+      altitude_range: {min: 5.0, max: 60.0}
+      interceptor_speed_range: {min: 20.0, max: 30.0}
+      target_speed_range: {min: 5.0, max: 20.0}
+      target_accel_range: {min: 0.0, max: 5.0}
+      path_end_distance: {min: 40.0, max: 100.0}
+      path_speed_cap: {min: 10.0, max: 25.0}
+      path_shape: random
+      cone_half_angle_deg: 45.0
+    intercept:
+      kill_radius: 1.0
+      world_radius: 200.0
+    obs:
+      frame_dim: 16
+      history_frames: 3
+      history_skip: 2
+      future_samples: 3
+      future_skip: 5
+      future_source: pred
+      predictor: const_vel
+      rl_action_scale: 4.5
+
+  stage_3:
+    name: Evasive Target
+    target_type: evasive
+    target_visible: true
+    world_radius: 250.0
+    episode_length_s: {min: 8.0, max: 15.0}
+    max_training_steps: 10000000
+    success_metric: kill_rate
+    threshold: 0.75
+    window: 100
+    success_rate: 0.75
+    rollback_threshold: 0.5
+    apn_N_prime: 4.5
+    apn_t_go_min: 0.05
+    reward:
+      k_progress: 1.0
+      k_progress_normalize: true
+      k_LOS_rate: 0.1
+      k_energy: 0.02
+      k_rl_residual: 0.05
+      k_smooth: 0.03
+      k_time_penalty: 0.001
+      k_closing_vel: 0.1
+      k_kill_bonus: 100.0
+      k_miss_distance_scale: true
+      k_time_bonus_scale: true
+      k_crash_penalty: -50.0
+      k_ZEM: 0.05
+    spawn:
+      target_distance_range: {min: 40.0, max: 100.0}
+      altitude_range: {min: 5.0, max: 80.0}
+      interceptor_speed_range: {min: 25.0, max: 35.0}
+      target_speed_range: {min: 10.0, max: 30.0}
+      target_accel_range: {min: 0.0, max: 0.0}
+      target_accel_g_limit: 3.0
+      target_jerk_limit: 20.0
+      evasive_probability: 0.6
+      cone_half_angle_deg: 45.0
+    intercept:
+      kill_radius: 1.5
+      world_radius: 250.0
+    obs:
+      frame_dim: 16
+      history_frames: 3
+      history_skip: 2
+      future_samples: 3
+      future_skip: 5
+      future_source: pred
+      predictor: const_vel
+      rl_action_scale: 7.5

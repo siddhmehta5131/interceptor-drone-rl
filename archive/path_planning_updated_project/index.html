@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evasive Maneuvers Visualizer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            overflow: hidden;
+        }
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+        .left-panel {
+            width: 70%;
+            display: flex;
+            flex-direction: column;
+        }
+        .viewport {
+            flex: 1;
+            position: relative;
+            background: #0a0a0a;
+        }
+        #canvas-container {
+            width: 100%;
+            height: 100%;
+        }
+        .data-bar {
+            height: 120px;
+            background: #222;
+            padding: 10px;
+            border-top: 2px solid #444;
+            overflow-y: auto;
+            font-size: 11px;
+        }
+        .right-panel {
+            width: 30%;
+            background: #252525;
+            padding: 15px;
+            overflow-y: auto;
+            border-left: 2px solid #444;
+        }
+        .section {
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #2a2a2a;
+            border-radius: 5px;
+        }
+        .section-title {
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #4a9eff;
+        }
+        .control-group {
+            margin-bottom: 10px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 12px;
+        }
+        input[type="range"] {
+            width: 100%;
+        }
+        select, button {
+            width: 100%;
+            padding: 8px;
+            background: #333;
+            color: #fff;
+            border: 1px solid #555;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #444;
+        }
+        .switch {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .switch-btn {
+            width: 60px;
+            height: 30px;
+            background: #444;
+            border-radius: 15px;
+            position: relative;
+            cursor: pointer;
+        }
+        .switch-btn.active {
+            background: #4a9eff;
+        }
+        .switch-knob {
+            width: 24px;
+            height: 24px;
+            background: #fff;
+            border-radius: 50%;
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            transition: 0.2s;
+        }
+        .switch-btn.active .switch-knob {
+            left: 33px;
+        }
+        .order-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .order-btn {
+            width: 30px;
+            padding: 5px;
+        }
+        .order-value {
+            flex: 1;
+            text-align: center;
+            background: #333;
+            padding: 5px;
+        }
+        .refresh-btn {
+            width: 40px;
+            height: 40px;
+            font-size: 20px;
+        }
+        .flex-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .playback {
+            display: flex;
+            gap: 5px;
+            margin-top: 10px;
+        }
+        .playback button {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="left-panel">
+            <div class="viewport">
+                <div id="canvas-container"></div>
+            </div>
+            <div class="data-bar" id="data-bar">
+                <div><strong>Simulation Data</strong></div>
+                <div id="data-content">No simulation run yet</div>
+            </div>
+        </div>
+        <div class="right-panel">
+            <div class="section">
+                <div class="section-title">Interceptor Position (2D on Ground)</div>
+                <div class="control-group">
+                    <label>X: <span id="int-x-val">5000</span></label>
+                    <input type="range" id="int-x" min="0" max="10000" value="5000" step="100">
+                </div>
+                <div class="control-group">
+                    <label>Y: <span id="int-y-val">5000</span></label>
+                    <input type="range" id="int-y" min="0" max="10000" value="5000" step="100">
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">Target Trajectory</div>
+                <div class="control-group">
+                    <label>Trajectory Type</label>
+                    <div class="switch">
+                        <span>Polynomial</span>
+                        <div class="switch-btn" id="traj-switch">
+                            <div class="switch-knob"></div>
+                        </div>
+                        <span>Bezier</span>
+                    </div>
+                </div>
+                <div class="control-group">
+                    <label id="order-label">Order</label>
+                    <div class="order-control">
+                        <button class="order-btn" id="order-dec">◀</button>
+                        <div class="order-value" id="order-value">2</div>
+                        <button class="order-btn" id="order-inc">▶</button>
+                    </div>
+                </div>
+                <div class="control-group" id="eta-group" style="display:none;">
+                    <label>Eta (Bezier spread): <span id="eta-val">0.5</span></label>
+                    <input type="range" id="eta" min="0" max="1" value="0.5" step="0.1">
+                </div>
+                <div class="flex-row">
+                    <button class="refresh-btn" id="refresh-traj">↻</button>
+                    <span>Generate Trajectory</span>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">Evasive Strategy</div>
+                <div class="control-group">
+                    <label>Select Strategy (Interceptor uses APN only)</label>
+                    <select id="maneuver-select">
+                    </select>
+                </div>
+            </div>
+
+            <div class="section">
+                <div class="section-title">Platform Specs</div>
+                <div class="flex-row" style="margin-bottom:10px;">
+                    <button id="tab-interceptor" style="flex:1; background:#4a9eff;">Interceptor</button>
+                    <button id="tab-target" style="flex:1;">Target</button>
+                </div>
+                <div id="interceptor-specs">
+                    <div class="control-group">
+                        <label>Max Velocity (m/s) <span title="Maximum speed of interceptor" style="cursor:help;">ⓘ</span>: <span id="vel-val">200</span></label>
+                        <input type="range" id="max-vel" min="50" max="500" value="200" step="10">
+                    </div>
+                    <div class="control-group">
+                        <label>Max Acceleration (g) <span title="Maximum lateral acceleration" style="cursor:help;">ⓘ</span>: <span id="accel-val">30</span></label>
+                        <input type="range" id="max-accel" min="5" max="50" value="30" step="5">
+                    </div>
+                    <div class="control-group">
+                        <label>Navigation Ratio (N) <span title="Proportional navigation constant" style="cursor:help;">ⓘ</span>: <span id="nav-val">3</span></label>
+                        <input type="range" id="nav-ratio" min="2" max="5" value="3" step="0.5">
+                    </div>
+                </div>
+                <div id="target-specs" style="display:none;">
+                    <div class="control-group">
+                        <label>Max Target Velocity (m/s) <span title="Maximum target speed" style="cursor:help;">ⓘ</span>: <span id="tvel-val">150</span></label>
+                        <input type="range" id="max-tvel" min="30" max="300" value="150" step="10">
+                    </div>
+                    <div class="control-group">
+                        <label>Max Target Accel (g) <span title="Maximum target normal acceleration" style="cursor:help;">ⓘ</span>: <span id="taccel-val">8</span></label>
+                        <input type="range" id="max-taccel" min="2" max="15" value="8" step="1">
+                    </div>
+                    <div class="control-group">
+                        <label>Target Platform <span title="Platform type affects limits" style="cursor:help;">ⓘ</span></label>
+                        <select id="target-platform">
+                            <option value="fixed_wing">Fixed Wing</option>
+                            <option value="quadcopter">Quadcopter</option>
+                            <option value="missile">Missile</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label>Max Drone Speed (m/s) <span title="Used for trajectory completion time" style="cursor:help;">ⓘ</span>: <span id="drone-val">150</span></label>
+                        <input type="range" id="max-drone" min="50" max="300" value="150" step="10">
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <button id="simulate-btn" style="background: #4a9eff; font-weight: bold;">SIMULATE</button>
+                <div class="playback" id="playback-controls" style="display:none;">
+                    <button id="play-btn">▶ Play</button>
+                    <button id="pause-btn">⏸ Pause</button>
+                    <button id="reset-btn">⏮ Reset</button>
+                </div>
+                <div id="miss-dist" style="margin-top: 10px; text-align: center;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
