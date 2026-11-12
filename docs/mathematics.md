@@ -689,11 +689,88 @@ historical `dt = 0.01 s` default for the P1 fixtures.
 
 ---
 
-## 7-10. Forward references
+## 7. Guidance-to-flight-controller bridge
 
-Sections 7 (tracker), 8 (flight-control reward), 9 (guidance observation and
-reward) and 10 (closed-loop bridge) are completed by the corresponding phases
-(P5, P4, P5, P8).
+Desired world acceleration `a_des` (z up, gravity `g = (0,0,-9.81)`) becomes a
+thrust vector
 
-Equation IDs already reserved by later phases: `EQ-TRK-*`, `EQ-FC-*`,
-`EQ-GUIDE-*`, `EQ-BRIDGE-*`.
+\[
+\mathbf f=m(\mathbf a_{des}-\mathbf g),
+\tag{EQ-BRIDGE-1}
+\]
+
+limited so that the tilt from vertical is at most `theta_max` (lateral part
+scaled first, vertical part has priority) and `|f| <= T_max = 4 c_l Omega_max^2`.
+The collective is found by inverting the thrust curve of 6.4 and the ESC curve:
+
+\[
+c=\left(\frac{\sqrt{|\mathbf f|/(4c_l)}-b_0}{b_2}\right)^2 .
+\tag{EQ-BRIDGE-2}
+\]
+
+The desired attitude has body z along `f` and yaw fixed at `psi_d` (stated rule:
+yaw held at zero), `R_d = [x_d, y_d, z_d]` with `z_d = f/|f|`,
+`y_d = z_d x x_c / |z_d x x_c|`, `x_d = y_d x z_d`, `x_c = (cos psi_d, sin psi_d, 0)`:
+
+\[
+\mathbf q_d=\mathrm{quat}(R_d).
+\tag{EQ-BRIDGE-3}
+\]
+
+The rate setpoint is the quaternion-error law with the firmware attitude gain
+`K_p = 6 1/s`, `q_e = q_d^{-1} (x) q`, taking the shortest rotation:
+
+\[
+\boldsymbol\omega_{cmd}=-2K_p\,\mathrm{sgn}(q_{e,w})\,\mathbf q_{e,xyz}.
+\tag{EQ-BRIDGE-4}
+\]
+
+Small-angle check: for `q_e ~ (1, theta/2)`, `omega_cmd = -K_p theta`, a first
+order attitude loop with time constant `1/K_p`.
+
+## 8. Flight-controller design and reward
+
+### 8.1 Rate-loop shaping (baseline B1)
+
+About one body axis, with the mixer output `u` as input, the plant is
+
+\[
+G(s)=\frac{K}{s(\tau s+1)},
+\]
+
+`K = d(omega_dot)/du` (measured from the model at hover) and `tau = 0.02 s`
+the motor lag. A PI controller `C(s) = k_p (1 + w_i/s)` with crossover
+`w_c = 1/(3 tau)` and zero `w_i = w_c/5` gives, near `w_c`, a phase
+`-90 deg - atan(w_c tau) - atan(w_i/w_c) = -90 - 18.4 - 11.3 = -119.7 deg`, i.e.
+a phase margin of about 60 deg. Gain at crossover equals one when
+
+\[
+k_p=\frac{w_c}{K},\qquad k_i=k_p\,w_i,\qquad w_c=\frac1{3\tau}.
+\tag{EQ-FC-1}
+\]
+
+Targets (verified by `tests/unit/test_fc.py`): rise time below 0.12 s,
+overshoot below 20 %, on roll/pitch.
+
+### 8.2 Reward
+
+With `e = omega_cmd - omega`, `r_max` the rate range, `T_err` the relative
+thrust error (actual minus commanded total thrust over hover thrust),
+`da` the change of action and `s` the fraction of motors at 0 or 1:
+
+\[
+r=-w_\omega\left\|\frac{\mathbf e}{r_{max}}\right\|^2-w_T T_{err}^2-w_s\|\Delta\mathbf a\|^2-w_{sat}\,s .
+\tag{EQ-FC-2}
+\]
+
+Each term is normalised to be of order one at its worst expected value, so the
+weights `w` express relative priority; `w_omega` dominates because rate tracking
+is the task, `w_s` penalises motor chatter (action smoothness), `w_sat` keeps
+headroom, `w_T` keeps the collective honest. Weights are in `configs/fc.yaml`
+and are subject to the P9.3 sensitivity run; they are design choices, not
+measurements.
+
+## 9-10. Forward references
+
+Section 9 (guidance observation and reward) and section 10 (algorithms) are
+completed by P5 and P6. Reserved IDs: `EQ-TRK-*`, `EQ-GUIDE-*`.

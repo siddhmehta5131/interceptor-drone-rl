@@ -3,6 +3,14 @@
 #
 # Quad values below are analytic thrust-to-weight bounds; P4.9 replaces them
 # with measured values from the validated 500 Hz flight-control stack.
+#
+# P4.9 status (scripts/measure_quad_limits.py -> results/tables/quad_limits.json):
+# measured with the B1 stack: lateral acceleration 6.8 m/s^2 (analytic 17.5),
+# terminal speed 3.0 m/s, acceleration time constant 0.052 s, jerk 130 m/s^3.
+# The speed and acceleration are drag-limited by the unrefit aero polynomial
+# (finding F10, vx*Omega^2 term gives ~1.5 1/s of drag).  They are NOT adopted
+# below until P3.5 refits that polynomial on NanoBench data; adopting them
+# would also require re-deriving the quad engagement geometry (P2.6, Q5).
 
 platforms:
   quadcopter:

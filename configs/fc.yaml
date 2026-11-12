@@ -1,0 +1,54 @@
+# Flight-controller environment settings (plan P4).  Every leaf is {value, unit, source}.
+rate_max:
+  value: 8.0
+  unit: rad/s
+  source: "P4.9 measured peak 4.4 rad/s for a 60 deg attitude step (results/tables/quad_limits.json), margin 1.8"
+episode_length:
+  value: 4.0
+  unit: s
+  source: "implementation_plan.md P4.1"
+control_dt:
+  value: 0.002
+  unit: s
+  source: "implementation_plan.md S8 (500 Hz)"
+physics_dt:
+  value: 0.001
+  unit: s
+  source: "implementation_plan.md S8 (1000 Hz)"
+safety_rate:
+  value: 40.0
+  unit: rad/s
+  source: "5 x rate_max; design choice, terminates divergent episodes"
+init_tilt_max:
+  value: 0.5236
+  unit: rad
+  source: "30 deg; design choice, recoverable by the B1 stack"
+init_rate_max:
+  value: 2.0
+  unit: rad/s
+  source: "design choice, quarter of rate_max"
+w_omega:
+  value: 1.0
+  unit: dimensionless
+  source: "EQ-FC-2 design weight, primary objective"
+w_thrust:
+  value: 0.2
+  unit: dimensionless
+  source: "EQ-FC-2 design weight; planned sensitivity run P9.3"
+w_smooth:
+  value: 0.02
+  unit: dimensionless
+  source: "EQ-FC-2 design weight; planned sensitivity run P9.3"
+w_sat:
+  value: 0.1
+  unit: dimensionless
+  source: "EQ-FC-2 design weight; planned sensitivity run P9.3"
+b1_targets:
+  rise_time_max:
+    value: 0.12
+    unit: s
+    source: "design target for B1 (EQ-FC-1 phase margin 60 deg)"
+  overshoot_max:
+    value: 0.20
+    unit: dimensionless
+    source: "design target for B1"
