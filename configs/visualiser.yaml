@@ -1,6 +1,6 @@
 # visualiser.yaml -- PyVista 3D visualiser settings (plan §14).
 #
-# Used by `python -m visualiser` and `scripts/visualise.py`.
+# Used by `python -m interceptor.visualiser` and `scripts/visualise.py`.
 
 # Output video resolution [width, height].
 resolution: [1920, 1080]

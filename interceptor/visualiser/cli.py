@@ -2,8 +2,8 @@
 
 Usage::
 
-    python -m visualiser --model apn --stage 2 --output video.mp4
-    python -m visualiser --model data/runs/apn_rl_v1/ppo_interceptor/final.zip \\
+    python -m interceptor.visualiser --model apn --stage 2 --output video.mp4
+    python -m interceptor.visualiser --model data/runs/apn_rl_v1/ppo_interceptor/final.zip \\
         --stage 3 --output-dir videos/ --fps 60
 
 The ``--model`` argument is either ``apn`` (APN-only, no RL residual), a run
@@ -25,7 +25,7 @@ __all__ = ["generate_trajectory", "main"]
 
 
 def _load_stage_configs(config_path: str, model_yaml: str):
-    from src.utils.config_loader import load_config
+    from interceptor.utils.config_loader import load_config
 
     cfg = load_config(config_path, model_source=model_yaml)
     return cfg
@@ -54,7 +54,7 @@ def generate_trajectory(
     deterministic: bool = True,
 ) -> Dict[str, Any]:
     """Roll one episode out and return ``{"trajectory": [...], "kill_radius": r}``."""
-    from src.envs.intercept_env import InterceptEnv, InterceptorConfig, APNConfig
+    from interceptor.envs.intercept_env import InterceptEnv, InterceptorConfig, APNConfig
 
     cfg = _load_stage_configs(config_path, model_yaml)
     stage_cfg = cfg.stage(stage)
@@ -116,7 +116,7 @@ def _initial_frame(env, info: Dict[str, Any]) -> Dict[str, Any]:
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = argparse.ArgumentParser(
-        prog="python -m visualiser",
+        prog="python -m interceptor.visualiser",
         description="Render APN+RL interceptor episodes to MP4 with PyVista.",
     )
     parser.add_argument("--model", default="apn", help="'apn', a run name, or a .zip path")

@@ -1,6 +1,6 @@
 # stages.yaml -- 3-stage curriculum for the APN + RL interceptor.
 #
-# This file is the authoritative stage table; `src/envs/stage_config.py`
+# This file is the authoritative stage table; `interceptor/envs/stage_config.py`
 # loads it at import time and falls back to identical built-in defaults when
 # the file is missing.  Ranges accept a scalar, a [lo, hi] pair, or
 # {min: .., max: ..}.

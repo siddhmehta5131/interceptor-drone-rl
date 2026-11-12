@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "interceptor"
+version = "2.0.0.dev0"
+description = "Layered interceptor system: Crazyflie simulator, RL flight controller, APN+RL guidance"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy>=2.0",
+    "scipy>=1.11",
+    "pyyaml>=6.0",
+    "gymnasium>=1.0",
+    "stable-baselines3>=2.3",
+    "torch>=2.0",
+    "tensorboard>=2.14",
+    "filterpy>=1.4",
+]
+
+[project.optional-dependencies]
+vis = ["pyvista>=0.43", "trimesh>=4.0", "imageio>=2.31", "imageio-ffmpeg>=0.4", "matplotlib>=3.8"]
+# PyBullet cross-check (plan P3.7, P4.7). Installed in Colab only.
+pybullet = ["pybullet>=3.2.7", "gym-pybullet-drones>=2.2"]
+dev = ["pytest>=7.0", "pandas>=2.0"]
+
+[tool.setuptools.packages.find]
+include = ["interceptor*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "slow: end-to-end tests (deselect with -m \"not slow\")",
+    "pybullet: needs pybullet / gym-pybullet-drones (skipped when missing)",
+]

@@ -2,7 +2,7 @@
 
 Typical use::
 
-    from src.api import train_model
+    from interceptor.api import train_model
     result = train_model(source="configs/model.yaml", stages=[1, 2, 3],
                          name="apn_rl_v1", config="configs/config.yaml")
     result.ppo_interceptor.save("data/models/apn_rl_v1_final")

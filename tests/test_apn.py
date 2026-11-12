@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from src.guidance.apn import (
+from interceptor.guidance.apn import (
     compute_apn_command,
     compute_closing_velocity,
     compute_los_rate,

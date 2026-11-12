@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from src.guidance.kinematic_model import KinematicModel, InterceptorState
+from interceptor.guidance.kinematic_model import KinematicModel, InterceptorState
 
 
 def test_reset_returns_expected_state():

@@ -2,12 +2,12 @@
 
 The orchestrator owns the training loop for ONE model definition:
 
-* builds a vectorised :class:`~src.envs.intercept_env.InterceptEnv` factory,
+* builds a vectorised :class:`~interceptor.envs.intercept_env.InterceptEnv` factory,
 * constructs a PPO policy (asymmetric actor-critic when privileged fields are
   declared) sized to the concatenated actor + privileged observation,
 * trains each curriculum stage until its kill-rate threshold is met or its
   budget is exhausted, saving per-stage checkpoints, and
-* records a :class:`~src.results.ModelResult`.
+* records a :class:`~interceptor.results.ModelResult`.
 """
 
 from __future__ import annotations

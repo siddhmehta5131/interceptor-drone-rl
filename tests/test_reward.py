@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from src.envs.reward import RewardFunction
-from src.envs.stage_config import RewardConfig
+from interceptor.envs.reward import RewardFunction
+from interceptor.envs.stage_config import RewardConfig
 
 
 def _rf():

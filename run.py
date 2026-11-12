@@ -18,8 +18,8 @@ import argparse
 import sys
 from typing import List, Optional, Sequence
 
-from src.api import train_model
-from src.results import TrainResult
+from interceptor.api import train_model
+from interceptor.results import TrainResult
 
 __all__ = ["smoke_example", "full_curriculum", "format_summary", "main"]
 

@@ -37,20 +37,20 @@ def _check(name: str, fn: Callable[[], None]) -> None:
 
 
 def check_imports() -> None:
-    import src.api  # noqa: F401
-    import src.envs.intercept_env  # noqa: F401
-    import src.envs.obs_builder  # noqa: F401
-    import src.envs.reward  # noqa: F401
-    import src.guidance.apn  # noqa: F401
-    import src.guidance.kinematic_model  # noqa: F401
-    import src.guidance.optimal_trajectory  # noqa: F401
-    import src.prediction.base  # noqa: F401
-    import src.training.orchestrator  # noqa: F401
-    import visualiser  # noqa: F401
+    import interceptor.api  # noqa: F401
+    import interceptor.envs.intercept_env  # noqa: F401
+    import interceptor.envs.obs_builder  # noqa: F401
+    import interceptor.envs.reward  # noqa: F401
+    import interceptor.guidance.apn  # noqa: F401
+    import interceptor.guidance.kinematic_model  # noqa: F401
+    import interceptor.guidance.optimal_trajectory  # noqa: F401
+    import interceptor.prediction.base  # noqa: F401
+    import interceptor.training.orchestrator  # noqa: F401
+    import interceptor.visualiser  # noqa: F401
 
 
 def check_apn_head_on() -> None:
-    from src.guidance.apn import compute_apn_command
+    from interceptor.guidance.apn import compute_apn_command
 
     # Head-on, target static straight ahead -> APN command ~ 0.
     a_cmd, info = compute_apn_command(
@@ -67,7 +67,7 @@ def check_apn_head_on() -> None:
 
 
 def check_apn_crossing() -> None:
-    from src.guidance.apn import compute_apn_command
+    from interceptor.guidance.apn import compute_apn_command
 
     # Target crossing laterally -> APN command points along +y (lead the target).
     a_cmd, _ = compute_apn_command(
@@ -82,7 +82,7 @@ def check_apn_crossing() -> None:
 
 
 def check_kinematic() -> None:
-    from src.guidance.kinematic_model import KinematicModel
+    from interceptor.guidance.kinematic_model import KinematicModel
 
     km = KinematicModel(v_max=50.0, a_max=15.0, omega_max=3.0, dt=0.02)
     state = km.reset(position=np.zeros(3), velocity=np.zeros(3))
@@ -94,7 +94,7 @@ def check_kinematic() -> None:
 
 
 def check_stage_config() -> None:
-    from src.envs.stage_config import STAGES
+    from interceptor.envs.stage_config import STAGES
 
     assert set(STAGES) == {"stage_1", "stage_2", "stage_3"}, STAGES.keys()
     for sid, stage in STAGES.items():
@@ -103,8 +103,8 @@ def check_stage_config() -> None:
 
 
 def check_obs_dims() -> None:
-    from src.utils.config_loader import load_config
-    from src.envs.intercept_env import InterceptEnv
+    from interceptor.utils.config_loader import load_config
+    from interceptor.envs.intercept_env import InterceptEnv
 
     cfg = load_config("configs/config.yaml")
     for n in cfg.stage_numbers():
@@ -116,8 +116,8 @@ def check_obs_dims() -> None:
 
 
 def check_reward() -> None:
-    from src.envs.reward import RewardFunction
-    from src.envs.stage_config import RewardConfig
+    from interceptor.envs.reward import RewardFunction
+    from interceptor.envs.stage_config import RewardConfig
 
     rf = RewardFunction(RewardConfig(), v_max=50.0, a_max=15.0, kill_radius=1.0)
     r_kill, term, _ = rf.compute(
@@ -135,8 +135,8 @@ def check_reward() -> None:
 
 
 def check_target_generator() -> None:
-    from src.envs.stage_config import STAGES
-    from src.envs.target_generator import TargetGenerator
+    from interceptor.envs.stage_config import STAGES
+    from interceptor.envs.target_generator import TargetGenerator
 
     for sid, stage in STAGES.items():
         gen = TargetGenerator(stage, np.random.default_rng(0))
@@ -150,8 +150,8 @@ def check_target_generator() -> None:
 
 
 def check_oracle() -> None:
-    from src.guidance.optimal_trajectory import compute_optimal_intercept
-    from src.envs.target_generator import PolynomialTargetPath
+    from interceptor.guidance.optimal_trajectory import compute_optimal_intercept
+    from interceptor.envs.target_generator import PolynomialTargetPath
 
     path = PolynomialTargetPath(
         start=np.zeros(3), end=np.array([60.0, 0.0, 0.0]),
@@ -166,8 +166,8 @@ def check_oracle() -> None:
 
 
 def check_history_stacking() -> None:
-    from src.envs.obs_builder import ObsBuilder
-    from src.envs.stage_config import ObsStageConfig
+    from interceptor.envs.obs_builder import ObsBuilder
+    from interceptor.envs.stage_config import ObsStageConfig
 
     builder = ObsBuilder(ObsStageConfig())
     builder.reset()
@@ -187,8 +187,8 @@ def check_history_stacking() -> None:
 
 
 def check_apn_only_intercept() -> None:
-    from src.envs.stage_config import STAGES
-    from src.envs.intercept_env import InterceptEnv
+    from interceptor.envs.stage_config import STAGES
+    from interceptor.envs.intercept_env import InterceptEnv
 
     stage = STAGES["stage_1"]
     kills = 0

@@ -14,7 +14,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from visualiser.cli import main as visualiser_main
+from interceptor.visualiser.cli import main as visualiser_main
 
 
 def main(argv=None) -> int:

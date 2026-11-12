@@ -106,7 +106,7 @@ class ModelResult:
 
 @dataclass
 class TrainResult:
-    """Top-level result of :func:`src.api.train_model`."""
+    """Top-level result of :func:`interceptor.api.train_model`."""
 
     run_dir: str = ""
     config_hash: str = ""

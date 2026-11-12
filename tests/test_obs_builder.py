@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import numpy as np
 
-from src.envs.obs_builder import (
+from interceptor.envs.obs_builder import (
     FRAME_DIM,
     FUTURE_SAMPLE_DIM,
     PRIVILEGED_DIM,
     ObsBuilder,
 )
-from src.envs.stage_config import ObsStageConfig
+from interceptor.envs.stage_config import ObsStageConfig
 
 
 def _build(builder, i=0.0):

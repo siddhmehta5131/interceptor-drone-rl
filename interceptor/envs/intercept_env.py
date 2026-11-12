@@ -14,7 +14,7 @@ The environment implements the plan §8.1 step order exactly:
 10. append to the trajectory log.
 
 The returned observation is ``concat(actor_obs, privileged_obs)`` so the
-retained :class:`~src.training.asymmetric_policy.AsymmetricActorCriticPolicy`
+retained :class:`~interceptor.training.asymmetric_policy.AsymmetricActorCriticPolicy`
 can slice the actor block while the critic sees the privileged columns.
 """
 

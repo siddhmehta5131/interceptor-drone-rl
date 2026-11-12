@@ -1,6 +1,6 @@
 """train.py -- training entry point (plan §17.1 file 30).
 
-Thin CLI over :func:`src.api.train_model`.  Example::
+Thin CLI over :func:`interceptor.api.train_model`.  Example::
 
     python scripts/train.py --stages 1,2,3 --name apn_rl_v1
     python scripts/train.py --stages 1 --name smoke --steps 20000
@@ -14,7 +14,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from src.api import train_model
+from interceptor.api import train_model
 
 
 def main(argv=None) -> int:

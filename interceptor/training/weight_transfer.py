@@ -248,7 +248,7 @@ def _is_torch(t: Any) -> bool:
 
 
 def _copy_into(src: Any, dst: Any) -> None:
-    """Copy ``src`` into ``dst`` for torch tensors and numpy arrays alike."""
+    """Copy ``interceptor`` into ``dst`` for torch tensors and numpy arrays alike."""
     if _is_torch(dst):
         import torch as th
 

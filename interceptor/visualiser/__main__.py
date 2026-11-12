@@ -1,4 +1,4 @@
-"""Enable ``python -m visualiser``."""
+"""Enable ``python -m interceptor.visualiser``."""
 
 from .cli import main
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from src.envs.stage_config import (
+from interceptor.envs.stage_config import (
     DEFAULT_STAGES,
     STAGES,
     StageConfig,

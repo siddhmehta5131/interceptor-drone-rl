@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from src.envs.stage_config import STAGES
-from src.envs.target_generator import PolynomialTargetPath, TargetGenerator
+from interceptor.envs.stage_config import STAGES
+from interceptor.envs.target_generator import PolynomialTargetPath, TargetGenerator
 
 
 def test_static_target_stays_put():

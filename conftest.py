@@ -1,4 +1,4 @@
-"""Make ``src`` / ``visualiser`` importable when running pytest from anywhere."""
+"""Make ``interceptor`` / ``visualiser`` importable when running pytest from anywhere."""
 
 from __future__ import annotations
 

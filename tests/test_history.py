@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from src.envs.obs_builder import FRAME_DIM, ObsBuilder
-from src.envs.stage_config import STAGES
+from interceptor.envs.obs_builder import FRAME_DIM, ObsBuilder
+from interceptor.envs.stage_config import STAGES
 
 _TARGET_POS = np.array([30.0, 0.0, 0.0])
 _TARGET_VEL = np.zeros(3)

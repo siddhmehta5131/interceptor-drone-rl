@@ -15,7 +15,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from src.api import evaluate_model
+from interceptor.api import evaluate_model
 
 _METRIC_ORDER = [
     ("kill_rate", "kill rate"),
@@ -68,8 +68,8 @@ def main(argv=None) -> int:
 
     if args.render:
         try:
-            from visualiser.cli import generate_trajectory
-            from visualiser.animator import InterceptAnimator
+            from interceptor.visualiser.cli import generate_trajectory
+            from interceptor.visualiser.animator import InterceptAnimator
 
             rollout = generate_trajectory(
                 args.stage, model_path=args.model,

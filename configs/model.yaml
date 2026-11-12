@@ -17,7 +17,7 @@
 #   obs_history        {frames: m, skip: p} -- must match config.observation
 #   hyperparameters    passed straight to SB3
 #   privileged_critic  critic-only observation fields the actor never sees.
-#                      Supported names (see src/envs/obs_builder.PRIVILEGED_FIELDS):
+#                      Supported names (see interceptor/envs/obs_builder.PRIVILEGED_FIELDS):
 #                        time_remaining
 #                        optimal_accel
 #                        optimal_vel

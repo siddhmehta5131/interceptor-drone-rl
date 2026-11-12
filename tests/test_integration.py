@@ -15,13 +15,13 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from src.envs.intercept_env import (
+from interceptor.envs.intercept_env import (
     APNConfig,
     DEFAULT_PRIVILEGED_FIELDS,
     InterceptEnv,
     InterceptorConfig,
 )
-from src.utils.config_loader import load_config
+from interceptor.utils.config_loader import load_config
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -92,9 +92,9 @@ def test_rl_training_smoke():
 def test_visualiser_renders_short_mp4(tmp_path):
     pytest.importorskip("pyvista")
 
-    from visualiser.animator import InterceptAnimator
-    from visualiser.cli import generate_trajectory
-    from visualiser.scene_builder import load_visualiser_config
+    from interceptor.visualiser.animator import InterceptAnimator
+    from interceptor.visualiser.cli import generate_trajectory
+    from interceptor.visualiser.scene_builder import load_visualiser_config
 
     rollout = generate_trajectory(1, model_path=None, seed=0)
     trajectory = rollout["trajectory"][:10]
@@ -123,7 +123,7 @@ def test_end_to_end(tmp_path):
     from stable_baselines3 import PPO
     from stable_baselines3.common.vec_env import DummyVecEnv
 
-    from src.training.orchestrator import evaluate_policy
+    from interceptor.training.orchestrator import evaluate_policy
 
     def _env_fn():
         return _make_env(1, seed=2)

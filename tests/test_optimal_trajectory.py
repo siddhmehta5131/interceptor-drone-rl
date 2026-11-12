@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from src.envs.target_generator import PolynomialTargetPath
-from src.guidance.optimal_trajectory import compute_optimal_intercept
+from interceptor.envs.target_generator import PolynomialTargetPath
+from interceptor.guidance.optimal_trajectory import compute_optimal_intercept
 
 
 class _StaticPath:
