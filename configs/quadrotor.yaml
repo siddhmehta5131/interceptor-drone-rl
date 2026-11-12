@@ -1,0 +1,143 @@
+# Quadrotor physical parameters -- every leaf is {value, unit, source}.
+#
+# Primary airframe: Crazyflie 2.1 with the NanoBench flying mass.  The
+# comparison of candidate values (F6/F7/F8) is in docs/sim_validation.md.
+# Values are consumed by interceptor/sim/constants.py at import time; this file
+# is the auditable source of record.
+
+airframe: "Crazyflie 2.1 / NanoBench"
+primary_source: "Forster 2015; Bitcraze Crazyflie 2.x datasheet; NanoBench (Crazyswarm2) system identification"
+
+mass:
+  value: 0.04085
+  unit: kg
+  source: "NanoBench primary parameter set; interceptor/sim/constants.py PH_M"
+inertia:
+  value: [2.3951e-5, 2.3951e-5, 3.2347e-5]
+  unit: kg m^2
+  source: "Forster 2015, diagonal inertia; matches cf2x.urdf"
+arm_length:
+  value: 0.0397
+  unit: m
+  source: "Bitcraze Crazyflie 2.x frame drawing; cf2x.urdf rotor offset"
+rotor_inertia:
+  value: 2.0e-9
+  unit: kg m^2
+  source: "Forster 2015 rotor/propeller inertia"
+thrust_coefficient:
+  value: 2.618e-8
+  unit: N s^2/rad^2
+  source: "NanoBench hover system identification; interceptor/sim/constants.py PH_C_L"
+torque_coefficient:
+  value: 5.45e-11
+  unit: N m s^2/rad^2
+  source: "NanoBench fitted c_l/480 drag-to-thrust ratio"
+maximum_motor_speed:
+  value: 2800.0
+  unit: rad/s
+  source: "Bitcraze 7x16 mm coreless motor at 4.2 V, full throttle"
+motor_time_constant:
+  value: 0.02
+  unit: s
+  source: "NanoBench motor step-response identification"
+motor_efficiency:
+  value: 0.7
+  unit: dimensionless
+  source: "Bitcraze motor/propeller efficiency measurement at hover"
+battery_voltage_full:
+  value: 4.2
+  unit: V
+  source: "Bitcraze 1S LiPo full-charge voltage"
+esc_zero_order_coefficients:
+  value: [1170.36749799968, 0.0, 1629.63250200032, 0.0, 0.0]
+  unit: "rad/s; polynomial in sqrt(throttle) and battery voltage"
+  source: "Two-point monotone fit anchored at hover and full throttle; docs/BUGS.md entry R-1"
+pid_rate_gains:
+  kp:
+    value: [0.150, 0.150, 0.200]
+    unit: "command per rad/s"
+    source: "Project rate-loop loop-shaping at 500 Hz; docs/mathematics.md EQ-CTRL-3"
+  ki:
+    value: [0.200, 0.200, 0.100]
+    unit: "command per (rad/s s)"
+    source: "Project rate-loop loop-shaping at 500 Hz; docs/mathematics.md EQ-CTRL-3"
+  kd:
+    value: [0.001, 0.001, 0.000]
+    unit: "command per (rad/s^2)"
+    source: "Discrete derivative stability bound at 500 Hz; docs/BUGS.md entry R-3"
+aero:
+  force_clip:
+    value: 50.0
+    unit: N
+    source: "Numerical guard above measured NanoBench peak specific force"
+  torque_clip:
+    value: 5.0
+    unit: N m
+    source: "Numerical guard above measured NanoBench peak torque"
+  fx_raw:
+    value: [6.582314e-02, -3.507132e-02, 0.0, -3.952726e-07]
+    unit: "m/s^2 per [v, v|v|, Omega^2, v Omega^2]"
+    source: "NanoBench least-squares fit, dissipative sign constraint; docs/mathematics.md EQ-AERO-8"
+  fy_raw:
+    value: [5.738530e-02, 2.022478e-02, 0.0, -6.291393e-07]
+    unit: "m/s^2 per [v, v|v|, Omega^2, v Omega^2]"
+    source: "NanoBench least-squares fit, dissipative sign constraint; docs/mathematics.md EQ-AERO-8"
+  fz_raw:
+    value: [3.610184e-02, -1.153378e-01, 0.0, -5.881881e-07, -1.188474e-06, -1.705725e-08]
+    unit: "m/s^2 polynomial basis"
+    source: "NanoBench least-squares fit, dissipative sign constraint; docs/mathematics.md EQ-AERO-8"
+  tx_raw:
+    value: [0.0, 0.0, 0.0, 0.0, 0.0]
+    unit: "rad/s^2 polynomial basis"
+    source: "Zeroed: over-predicted roll torque in NanoBench fit; docs/BUGS.md entry R-2"
+  ty_raw:
+    value: [0.0, 0.0, 0.0, 0.0, 0.0]
+    unit: "rad/s^2 polynomial basis"
+    source: "Zeroed: over-predicted pitch torque in NanoBench fit; docs/BUGS.md entry R-2"
+  tz_raw:
+    value: [-1.432000e-03, 7.798700e-02]
+    unit: "rad/s^2 per [vx, vy]"
+    source: "NanoBench yaw-damping fit; docs/mathematics.md EQ-AERO-9"
+ground_effect:
+  height:
+    value: 0.15
+    unit: m
+    source: "Cheeseman & Bennett image-vortex fit, scaled to Crazyflie rotor diameter"
+  max_gain:
+    value: 0.20
+    unit: dimensionless
+    source: "Cheeseman & Bennett image-vortex fit at z=0"
+wind:
+  mean_std:
+    value: 1.5
+    unit: m/s
+    source: "Dryden low-altitude light-turbulence intensity, MIL-HDBK-1797"
+  theta_range:
+    value: [0.2, 1.0]
+    unit: 1/s
+    source: "Dryden longitudinal filter bandwidth mapping; docs/mathematics.md EQ-WIND-2"
+  sigma_range:
+    value: [0.3, 2.0]
+    unit: m/s
+    source: "Dryden low-altitude turbulence intensity range, MIL-HDBK-1797"
+domain_randomisation:
+  mass_fraction:
+    value: [0.90, 1.10]
+    unit: dimensionless
+    source: "NanoBench unit-to-unit mass spread"
+  inertia_fraction:
+    value: [0.90, 1.10]
+    unit: dimensionless
+    source: "NanoBench unit-to-unit inertia spread"
+  thrust_fraction:
+    value: [0.85, 1.15]
+    unit: dimensionless
+    source: "Bitcraze motor-to-motor thrust scatter"
+  torque_fraction:
+    value: [0.85, 1.15]
+    unit: dimensionless
+    source: "Bitcraze motor-to-motor drag-torque scatter"
+  aero_fraction:
+    value: [0.80, 1.20]
+    unit: dimensionless
+    source: "NanoBench fit residual envelope"

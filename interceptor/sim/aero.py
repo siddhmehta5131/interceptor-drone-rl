@@ -6,8 +6,9 @@ with three extensions taken from ``swift_rl_env.py``:
 * **Domain randomization ready** -- the raw (acceleration-unit) polynomial
   coefficients live in ``PhysicsParams`` and are multiplied by the (possibly
   randomized) mass / inertia at evaluation time.
-* **Wind** -- an Ornstein-Uhlenbeck process; wind in the world frame is
-  transformed into air-relative body velocity before entering the aero model.
+* **Wind** -- an Ornstein-Uhlenbeck process (EQ-WIND-1, the first-order Dryden
+  longitudinal filter); wind in the world frame is transformed into
+  air-relative body velocity before entering the aero model.
 * **Ground effect** -- multiplicative thrust boost near the floor.
 
 When wind is zero and the params are at their nominal values the model is

@@ -1,0 +1,177 @@
+# Evasive-target manoeuvre constants (plan P2.8).  All values are
+# non-dimensional ratios so the laws transfer across platforms.  Every leaf is
+# {value, unit, source}; the implementation is guidance/targets.py.
+
+hard_maneuvers:
+  value:
+    - spiral_corkscrew
+    - barrel_roll
+    - square_bang_bang
+    - terminal_break
+    - split_s
+    - scissor
+    - energy_depletion
+  unit: "law names"
+  source: "notebook v2 oversampling set; EQ-MAN-1"
+
+laws:
+  none:
+    enabled:
+      value: false
+      unit: dimensionless
+      source: "Straight-flight reference law; EQ-MAN-2"
+  constant_g:
+    onset_time:
+      value: 0.25
+      unit: s
+      source: "Two decision periods of 50 Hz loop; EQ-MAN-3"
+    load_fraction:
+      value: 1.0
+      unit: "fraction of a_max"
+      source: "Saturation turn; EQ-MAN-3"
+  sinusoidal_weave:
+    frequency_ratio:
+      value: [1.1, 2.0]
+      unit: rad/s
+      source: "Notebook v2 weave bandwidth; EQ-MAN-4"
+    amplitude_fraction:
+      value: 1.0
+      unit: "fraction of a_max"
+      source: "Saturation weave; EQ-MAN-4"
+  barrel_roll:
+    frequency_ratio:
+      value: [1.1, 2.0]
+      unit: rad/s
+      source: "Notebook v2 barrel-roll bandwidth; EQ-MAN-5"
+    amplitude_fraction:
+      value: 1.0
+      unit: "fraction of a_max"
+      source: "Saturation barrel roll; EQ-MAN-5"
+  terminal_break:
+    trigger_time_to_go:
+      value: 2.5
+      unit: s
+      source: "Terminal-phase break window; EQ-MAN-6"
+    load_fraction:
+      value: 1.0
+      unit: "fraction of a_max"
+      source: "Saturation break; EQ-MAN-6"
+  energy_depletion:
+    axial_fraction:
+      value: 0.25
+      unit: "fraction of a_max"
+      source: "Notebook v2 energy-depletion law; EQ-MAN-7"
+    steering_fraction:
+      value: 0.7
+      unit: "fraction of a_max"
+      source: "Notebook v2 energy-depletion law; EQ-MAN-7"
+    weave_fraction:
+      value: 0.4
+      unit: "fraction of a_max"
+      source: "Notebook v2 energy-depletion law; EQ-MAN-7"
+  split_s:
+    heading_change:
+      value: 2.8
+      unit: rad
+      source: "Inverted-flight completion threshold; EQ-MAN-8"
+    axial_fraction:
+      value: 0.2
+      unit: "fraction of a_max"
+      source: "Notebook v2 split-S law; EQ-MAN-8"
+  square_bang_bang:
+    frequency_ratio:
+      value: [1.1, 2.0]
+      unit: rad/s
+      source: "Notebook v2 bang-bang reversal rate; EQ-MAN-9"
+    load_fraction:
+      value: 1.0
+      unit: "fraction of a_max"
+      source: "Saturation reversal; EQ-MAN-9"
+  scissor:
+    bank_limit:
+      value: 65.0
+      unit: deg
+      source: "Notebook v2 scissor reversal angle; EQ-MAN-10"
+    axial_fraction:
+      value: -0.25
+      unit: "fraction of a_max"
+      source: "Notebook v2 scissor deceleration; EQ-MAN-10"
+  notching:
+    radial_gain:
+      value: -4.0
+      unit: "s/m"
+      source: "Notebook v2 notch feedback; EQ-MAN-11"
+    centripetal_fraction:
+      value: 1.0
+      unit: "fraction of v^2/r"
+      source: "Notebook v2 notch turn; EQ-MAN-11"
+  turn_into_missile:
+    axial_fraction:
+      value: 0.2
+      unit: "fraction of a_max"
+      source: "Notebook v2 threat-turn law; EQ-MAN-12"
+  crank:
+    offset_angle:
+      value: 60.0
+      unit: deg
+      source: "Notebook v2 crank geometry; EQ-MAN-13"
+    heading_gain:
+      value: 3.0
+      unit: "1/s"
+      source: "Notebook v2 crank heading loop; EQ-MAN-13"
+    switch_frequency:
+      value: 0.35
+      unit: rad/s
+      source: "Notebook v2 crank side-switch rate; EQ-MAN-13"
+  speed_change:
+    amplitude_fraction:
+      value: 0.8
+      unit: "fraction of a_max"
+      source: "Notebook v2 speed-change law; EQ-MAN-14"
+    frequency:
+      value: 1.2
+      unit: rad/s
+      source: "Notebook v2 speed-change rate; EQ-MAN-14"
+  minimum_range_turn:
+    trigger_time_to_go:
+      value: 4.0
+      unit: s
+      source: "Notebook v2 minimum-range trigger; EQ-MAN-15"
+    axial_fraction:
+      value: -0.3
+      unit: "fraction of a_max"
+      source: "Notebook v2 minimum-range deceleration; EQ-MAN-15"
+    load_fraction:
+      value: 1.0
+      unit: "fraction of a_max"
+      source: "Saturation turn; EQ-MAN-15"
+  dive_dense_air:
+    dive_angle:
+      value: -30.0
+      unit: deg
+      source: "Notebook v2 dense-air dive; EQ-MAN-16"
+    altitude_threshold:
+      value: 100.0
+      unit: m
+      source: "Notebook v2 dive onset altitude; EQ-MAN-16"
+    axial_fraction:
+      value: 0.25
+      unit: "fraction of a_max"
+      source: "Notebook v2 dive thrust margin; EQ-MAN-16"
+    pitch_gain:
+      value: 3.0
+      unit: "1/s"
+      source: "Notebook v2 dive pitch loop; EQ-MAN-16"
+  spiral_corkscrew:
+    axial_fraction:
+      value: 0.2
+      unit: "fraction of a_max"
+      source: "Notebook v2 cork-screw law; EQ-MAN-17"
+    chirp_rate:
+      value: 0.18
+      unit: "rad/s^2"
+      source: "Notebook v2 cork-screw chirp; EQ-MAN-17"
+    frequency_ratio:
+      value: [1.1, 2.0]
+      unit: rad/s
+      source: "Notebook v2 cork-screw bandwidth; EQ-MAN-17"

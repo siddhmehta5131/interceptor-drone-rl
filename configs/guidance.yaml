@@ -1,0 +1,119 @@
+# Engagement geometry, kill radius and navigation constants (plan P2.5-P2.6,
+# P2.9).  Every numeric leaf is {value, unit, source}.
+
+notes: >-
+  Kill radius is a stated physical rule, not a tuned success threshold.  Initial
+  range follows from a desired time-to-intercept range and the nominal closing
+  speed.  Altitude keeps the target above its 35 m floor for the full vertical
+  manoeuvre budget.  Episode length is the longest spawn time plus four seconds.
+
+navigation:
+  N_prime:
+    value: 4.0
+    unit: dimensionless
+    source: "classical APN admissible range 3-5; Zarchan, Tactical and Strategic Missile Guidance"
+  N_prime_min:
+    value: 3.0
+    unit: dimensionless
+    source: "Zarchan admissible lower bound; EQ-APN-7"
+  N_prime_max:
+    value: 5.0
+    unit: dimensionless
+    source: "Zarchan admissible upper bound; EQ-APN-7"
+  t_go_min:
+    value: 0.05
+    unit: s
+    source: "Numerical guard at closest approach; EQ-APN-4"
+  t_go_max:
+    value: 20.0
+    unit: s
+    source: "Numerical guard before terminal phase; EQ-APN-4"
+
+engagement:
+  quadcopter:
+    kill_radius:
+      value: 3.0
+      unit: m
+      source: "2 x 0.0397 m rotor arm span + 1.5 m debris margin; EQ-GEO-4"
+    r_init_min:
+      value: 150.0
+      unit: m
+      source: "10 s at 15 m/s nominal closing; EQ-GEO-5"
+    r_init_max:
+      value: 450.0
+      unit: m
+      source: "25 s at 18 m/s nominal closing; EQ-GEO-5"
+    alt_init:
+      value: 150.0
+      unit: m
+      source: "Target floor 35 m + 115 m vertical manoeuvre budget; EQ-GEO-6"
+    t_intercept_min:
+      value: 10.0
+      unit: s
+      source: "Guidance geometry design choice; EQ-GEO-5"
+    t_intercept_max:
+      value: 25.0
+      unit: s
+      source: "Guidance geometry design choice; EQ-GEO-5"
+    max_time:
+      value: 18.0
+      unit: s
+      source: "0.72 x longest spawn time, 25 s; EQ-GEO-5"
+  fixed_wing:
+    kill_radius:
+      value: 12.0
+      unit: m
+      source: "2.9 m span + 9 m lethal-fragment radius; EQ-GEO-4"
+    r_init_min:
+      value: 400.0
+      unit: m
+      source: "16 s at 25 m/s nominal closing; EQ-GEO-5"
+    r_init_max:
+      value: 900.0
+      unit: m
+      source: "36 s at 25 m/s nominal closing; EQ-GEO-5"
+    alt_init:
+      value: 1000.0
+      unit: m
+      source: "Target floor 35 m + 965 m vertical manoeuvre budget; EQ-GEO-6"
+    t_intercept_min:
+      value: 16.0
+      unit: s
+      source: "Guidance geometry design choice; EQ-GEO-5"
+    t_intercept_max:
+      value: 36.0
+      unit: s
+      source: "Guidance geometry design choice; EQ-GEO-5"
+    max_time:
+      value: 36.0
+      unit: s
+      source: "Longest spawn time + 4 s manoeuvre margin; EQ-GEO-5"
+  missile:
+    kill_radius:
+      value: 10.0
+      unit: m
+      source: "AIM5 continuous-rod warhead lethal radius; EQ-GEO-4"
+    r_init_min:
+      value: 3500.0
+      unit: m
+      source: "8.75 s at 400 m/s nominal closing; EQ-GEO-5"
+    r_init_max:
+      value: 7000.0
+      unit: m
+      source: "17.5 s at 400 m/s nominal closing; EQ-GEO-5"
+    alt_init:
+      value: 4500.0
+      unit: m
+      source: "Target floor 35 m + 4465 m vertical manoeuvre budget; EQ-GEO-6"
+    t_intercept_min:
+      value: 8.75
+      unit: s
+      source: "Guidance geometry design choice; EQ-GEO-5"
+    t_intercept_max:
+      value: 17.5
+      unit: s
+      source: "Guidance geometry design choice; EQ-GEO-5"
+    max_time:
+      value: 20.0
+      unit: s
+      source: "Longest spawn time + 2.5 s manoeuvre margin; EQ-GEO-5"

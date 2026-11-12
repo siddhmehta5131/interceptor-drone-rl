@@ -1,0 +1,267 @@
+# Guidance-level platform envelopes.  Every leaf is {value, unit, source}.
+# Consumed by interceptor/guidance/platform.py::load_platforms.
+#
+# Quad values below are analytic thrust-to-weight bounds; P4.9 replaces them
+# with measured values from the validated 500 Hz flight-control stack.
+
+platforms:
+  quadcopter:
+    description: "Crazyflie 2.1 interceptor, omnidirectional"
+    v_min:
+      value: 0.0
+      unit: m/s
+      source: "Multirotor can hover; EQ-KIN-1"
+    v_max:
+      value: 45.0
+      unit: m/s
+      source: "Drag-limited Crazyflie sprint estimate; replaced by measured P4.9"
+    a_t_max:
+      value: 31.392
+      unit: m/s^2
+      source: "3.2 g collective thrust margin; analytic, replaced by measured P4.9"
+    a_t_min:
+      value: -31.392
+      unit: m/s^2
+      source: "3.2 g negative collective; analytic, replaced by measured P4.9"
+    a_n_max:
+      value: 51.012
+      unit: m/s^2
+      source: "5.2 g lateral thrust component at hover; analytic, replaced by measured P4.9"
+    a_n_down_max:
+      value: 9.81
+      unit: m/s^2
+      source: "1.0 g downward normal limit; analytic, replaced by measured P4.9"
+    tau_accel:
+      value: 0.05
+      unit: s
+      source: "Inner rate-loop closed-loop bandwidth; measured P4.9"
+    max_jerk:
+      value: 300.0
+      unit: m/s^3
+      source: "a_n_max / tau_accel = 51.012 / 0.05 rounded; EQ-KIN-3"
+    omega_max:
+      value: 6.0
+      unit: rad/s
+      source: "Crazyflie body-rate limit at 500 Hz; measured P4.9"
+    can_hover:
+      value: true
+      unit: dimensionless
+      source: "Multirotor thrust exceeds weight; EQ-KIN-1"
+    omnidirectional:
+      value: true
+      unit: dimensionless
+      source: "Thrust vector can point in any direction; EQ-KIN-2"
+    kill_radius:
+      value: 3.0
+      unit: m
+      source: "2 x rotor span; configs/guidance.yaml EQ-GEO-4"
+    r_init_min:
+      value: 150.0
+      unit: m
+      source: "10 s at 15 m/s closing; configs/guidance.yaml EQ-GEO-5"
+    r_init_max:
+      value: 450.0
+      unit: m
+      source: "25 s at 18 m/s closing; configs/guidance.yaml EQ-GEO-5"
+    alt_init:
+      value: 150.0
+      unit: m
+      source: "Above 35 m target floor plus 8 s vertical manoeuvre margin; EQ-GEO-6"
+    v_target_nominal:
+      value: 18.0
+      unit: m/s
+      source: "Q5 baseline: 0.4 x interceptor v_max; configs/guidance.yaml"
+    a_target_max:
+      value: 24.525
+      unit: m/s^2
+      source: "Q5 baseline: 2.5 g evasive target; EQ-TGT-1"
+    dt:
+      value: 0.02
+      unit: s
+      source: "Decision rate S8: 50 Hz guidance decision"
+    max_time:
+      value: 18.0
+      unit: s
+      source: "Guidance geometry: longest spawn at 25 m/s closing; EQ-GEO-5"
+    speed_ratio:
+      value: 2.5
+      unit: dimensionless
+      source: "Q5 baseline interceptor/target speed ratio = 45/18; EQ-TGT-1"
+    a_ratio:
+      value: 2.08
+      unit: dimensionless
+      source: "Q5 baseline interceptor/target accel ratio = 51.012/24.525; EQ-TGT-1"
+
+  fixed_wing:
+    description: "Aerosonde fixed-wing interceptor, non-holonomic"
+    v_min:
+      value: 15.0
+      unit: m/s
+      source: "configs/airframes/aerosonde.yaml derived_limits; EQ-FW-2"
+    v_max:
+      value: 40.0
+      unit: m/s
+      source: "configs/airframes/aerosonde.yaml derived_limits; EQ-FW-3"
+    a_t_max:
+      value: 41.202
+      unit: m/s^2
+      source: "configs/airframes/aerosonde.yaml derived_limits; EQ-FW-4"
+    a_t_min:
+      value: -19.62
+      unit: m/s^2
+      source: "configs/airframes/aerosonde.yaml derived_limits; EQ-FW-4"
+    a_n_max:
+      value: 102.9
+      unit: m/s^2
+      source: "configs/airframes/aerosonde.yaml derived_limits; EQ-FW-5"
+    a_n_down_max:
+      value: 49.05
+      unit: m/s^2
+      source: "configs/airframes/aerosonde.yaml derived_limits; EQ-FW-5"
+    tau_accel:
+      value: 0.12
+      unit: s
+      source: "configs/airframes/aerosonde.yaml derived_limits; EQ-FW-7"
+    max_jerk:
+      value: 180.0
+      unit: m/s^3
+      source: "configs/airframes/aerosonde.yaml derived_limits; EQ-FW-7"
+    omega_max:
+      value: 3.5
+      unit: rad/s
+      source: "coordinated turn at 25 m/s and 10.5 g; EQ-FW-6"
+    can_hover:
+      value: false
+      unit: dimensionless
+      source: "Fixed-wing lift vanishes at zero speed; EQ-KIN-1"
+    omnidirectional:
+      value: false
+      unit: dimensionless
+      source: "Thrust acts along body x only; EQ-KIN-2"
+    kill_radius:
+      value: 12.0
+      unit: m
+      source: "Aerosonde 2.9 m span plus 9 m lethal-fragment radius; EQ-GEO-4"
+    r_init_min:
+      value: 400.0
+      unit: m
+      source: "16 s at 25 m/s closing; EQ-GEO-5"
+    r_init_max:
+      value: 900.0
+      unit: m
+      source: "36 s at 25 m/s closing; EQ-GEO-5"
+    alt_init:
+      value: 1000.0
+      unit: m
+      source: "Above 35 m target floor plus 965 m manoeuvre margin; EQ-GEO-6"
+    v_target_nominal:
+      value: 25.0
+      unit: m/s
+      source: "Aerosonde trim speed, Beard & McLain Appendix E; configs/guidance.yaml"
+    a_target_max:
+      value: 41.202
+      unit: m/s^2
+      source: "Q5 baseline: same 4.2 g manoeuvre capability as interceptor; EQ-TGT-1"
+    dt:
+      value: 0.02
+      unit: s
+      source: "Decision rate S8: 50 Hz guidance decision"
+    max_time:
+      value: 36.0
+      unit: s
+      source: "Spawn range / closing speed + 4 s; EQ-GEO-5"
+    speed_ratio:
+      value: 1.6
+      unit: dimensionless
+      source: "Q5 baseline interceptor/target speed ratio = 40/25; EQ-TGT-1"
+    a_ratio:
+      value: 1.0
+      unit: dimensionless
+      source: "Q5 baseline equal manoeuvre capability; EQ-TGT-1"
+
+  missile:
+    description: "AIM5 missile interceptor, boost-coast"
+    v_min:
+      value: 180.0
+      unit: m/s
+      source: "configs/airframes/aim5.yaml derived_limits; EQ-MS-2"
+    v_max:
+      value: 1200.0
+      unit: m/s
+      source: "configs/airframes/aim5.yaml derived_limits; EQ-MS-3"
+    a_t_max:
+      value: 176.58
+      unit: m/s^2
+      source: "configs/airframes/aim5.yaml derived_limits; 18 g; EQ-MS-4"
+    a_t_min:
+      value: -39.24
+      unit: m/s^2
+      source: "configs/airframes/aim5.yaml derived_limits; -4 g; EQ-MS-4"
+    a_n_max:
+      value: 358.1
+      unit: m/s^2
+      source: "configs/airframes/aim5.yaml derived_limits; CADAC 35 deg at Q12; EQ-MS-1"
+    a_n_down_max:
+      value: 358.1
+      unit: m/s^2
+      source: "configs/airframes/aim5.yaml derived_limits; symmetric; EQ-MS-1"
+    tau_accel:
+      value: 0.1
+      unit: s
+      source: "configs/airframes/aim5.yaml CADAC tr; EQ-MS-6"
+    max_jerk:
+      value: 1000.0
+      unit: m/s^3
+      source: "configs/airframes/aim5.yaml derived_limits; EQ-MS-6"
+    omega_max:
+      value: 12.0
+      unit: rad/s
+      source: "a_n_max/v at Q12; EQ-MS-5"
+    can_hover:
+      value: false
+      unit: dimensionless
+      source: "Lift-dependent missile; EQ-KIN-1"
+    omnidirectional:
+      value: false
+      unit: dimensionless
+      source: "Thrust along body x; EQ-KIN-2"
+    kill_radius:
+      value: 10.0
+      unit: m
+      source: "AIM5 warhead lethal radius; EQ-GEO-4"
+    r_init_min:
+      value: 3500.0
+      unit: m
+      source: "8.75 s at 400 m/s closing; EQ-GEO-5"
+    r_init_max:
+      value: 7000.0
+      unit: m
+      source: "17.5 s at 400 m/s closing; EQ-GEO-5"
+    alt_init:
+      value: 4500.0
+      unit: m
+      source: "Above 35 m target floor plus 4465 m manoeuvre margin; EQ-GEO-6"
+    v_target_nominal:
+      value: 400.0
+      unit: m/s
+      source: "Q5 baseline: 1/3 of missile v_max; configs/guidance.yaml"
+    a_target_max:
+      value: 107.91
+      unit: m/s^2
+      source: "Q5 baseline: 11 g evasive target; EQ-TGT-1"
+    dt:
+      value: 0.02
+      unit: s
+      source: "Decision rate S8: 50 Hz guidance decision"
+    max_time:
+      value: 20.0
+      unit: s
+      source: "Spawn range / closing speed; EQ-GEO-5"
+    speed_ratio:
+      value: 1.5
+      unit: dimensionless
+      source: "Q5 baseline interceptor/target speed ratio = 600/400 at Q12; EQ-TGT-1"
+    a_ratio:
+      value: 3.32
+      unit: dimensionless
+      source: "Q5 baseline interceptor/target accel ratio = 358.1/107.91; EQ-TGT-1"

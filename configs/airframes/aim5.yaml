@@ -1,0 +1,193 @@
+# AIM5 air-to-air missile -- CADAC++ data decks (Zipfel, AIAA ARC).
+# Data copied from SwaggyTyrion/CADAC example/AIM5:
+#   aim5_prop_deck.asc, aim5_aero_deck.asc, input.asc, aim_modules.cpp
+# CADAC repository is MIT; the numerical decks originate from Zipfel's book
+# supplement.  Only numerical data is used, with citation.
+
+airframe: "AIM5"
+primary_source: "Zipfel, Modeling and Simulation of Aerospace Vehicle Dynamics; CADAC++ example/AIM5 data decks"
+license: "CADAC repository MIT; data attributed to Zipfel book supplement; no source code copied"
+
+physical:
+  mass_initial:
+    value: 63.8
+    unit: kg
+    source: "CADAC aim5_prop_deck.asc mass_vs_time at t=0"
+  mass_burnout:
+    value: 38.6
+    unit: kg
+    source: "CADAC aim5_prop_deck.asc mass_vs_time at t>=3.02 s"
+  reference_area:
+    value: 0.01767
+    unit: m^2
+    source: "CADAC aim5_aero_deck.asc reference area"
+  reference_diameter:
+    value: 0.15
+    unit: m
+    source: "CADAC aim5_aero_deck.asc reference diameter"
+  max_angle_of_attack:
+    value: 35.0
+    unit: deg
+    source: "CADAC input.asc alpmax"
+  nozzle_exit_area:
+    value: 0.00948
+    unit: m^2
+    source: "CADAC input.asc aexit"
+  specific_impulse:
+    value: 267.0
+    unit: s
+    source: "CADAC aim5_prop_deck.asc ISP"
+  rate_loop_time_constant:
+    value: 0.1
+    unit: s
+    source: "CADAC input.asc tr"
+  prop_integral_ratio:
+    value: 2.0
+    unit: dimensionless
+    source: "CADAC input.asc ta"
+  accel_loop_gain:
+    value: 40.0
+    unit: rad/s^2
+    source: "CADAC input.asc gacp"
+  gravity:
+    value: 9.81
+    unit: m/s^2
+    source: "CODATA standard gravity"
+
+propulsion:
+  mass_vs_time:
+    value:
+      - [0.0, 63.8]
+      - [0.01, 63.8]
+      - [0.5, 57.4]
+      - [0.82, 52.6]
+      - [1.0, 50.0]
+      - [1.5, 44.9]
+      - [2.0, 42.0]
+      - [2.36, 40.7]
+      - [3.0, 38.6]
+      - [3.02, 38.6]
+      - [10.0, 38.6]
+    unit: "[time s, mass kg]"
+    source: "CADAC aim5_prop_deck.asc mass_vs_time"
+  sea_level_thrust_vs_time:
+    value:
+      - [0.0, 28075.0]
+      - [0.01, 28075.0]
+      - [0.5, 34614.0]
+      - [0.82, 39231.0]
+      - [1.0, 30767.0]
+      - [1.5, 18464.0]
+      - [2.0, 8847.0]
+      - [2.36, 7308.0]
+      - [3.0, 8308.0]
+      - [3.02, 0.0]
+      - [10.0, 0.0]
+    unit: "[time s, sea-level thrust N]"
+    source: "CADAC aim5_prop_deck.asc thrust_vs_time"
+
+aerodynamics:
+  alpha_grid_deg:
+    value: [0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0]
+    unit: deg
+    source: "CADAC aim5_aero_deck.asc alpha rows"
+  mach_grid:
+    value: [0.7, 0.9, 1.1, 1.4, 1.8, 2.5, 3.5, 5.0]
+    unit: dimensionless
+    source: "CADAC aim5_aero_deck.asc Mach columns"
+  cl_vs_alpha_mach:
+    value:
+      - [0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000]
+      - [0.399, 0.405, 0.400, 0.390, 0.404, 0.376, 0.398, 0.421]
+      - [0.890, 0.913, 0.958, 1.011, 1.132, 1.265, 1.465, 1.355]
+      - [1.485, 1.602, 1.898, 2.152, 2.604, 2.834, 2.659, 2.345]
+      - [2.300, 2.644, 3.389, 4.154, 4.608, 4.336, 3.879, 3.557]
+      - [3.394, 3.986, 5.619, 6.448, 6.416, 5.666, 5.171, 4.962]
+      - [4.735, 5.847, 8.267, 8.370, 7.846, 6.980, 6.569, 6.387]
+      - [6.335, 8.048, 10.56, 10.15, 9.081, 8.191, 7.917, 7.719]
+    unit: dimensionless
+    source: "CADAC aim5_aero_deck.asc cl_aim_vs_alpha_mach"
+  cd_powered_vs_alpha_mach:
+    value:
+      - [0.207, 0.317, 0.751, 0.682, 0.575, 0.611, 0.613, 0.585]
+      - [0.233, 0.344, 0.775, 0.697, 0.597, 0.635, 0.649, 0.630]
+      - [0.306, 0.412, 0.830, 0.761, 0.723, 0.810, 0.887, 0.857]
+      - [0.463, 0.584, 1.048, 1.053, 1.173, 1.329, 1.356, 1.270]
+      - [0.722, 0.887, 1.441, 1.758, 2.077, 2.114, 2.061, 1.950]
+      - [1.275, 1.567, 2.494, 3.071, 3.291, 3.111, 3.038, 2.964]
+      - [2.054, 2.639, 4.002, 4.658, 4.692, 4.408, 4.370, 4.307]
+      - [3.063, 4.059, 5.656, 6.619, 6.347, 5.986, 6.053, 5.977]
+    unit: dimensionless
+    source: "CADAC aim5_aero_deck.asc cd_aim_on_vs_alpha_mach"
+  cd_unpowered_vs_alpha_mach:
+    value:
+      - [0.260, 0.369, 0.830, 0.754, 0.638, 0.657, 0.644, 0.607]
+      - [0.287, 0.398, 0.858, 0.770, 0.661, 0.681, 0.677, 0.647]
+      - [0.363, 0.468, 0.916, 0.837, 0.788, 0.847, 0.895, 0.854]
+      - [0.526, 0.654, 1.153, 1.138, 1.233, 1.349, 1.339, 1.245]
+      - [0.833, 0.971, 1.577, 1.870, 2.141, 2.116, 2.016, 1.902]
+      - [1.371, 1.676, 2.669, 3.203, 3.360, 3.105, 2.975, 2.895]
+      - [2.183, 2.794, 4.235, 4.819, 4.782, 4.401, 4.298, 4.231]
+      - [3.236, 4.274, 5.956, 6.836, 6.471, 5.996, 5.982, 5.904]
+    unit: dimensionless
+    source: "CADAC aim5_aero_deck.asc cd_aim_off_vs_alpha_mach"
+
+flight_condition_q12:
+  altitude:
+    value: 10000.0
+    unit: m
+    source: "decision Q12, post-burnout evaluation condition"
+  mach:
+    value: 2.0
+    unit: dimensionless
+    source: "decision Q12, post-burnout evaluation condition"
+  air_density:
+    value: 0.4135
+    unit: kg/m^3
+    source: "ISA standard atmosphere at 10 km"
+  speed_of_sound:
+    value: 299.5
+    unit: m/s
+    source: "ISA standard atmosphere at 10 km"
+  speed:
+    value: 599.0
+    unit: m/s
+    source: "Mach 2 x 299.5 m/s at 10 km"
+
+derived_limits:
+  v_min:
+    value: 180.0
+    unit: m/s
+    source: "Post-burnout sustained-flight lower bound; docs/mathematics.md EQ-MS-2"
+  v_max:
+    value: 1200.0
+    unit: m/s
+    source: "Boost-phase speed envelope, 18 g axial cap; docs/mathematics.md EQ-MS-3"
+  a_t_max:
+    value: 176.58
+    unit: m/s^2
+    source: "18 g axial limit, decision Q11; docs/mathematics.md EQ-MS-4"
+  a_t_min:
+    value: -39.24
+    unit: m/s^2
+    source: "-4 g deceleration/drag limit; docs/mathematics.md EQ-MS-4"
+  a_n_max:
+    value: 358.1
+    unit: m/s^2
+    source: "CADAC alpmax=35 deg at 10 km Mach 2 post-burnout; 36.5 g; EQ-MS-1"
+  a_n_down_max:
+    value: 358.1
+    unit: m/s^2
+    source: "Symmetric normal-force limit at alpmax; EQ-MS-1"
+  omega_max:
+    value: 12.0
+    unit: rad/s
+    source: "a_n_max / speed at Q12; docs/mathematics.md EQ-MS-5"
+  tau_accel:
+    value: 0.1
+    unit: s
+    source: "CADAC autopilot rate-loop time constant tr; EQ-MS-6"
+  max_jerk:
+    value: 1000.0
+    unit: m/s^3
+    source: "a_n_max / (4 tau_accel) rounded; EQ-MS-6"

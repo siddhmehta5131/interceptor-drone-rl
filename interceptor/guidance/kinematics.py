@@ -3,6 +3,9 @@
 All vectors are world ``x north, y west, z up``.  The formulas are invariant
 under the NED -> z-up rotation used by the original notebook, so the golden
 fixture replay differs only by the frame transform ``T = diag(1, -1, -1)``.
+
+Equation IDs: EQ-GEO-1, EQ-GEO-2, EQ-GEO-3, EQ-GEO-7, EQ-APN-1, EQ-APN-2,
+EQ-APN-3, EQ-APN-5, EQ-APN-6, EQ-KIN-4.
 """
 
 from __future__ import annotations

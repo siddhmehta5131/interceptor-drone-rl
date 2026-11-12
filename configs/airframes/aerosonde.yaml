@@ -1,0 +1,240 @@
+# Aerosonde fixed-wing airframe -- Beard & McLain, Small Unmanned Aircraft.
+# Numerical data copied from BYU-MAGICC mavsim_public
+# mavsim_python/parameters/aerosonde_parameters.py (GPL-3.0; data only, cited)
+# and the textbook Appendix E tables.  No source code is copied.
+
+airframe: "Aerosonde Mk 4.7"
+primary_source: "Beard & McLain (2012), Small Unmanned Aircraft: Theory and Practice, Appendix E; byu-magicc/mavsim_public aerosonde_parameters.py"
+license: "Data cited from GPL-3.0 repository; numerical values are facts, no code copied"
+
+physical:
+  mass:
+    value: 11.0
+    unit: kg
+    source: "Beard & McLain Appendix E; mavsim aerosonde_parameters.py mass"
+  inertia:
+    value: [0.8244, 1.135, 1.759]
+    unit: kg m^2
+    source: "Beard & McLain Appendix E; Jx, Jy, Jz"
+  inertia_xz:
+    value: 0.1204
+    unit: kg m^2
+    source: "Beard & McLain Appendix E; Jxz"
+  wing_area:
+    value: 0.55
+    unit: m^2
+    source: "Beard & McLain Appendix E; S_wing"
+  wing_span:
+    value: 2.8956
+    unit: m
+    source: "Beard & McLain Appendix E; b"
+  chord:
+    value: 0.18994
+    unit: m
+    source: "Beard & McLain Appendix E; c"
+  aspect_ratio:
+    value: 15.24
+    unit: dimensionless
+    source: "b^2/S_wing = 2.8956^2 / 0.55"
+  oswald_efficiency:
+    value: 0.9
+    unit: dimensionless
+    source: "Beard & McLain Appendix E; e"
+  air_density_sea_level:
+    value: 1.2682
+    unit: kg/m^3
+    source: "Beard & McLain Appendix E; rho at 25 m/s trim condition"
+  propeller_area:
+    value: 0.2027
+    unit: m^2
+    source: "Beard & McLain Appendix E; S_prop"
+  propeller_diameter:
+    value: 0.508
+    unit: m
+    source: "mavsim aerosonde_parameters.py D_prop = 20 inch"
+  motor_kv:
+    value: 145.0
+    unit: rpm/V
+    source: "mavsim aerosonde_parameters.py KV_rpm_per_volt"
+  motor_resistance:
+    value: 0.042
+    unit: ohm
+    source: "mavsim aerosonde_parameters.py R_motor"
+  motor_no_load_current:
+    value: 1.5
+    unit: A
+    source: "mavsim aerosonde_parameters.py i0"
+  battery_cells:
+    value: 12
+    unit: cells
+    source: "mavsim aerosonde_parameters.py ncells"
+  battery_voltage_max:
+    value: 44.4
+    unit: V
+    source: "12 cells x 3.7 V; mavsim aerosonde_parameters.py V_max"
+  gravity:
+    value: 9.81
+    unit: m/s^2
+    source: "CODATA standard gravity"
+
+aerodynamics:
+  alpha_stall:
+    value: 0.47
+    unit: rad
+    source: "mavsim aerosonde_parameters.py alpha0"
+  CL_0:
+    value: 0.23
+    unit: dimensionless
+    source: "mavsim aerosonde_parameters.py C_L_0"
+  CD_0:
+    value: 0.0424
+    unit: dimensionless
+    source: "mavsim aerosonde_parameters.py C_D_0"
+  Cm_0:
+    value: 0.0135
+    unit: dimensionless
+    source: "mavsim aerosonde_parameters.py C_m_0"
+  CL_alpha:
+    value: 5.61
+    unit: 1/rad
+    source: "mavsim aerosonde_parameters.py C_L_alpha"
+  CD_alpha:
+    value: 0.132
+    unit: 1/rad
+    source: "mavsim aerosonde_parameters.py C_D_alpha"
+  Cm_alpha:
+    value: -2.74
+    unit: 1/rad
+    source: "mavsim aerosonde_parameters.py C_m_alpha"
+  CL_q:
+    value: 7.95
+    unit: dimensionless
+    source: "mavsim aerosonde_parameters.py C_L_q"
+  Cm_q:
+    value: -38.21
+    unit: dimensionless
+    source: "mavsim aerosonde_parameters.py C_m_q"
+  CL_delta_e:
+    value: 0.13
+    unit: 1/rad
+    source: "mavsim aerosonde_parameters.py C_L_delta_e"
+  CD_delta_e:
+    value: 0.0135
+    unit: 1/rad
+    source: "mavsim aerosonde_parameters.py C_D_delta_e"
+  Cm_delta_e:
+    value: -0.99
+    unit: 1/rad
+    source: "mavsim aerosonde_parameters.py C_m_delta_e"
+  CD_p:
+    value: 0.043
+    unit: dimensionless
+    source: "mavsim aerosonde_parameters.py C_D_p"
+  M:
+    value: 50.0
+    unit: dimensionless
+    source: "mavsim aerosonde_parameters.py pitch damping M"
+  epsilon:
+    value: 0.16
+    unit: dimensionless
+    source: "mavsim aerosonde_parameters.py downwash epsilon"
+  CY_beta:
+    value: -0.98
+    unit: 1/rad
+    source: "mavsim aerosonde_parameters.py C_Y_beta"
+  Cell_beta:
+    value: -0.13
+    unit: 1/rad
+    source: "mavsim aerosonde_parameters.py C_ell_beta"
+  Cn_beta:
+    value: 0.073
+    unit: 1/rad
+    source: "mavsim aerosonde_parameters.py C_n_beta"
+  Cell_p:
+    value: -0.51
+    unit: dimensionless
+    source: "mavsim aerosonde_parameters.py C_ell_p"
+  Cn_p:
+    value: 0.069
+    unit: dimensionless
+    source: "mavsim aerosonde_parameters.py C_n_p"
+  Cell_r:
+    value: 0.25
+    unit: dimensionless
+    source: "mavsim aerosonde_parameters.py C_ell_r"
+  Cn_r:
+    value: -0.095
+    unit: dimensionless
+    source: "mavsim aerosonde_parameters.py C_n_r"
+  CY_delta_a:
+    value: 0.075
+    unit: 1/rad
+    source: "mavsim aerosonde_parameters.py C_Y_delta_a"
+  Cell_delta_a:
+    value: 0.17
+    unit: 1/rad
+    source: "mavsim aerosonde_parameters.py C_ell_delta_a"
+  Cn_delta_a:
+    value: -0.011
+    unit: 1/rad
+    source: "mavsim aerosonde_parameters.py C_n_delta_a"
+  CY_delta_r:
+    value: 0.19
+    unit: 1/rad
+    source: "mavsim aerosonde_parameters.py C_Y_delta_r"
+  Cell_delta_r:
+    value: 0.0024
+    unit: 1/rad
+    source: "mavsim aerosonde_parameters.py C_ell_delta_r"
+  Cn_delta_r:
+    value: -0.069
+    unit: 1/rad
+    source: "mavsim aerosonde_parameters.py C_n_delta_r"
+
+propeller_fit:
+  CT_coefficients:
+    value: [0.09357, -0.06044, -0.1079]
+    unit: "CT = C_T0 + C_T1 J + C_T2 J^2"
+    source: "mavsim aerosonde_parameters.py C_T0,C_T1,C_T2"
+  CQ_coefficients:
+    value: [0.005230, 0.004970, -0.01664]
+    unit: "CQ = C_Q0 + C_Q1 J + C_Q2 J^2"
+    source: "mavsim aerosonde_parameters.py C_Q0,C_Q1,C_Q2"
+
+derived_limits:
+  v_min:
+    value: 15.0
+    unit: m/s
+    source: "Stall speed from CL_max=1.45 at sea level; docs/mathematics.md EQ-FW-2"
+  v_max:
+    value: 40.0
+    unit: m/s
+    source: "Level-flight thrust=drag root at 25 m/s trim; docs/mathematics.md EQ-FW-3"
+  a_t_max:
+    value: 41.202
+    unit: m/s^2
+    source: "4.2 g excess-thrust limit at sea level; docs/mathematics.md EQ-FW-4"
+  a_t_min:
+    value: -19.62
+    unit: m/s^2
+    source: "-2.0 g idle-thrust/drag limit; docs/mathematics.md EQ-FW-4"
+  a_n_max:
+    value: 102.9
+    unit: m/s^2
+    source: "10.5 g aero/structural limit, decision Q11; docs/mathematics.md EQ-FW-5"
+  a_n_down_max:
+    value: 49.05
+    unit: m/s^2
+    source: "5.0 g negative-load limit, decision Q11; docs/mathematics.md EQ-FW-5"
+  omega_max:
+    value: 3.5
+    unit: rad/s
+    source: "Coordinated turn at 25 m/s and 10.5 g, capped by roll-rate response; EQ-FW-6"
+  tau_accel:
+    value: 0.12
+    unit: s
+    source: "Roll/pitch first-order response fit, Beard & McLain control chapter; EQ-FW-7"
+  max_jerk:
+    value: 180.0
+    unit: m/s^3
+    source: "a_n_max / tau_accel = 102.9 / 0.12 rounded down; EQ-FW-7"

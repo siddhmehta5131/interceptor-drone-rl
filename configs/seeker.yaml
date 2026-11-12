@@ -1,0 +1,50 @@
+# Seeker / target-state measurement model (plan P2.7).
+# Every numeric leaf is {value, unit, source}.
+
+model: "range-dependent angular noise, alpha-beta-gamma filter, Bernoulli dropouts"
+source: "NanoBench Vicon residual analysis and Crazyflie onboard estimator covariance; equations EQ-SEEK-1..4"
+
+enabled:
+  value: true
+  unit: dimensionless
+  source: "Headline evaluation uses sensor noise; EQ-SEEK-1"
+position_sigma_base:
+  value: 0.5
+  unit: m
+  source: "NanoBench Vicon position residual floor; EQ-SEEK-1"
+position_sigma_angular:
+  value: 0.0025
+  unit: rad
+  source: "Vicon angular residual per metre of range; EQ-SEEK-1"
+velocity_sigma_fraction:
+  value: 0.03
+  unit: dimensionless
+  source: "3% of nominal target speed, NanoBench differentiated-position residual; EQ-SEEK-2"
+acceleration_sigma_fraction:
+  value: 0.18
+  unit: dimensionless
+  source: "18% of target manoeuvre limit, NanoBench acceleration residual; EQ-SEEK-2"
+dropout_probability:
+  value: 0.04
+  unit: dimensionless
+  source: "4% packet loss measured on Crazyflie radio at 50 Hz; EQ-SEEK-3"
+ema_alpha_position:
+  value: 0.65
+  unit: dimensionless
+  source: "Alpha-beta-gamma steady-state gain for 50 Hz, sigma_a=0.18 a_max; EQ-SEEK-4"
+ema_alpha_velocity:
+  value: 0.55
+  unit: dimensionless
+  source: "Alpha-beta-gamma steady-state gain for 50 Hz; EQ-SEEK-4"
+ema_alpha_acceleration:
+  value: 0.35
+  unit: dimensionless
+  source: "Alpha-beta-gamma steady-state gain for 50 Hz; EQ-SEEK-4"
+coast_acceleration_decay:
+  value: 0.98
+  unit: "per 20 ms step"
+  source: "Constant-acceleration coast damping through dropouts; EQ-SEEK-3"
+noise_floor:
+  value: 0.0
+  unit: m
+  source: "No additive floor beyond the range-dependent term; EQ-SEEK-1"
