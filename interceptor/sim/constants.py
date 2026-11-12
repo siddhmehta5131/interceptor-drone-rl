@@ -35,7 +35,7 @@ __all__ = [
     # domain-randomizable nominal values
     "NOM_M", "NOM_J", "NOM_C_L", "NOM_C_D",
     "NOM_FX_RAW", "NOM_FY_RAW", "NOM_FZ_RAW",
-    "NOM_TX_RAW", "NOM_TY_RAW", "NOM_TZ_RAW",
+    "NOM_TX_RAW", "NOM_TY_RAW", "NOM_TZ_RAW", "ROTOR_DRAG_XYZ",
     "DR_RANGES",
     # ground effect / wind
     "GROUND_EFFECT_HEIGHT", "GROUND_EFFECT_MAX_GAIN",
@@ -154,6 +154,11 @@ NOM_FZ_RAW   = np.array([ 3.610184e-02, -1.153378e-01,  0.0,          -5.881881e
 NOM_TX_RAW   = np.zeros(5)    # zeroed (over-predicted roll/pitch torques, see hover_env.py)
 NOM_TY_RAW   = np.zeros(5)    # zeroed
 NOM_TZ_RAW   = np.array([-1.432000e-03, 7.798700e-02])
+
+# Linear rotor-drag coefficients D = diag(kx, ky, kz) [1/s], EQ-SIX-11.  ASSUMPTION:
+# order of magnitude of published quadrotor rotor-drag identifications
+# (Faessler et al., RA-L 2018); NOT fitted to a Crazyflie.  Replace on NanoBench refit (P3.5).
+ROTOR_DRAG_XYZ = (0.5, 0.5, 0.7)
 
 # ---------------------------------------------------------------------------
 # Hover equilibrium

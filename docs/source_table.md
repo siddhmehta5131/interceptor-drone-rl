@@ -18,6 +18,10 @@ config files.  Regenerate after changing a sourced value; the
 
 | File | Path | Value | Unit | Source |
 |---|---|---|---|---|
+| `configs/quadrotor.yaml` | `rates.physics` | `1000` | Hz | implementation_plan.md decision S8: two RK4 steps per control step |
+| `configs/quadrotor.yaml` | `rates.flight_controller` | `500` | Hz | implementation_plan.md decision S8: matches the Crazyflie firmware loop |
+| `configs/quadrotor.yaml` | `rates.guidance` | `50` | Hz | implementation_plan.md decision S8: seeker update rate, matches legacy env |
+| `configs/quadrotor.yaml` | `rates.kinematic_integration` | `200` | Hz | implementation_plan.md decision S8: step below a quarter of the 20 ms actuator lag |
 | `configs/quadrotor.yaml` | `mass` | `0.04085` | kg | NanoBench primary parameter set; interceptor/sim/constants.py PH_M |
 | `configs/quadrotor.yaml` | `inertia` | `[2.3951e-05, 2.3951e-05, 3.2347e-05]` | kg m^2 | Forster 2015, diagonal inertia; matches cf2x.urdf |
 | `configs/quadrotor.yaml` | `arm_length` | `0.0397` | m | Bitcraze Crazyflie 2.x frame drawing; cf2x.urdf rotor offset |
@@ -50,6 +54,19 @@ config files.  Regenerate after changing a sourced value; the
 | `configs/quadrotor.yaml` | `domain_randomisation.thrust_fraction` | `[0.85, 1.15]` | dimensionless | Bitcraze motor-to-motor thrust scatter |
 | `configs/quadrotor.yaml` | `domain_randomisation.torque_fraction` | `[0.85, 1.15]` | dimensionless | Bitcraze motor-to-motor drag-torque scatter |
 | `configs/quadrotor.yaml` | `domain_randomisation.aero_fraction` | `[0.8, 1.2]` | dimensionless | NanoBench fit residual envelope |
+| `configs/fc.yaml` | `rate_max` | `8.0` | rad/s | P4.9 measured peak 4.4 rad/s for a 60 deg attitude step (results/tables/quad_limits.json), margin 1.8 |
+| `configs/fc.yaml` | `episode_length` | `4.0` | s | implementation_plan.md P4.1 |
+| `configs/fc.yaml` | `control_dt` | `0.002` | s | implementation_plan.md S8 (500 Hz) |
+| `configs/fc.yaml` | `physics_dt` | `0.001` | s | implementation_plan.md S8 (1000 Hz) |
+| `configs/fc.yaml` | `safety_rate` | `40.0` | rad/s | 5 x rate_max; design choice, terminates divergent episodes |
+| `configs/fc.yaml` | `init_tilt_max` | `0.5236` | rad | 30 deg; design choice, recoverable by the B1 stack |
+| `configs/fc.yaml` | `init_rate_max` | `2.0` | rad/s | design choice, quarter of rate_max |
+| `configs/fc.yaml` | `w_omega` | `1.0` | dimensionless | EQ-FC-2 design weight, primary objective |
+| `configs/fc.yaml` | `w_thrust` | `0.2` | dimensionless | EQ-FC-2 design weight; planned sensitivity run P9.3 |
+| `configs/fc.yaml` | `w_smooth` | `0.02` | dimensionless | EQ-FC-2 design weight; planned sensitivity run P9.3 |
+| `configs/fc.yaml` | `w_sat` | `0.1` | dimensionless | EQ-FC-2 design weight; planned sensitivity run P9.3 |
+| `configs/fc.yaml` | `b1_targets.rise_time_max` | `0.12` | s | design target for B1 (EQ-FC-1 phase margin 60 deg) |
+| `configs/fc.yaml` | `b1_targets.overshoot_max` | `0.2` | dimensionless | design target for B1 |
 | `configs/platforms.yaml` | `platforms.quadcopter.v_min` | `0.0` | m/s | Multirotor can hover; EQ-KIN-1 |
 | `configs/platforms.yaml` | `platforms.quadcopter.v_max` | `45.0` | m/s | Drag-limited Crazyflie sprint estimate; replaced by measured P4.9 |
 | `configs/platforms.yaml` | `platforms.quadcopter.a_t_max` | `31.392` | m/s^2 | 3.2 g collective thrust margin; analytic, replaced by measured P4.9 |
@@ -113,6 +130,13 @@ config files.  Regenerate after changing a sourced value; the
 | `configs/platforms.yaml` | `platforms.missile.max_time` | `20.0` | s | Spawn range / closing speed; EQ-GEO-5 |
 | `configs/platforms.yaml` | `platforms.missile.speed_ratio` | `1.5` | dimensionless | Q5 baseline interceptor/target speed ratio = 600/400 at Q12; EQ-TGT-1 |
 | `configs/platforms.yaml` | `platforms.missile.a_ratio` | `3.32` | dimensionless | Q5 baseline interceptor/target accel ratio = 358.1/107.91; EQ-TGT-1 |
+| `configs/platforms.yaml` | `quad_closed_loop_limits.a_lateral_max` | `14.8` | m/s^2 | measured, P4.9 (analytic g*sqrt(TW^2-1) = 17.5; gap = tilt-rate lag and drag) |
+| `configs/platforms.yaml` | `quad_closed_loop_limits.a_up_max` | `9.4` | m/s^2 | measured, P4.9 (analytic g*(TW-1) = 10.3) |
+| `configs/platforms.yaml` | `quad_closed_loop_limits.a_down_max` | `9.4` | m/s^2 | measured, P4.9 (analytic 1 g free fall = 9.81) |
+| `configs/platforms.yaml` | `quad_closed_loop_limits.v_max` | `22.0` | m/s | measured, P4.9; equals a_max/k to first order, depends on the assumed rotor drag |
+| `configs/platforms.yaml` | `quad_closed_loop_limits.tau_accel` | `0.17` | s | measured, P4.9; consistent with 1/Kp = 1/6 s of the attitude loop, EQ-BRIDGE-4 |
+| `configs/platforms.yaml` | `quad_closed_loop_limits.max_jerk` | `85.0` | m/s^3 | a_lateral_max / tau_accel = 14.8/0.174, P4.9 |
+| `configs/platforms.yaml` | `quad_closed_loop_limits.omega_demand_peak` | `4.4` | rad/s | measured peak body rate in a hard attitude step, P4.9; feeds P4.2 rate range |
 | `configs/guidance.yaml` | `navigation.N_prime` | `4.0` | dimensionless | classical APN admissible range 3-5; Zarchan, Tactical and Strategic Missile Guidance |
 | `configs/guidance.yaml` | `navigation.N_prime_min` | `3.0` | dimensionless | Zarchan admissible lower bound; EQ-APN-7 |
 | `configs/guidance.yaml` | `navigation.N_prime_max` | `5.0` | dimensionless | Zarchan admissible upper bound; EQ-APN-7 |
@@ -276,4 +300,4 @@ config files.  Regenerate after changing a sourced value; the
 | `configs/airframes/aim5.yaml` | `derived_limits.tau_accel` | `0.1` | s | CADAC autopilot rate-loop time constant tr; EQ-MS-6 |
 | `configs/airframes/aim5.yaml` | `derived_limits.max_jerk` | `1000.0` | m/s^3 | a_n_max / (4 tau_accel) rounded; EQ-MS-6 |
 
-**257 sourced leaves; 0 TODO.**
+**281 sourced leaves; 0 TODO.**

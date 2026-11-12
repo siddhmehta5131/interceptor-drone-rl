@@ -15,7 +15,7 @@ from . import metrics
 def rollout(controller, setpoints, params=None, wind=None, dt=0.002, physics_dt=0.001,
             state0=None, U_bat=4.2, p0=(0.0, 0.0, 10.0)):
     """Simulate ``len(setpoints)`` control steps.  Returns a dict of arrays."""
-    params = params or pipeline.PhysicsParams()
+    params = params or pipeline.PhysicsParams.rotor_drag()
     s = state0 or (np.array(p0, float), np.array([1.0, 0, 0, 0]), np.zeros(3), np.zeros(3),
                    np.full(4, PH_OMEGA_HOVER))
     if hasattr(controller, "reset"):

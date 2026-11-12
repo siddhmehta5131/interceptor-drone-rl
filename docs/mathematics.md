@@ -588,6 +588,26 @@ the collective axis of `f_prop` by
 \tag{EQ-SIX-10}
 \]
 
+**Rotor-drag model (P3.5 fallback).** The polynomial above has a `v Omega^2`
+term worth about 1.5 1/s of drag at hover speed (finding F10), which caps the
+quad at about 3 m/s. The NanoBench data needed for the constrained refit is not
+available, so the plan's decision rule (keep the polynomial only if it beats a
+linear rotor-drag model) cannot be evaluated; the simpler model is adopted for
+all interceptor work:
+
+\[
+\mathbf F_{drag}=-m\,D\,\mathbf v_{rel},\qquad D=\mathrm{diag}(k_x,k_y,k_z),\quad k_i>0 .
+\tag{EQ-SIX-11}
+\]
+
+It is dissipative by construction (`v . F = -m sum k_i v_i^2 <= 0`) and gives a
+terminal speed `a_max / k`. The values `k = (0.5, 0.5, 0.7) 1/s` are an
+**assumption** at the order of magnitude of published rotor-drag identifications
+(Faessler et al., RA-L 2018), not a Crazyflie fit, so every speed measured with
+it carries that caveat. The polynomial remains selectable
+(`aero_model="polynomial"`) and is what the fixture-parity tests use.
+Implemented by `aero.rotor_drag_force_torque`.
+
 with `h_ge = 0.15 m` and `kappa_max = 0.20`.
 
 ### 6.2 Rotation

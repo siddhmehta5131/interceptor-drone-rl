@@ -25,7 +25,7 @@ def fresh_state(v0=(0, 0, 0)):
 
 
 def run_accel(a_cmd_fn, T, bridge=None, params=None, state=None):
-    params = params or pipeline.PhysicsParams()
+    params = params or pipeline.PhysicsParams.rotor_drag()
     bridge = bridge or AccelBridge()
     pid = RatePID.tuned(dt=DT, params=params)
     s = state or fresh_state()
@@ -62,8 +62,8 @@ def main():
     rec = run_accel(lambda t: np.array([a_step if t > 0.1 else 0.0, 0, 0]), 1.5)
     ax = smooth(rec["spec_force"][:, 0])
     idx = int(0.1 / DT)
-    final = ax[-100:].mean()
-    k63 = np.argmax(ax[idx:] >= 0.632 * final)
+    final = ax[idx:idx + 150].max()  # early peak; drag has not yet built up
+    k63 = np.argmax(ax[idx:] >= 0.632 * a_step)
     out["tau_accel_s"] = float(k63 * DT)
     out["accel_step_final"] = float(final)
 
@@ -80,10 +80,10 @@ def main():
     out["lateral_a_max_measured"] = float(best)
 
     # 3. Maximum upward acceleration with level attitude.
-    rec = run_accel(lambda t: np.array([0, 0, 1.0e3 if False else (tw - 1) * 9.81 * 0.98]), 1.0)
-    out["vertical_up_a_max_measured"] = float(smooth(rec["spec_force"][:, 2])[300:450].mean() + PH_G_W[2])
+    rec = run_accel(lambda t: np.array([0, 0, 1.0e3 if False else (tw - 1) * 9.81 * 0.98]), 0.6)
+    out["vertical_up_a_max_measured"] = float(smooth(rec["spec_force"][:, 2])[:200].max() + PH_G_W[2])  # peak in first 0.4 s, before drag builds
     rec = run_accel(lambda t: np.array([0, 0, -9.81 * 0.98]), 0.8)
-    out["vertical_down_a_max_measured"] = float(-(smooth(rec["spec_force"][:, 2])[200:350].mean() + PH_G_W[2]))
+    out["vertical_down_a_max_measured"] = float(-(smooth(rec["spec_force"][:, 2])[:200].min() + PH_G_W[2]))
 
     # 4. Maximum speed: hold the maximal tilt command until terminal velocity.
     a_hold = 0.9 * out["lateral_a_max_measured"]

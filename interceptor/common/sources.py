@@ -21,6 +21,7 @@ __all__ = [
 
 SOURCE_FILES = (
     "configs/quadrotor.yaml",
+    "configs/fc.yaml",
     "configs/platforms.yaml",
     "configs/guidance.yaml",
     "configs/seeker.yaml",

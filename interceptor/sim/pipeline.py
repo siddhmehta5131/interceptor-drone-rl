@@ -35,6 +35,7 @@ from .constants import (
     NOM_TX_RAW,
     NOM_TY_RAW,
     NOM_TZ_RAW,
+    ROTOR_DRAG_XYZ,
     PH_BAT,
     PH_C_D,
     PH_C_L,
@@ -96,6 +97,15 @@ class PhysicsParams:
     tx_raw: np.ndarray = field(default_factory=lambda: np.array(NOM_TX_RAW, dtype=np.float64))
     ty_raw: np.ndarray = field(default_factory=lambda: np.array(NOM_TY_RAW, dtype=np.float64))
     tz_raw: np.ndarray = field(default_factory=lambda: np.array(NOM_TZ_RAW, dtype=np.float64))
+    # "polynomial": NanoBench-style polynomial (fixture parity; drag-limited to ~3 m/s, F10).
+    # "rotor_drag": linear rotor drag a = -D v (EQ-SIX-11), the P3.5 fallback model.
+    aero_model: str = "polynomial"
+    drag_xyz: np.ndarray = field(default_factory=lambda: np.array(ROTOR_DRAG_XYZ, dtype=np.float64))
+
+    @classmethod
+    def rotor_drag(cls, **kw) -> "PhysicsParams":
+        """Nominal parameters with the linear rotor-drag model (P3.5 fallback)."""
+        return cls(aero_model="rotor_drag", **kw)
 
     @property
     def J_inv(self) -> np.ndarray:
@@ -132,6 +142,7 @@ def sample_physics_params(
     tx_raw = np.array(NOM_TX_RAW) * rng.uniform(lo, hi)
     ty_raw = np.array(NOM_TY_RAW) * rng.uniform(lo, hi)
     tz_raw = np.array(NOM_TZ_RAW) * rng.uniform(lo, hi)
+    drag_xyz = np.array(ROTOR_DRAG_XYZ) * scale  # reuses the fx draw: no extra RNG call, legacy draw order kept
 
     return PhysicsParams(
         mass=float(m),
@@ -144,6 +155,7 @@ def sample_physics_params(
         tx_raw=tx_raw,
         ty_raw=ty_raw,
         tz_raw=tz_raw,
+        drag_xyz=drag_xyz,
     )
 
 
@@ -260,6 +272,8 @@ def aero_force_torque(
         v_rel_B = _aero.air_relative_body_velocity(q_WB, v_WB, wind_W)
     else:
         v_rel_B = quat2rot(q_WB).T @ v_WB
+    if params.aero_model == "rotor_drag":
+        return _aero.rotor_drag_force_torque(v_rel_B, mass=params.mass, drag_xyz=params.drag_xyz)
     return _aero.aero_force_torque(
         v_rel_B, Omega,
         mass=params.mass, J=params.J,

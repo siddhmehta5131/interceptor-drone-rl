@@ -84,7 +84,7 @@ class FlightControllerEnv(gym.Env):
         if seed is not None:
             self.rng = make_rng(seed)
         r = self.rng
-        self.params = pipeline.sample_physics_params(r) if self.dr else pipeline.PhysicsParams()
+        self.params = pipeline.sample_physics_params(r) if self.dr else pipeline.PhysicsParams.rotor_drag()
         q = _random_quat(r, self.cfg["init_tilt_max"])
         omega = r.uniform(-1, 1, 3) * self.cfg["init_rate_max"]
         v = r.normal(0, 1.0, 3)

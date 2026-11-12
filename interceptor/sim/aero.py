@@ -30,6 +30,7 @@ from .constants import (
 from .quaternion import quat2rot
 
 __all__ = [
+    "rotor_drag_force_torque",
     "aero_force_torque",
     "ground_effect_gain",
     "wind_ou_step",
@@ -88,6 +89,19 @@ def aero_force_torque(
     f_aero = np.clip([fx, fy, fz], -_AERO_CLIP_F, _AERO_CLIP_F)
     tau_aero = np.clip([tx, ty, tz], -_AERO_CLIP_T, _AERO_CLIP_T)
     return np.asarray(f_aero, dtype=np.float64), np.asarray(tau_aero, dtype=np.float64)
+
+
+def rotor_drag_force_torque(v_rel_B: np.ndarray, *, mass: float,
+                            drag_xyz: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Linear rotor drag, body frame (EQ-SIX-11): ``F = -m D v_rel``, no torque.
+
+    ``D = diag(drag_xyz)`` has units 1/s, so the force is dissipative by
+    construction (``v.F = -m sum D_i v_i^2 <= 0``).  This is the P3.5 fallback
+    model, used because the NanoBench data needed for the polynomial refit is
+    not available.
+    """
+    f = -mass * np.asarray(drag_xyz, dtype=np.float64) * np.asarray(v_rel_B, dtype=np.float64)
+    return f, np.zeros(3)
 
 
 def wind_ou_step(wind_W: np.ndarray, mean_W: np.ndarray, theta: float, sigma: float,

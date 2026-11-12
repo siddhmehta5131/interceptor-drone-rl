@@ -17,7 +17,7 @@ from ..sim.constants import PH_CUT_THR, PH_C_HOVER, PH_K_MOT
 
 def axis_gain(params: pipeline.PhysicsParams | None = None) -> np.ndarray:
     """K_i = d(omega_dot_i)/d(u_i) at hover, rad/s^2 per unit mixer output."""
-    params = params or pipeline.PhysicsParams()
+    params = params or pipeline.PhysicsParams.rotor_drag()
     gains = np.zeros(3)
     du = 0.01
     for i in range(3):

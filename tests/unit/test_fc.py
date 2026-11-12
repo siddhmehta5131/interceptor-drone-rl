@@ -91,3 +91,15 @@ def test_bridge_hover_and_tilt_direction():
     assert sp.omega_cmd[1] > 0 and abs(sp.omega_cmd[0]) < 1e-9
     sp = b(q, np.array([0, 3.0, 0]))
     assert sp.omega_cmd[0] < 0
+
+
+def test_rotor_drag_dissipative_and_linear():
+    import numpy as np
+    from interceptor.sim import aero
+    rng = np.random.default_rng(0)
+    for _ in range(20):
+        v = rng.normal(size=3) * 5
+        f, t = aero.rotor_drag_force_torque(v, mass=0.04, drag_xyz=np.array([0.5, 0.5, 0.7]))
+        assert v @ f <= 0 and not t.any()
+        f2, _ = aero.rotor_drag_force_torque(2 * v, mass=0.04, drag_xyz=np.array([0.5, 0.5, 0.7]))
+        assert np.allclose(f2, 2 * f)
