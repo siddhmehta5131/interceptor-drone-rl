@@ -48,7 +48,14 @@ def smooth(x, w=25):
     return np.convolve(x, k, mode="same")
 
 
-def main():
+def measure(*, a_step=4.0, smooth_w=25, lat_T=1.2, lat_step=1.0, v_hold_T=40.0,
+            v_hold_frac=0.9, peak_window=200, params=None):
+    """Measure the envelope.  The keyword arguments are the procedure settings
+    (step size, smoothing window, hold times); the defaults produced
+    ``quad_limits.json``.  ``scripts/check_quad_limits_repeatability.py`` varies
+    them to show the envelope does not depend on the procedure."""
+    sm = lambda x: smooth(x, smooth_w)
+    run = lambda fn, T, **kw: run_accel(fn, T, params=params, **kw)
     out = {}
     tw = max_thrust() / (PH_M * 9.81)
     out["thrust_to_weight"] = tw
@@ -57,50 +64,51 @@ def main():
     out["analytic_vertical_up_a_max"] = 9.81 * (tw - 1)
     out["analytic_vertical_down_a_max"] = 9.81
 
-    # 1. Acceleration step response (lateral 4 m/s^2): time constant and delay.
-    a_step = 4.0
-    rec = run_accel(lambda t: np.array([a_step if t > 0.1 else 0.0, 0, 0]), 1.5)
-    ax = smooth(rec["spec_force"][:, 0])
+    # 1. Acceleration step response: time constant (63.2 % of the commanded step).
+    rec = run(lambda t: np.array([a_step if t > 0.1 else 0.0, 0, 0]), 1.5)
+    ax = sm(rec["spec_force"][:, 0])
     idx = int(0.1 / DT)
     final = ax[idx:idx + 150].max()  # early peak; drag has not yet built up
     k63 = np.argmax(ax[idx:] >= 0.632 * a_step)
     out["tau_accel_s"] = float(k63 * DT)
     out["accel_step_final"] = float(final)
 
-    # 2. Maximum sustained lateral acceleration holding altitude (ramp the command).
+    # 2. Maximum lateral acceleration: raise the command until the motors saturate;
+    #    record the peak acceleration reached from rest (drag-limited model, F10).
     best = 0.0
-    for a in np.arange(6.0, out["analytic_lateral_a_max"] + 1.0, 1.0):
-        rec = run_accel(lambda t, a=a: np.array([a, 0, 0]), 1.2)
-        ax_m = smooth(rec["spec_force"][:, 0])[300:450].mean()
-        az_m = smooth(rec["spec_force"][:, 2])[300:450].mean() + PH_G_W[2]
-        # Peak acceleration reached within 0.6 s from rest (drag-limited model, F10).
-        best = max(best, float(smooth(rec["spec_force"][:, 0]).max()))
+    for a in np.arange(6.0, out["analytic_lateral_a_max"] + 1.0, lat_step):
+        rec = run(lambda t, a=a: np.array([a, 0, 0]), lat_T)
+        best = max(best, float(sm(rec["spec_force"][:, 0]).max()))
         if rec["sat"].mean() > 0.5:
             break
     out["lateral_a_max_measured"] = float(best)
 
-    # 3. Maximum upward acceleration with level attitude.
-    rec = run_accel(lambda t: np.array([0, 0, 1.0e3 if False else (tw - 1) * 9.81 * 0.98]), 0.6)
-    out["vertical_up_a_max_measured"] = float(smooth(rec["spec_force"][:, 2])[:200].max() + PH_G_W[2])  # peak in first 0.4 s, before drag builds
-    rec = run_accel(lambda t: np.array([0, 0, -9.81 * 0.98]), 0.8)
-    out["vertical_down_a_max_measured"] = float(-(smooth(rec["spec_force"][:, 2])[:200].min() + PH_G_W[2]))
+    # 3. Maximum vertical acceleration with level attitude (peak before drag builds).
+    rec = run(lambda t: np.array([0, 0, (tw - 1) * 9.81 * 0.98]), 0.6)
+    out["vertical_up_a_max_measured"] = float(sm(rec["spec_force"][:, 2])[:peak_window].max() + PH_G_W[2])
+    rec = run(lambda t: np.array([0, 0, -9.81 * 0.98]), 0.8)
+    out["vertical_down_a_max_measured"] = float(-(sm(rec["spec_force"][:, 2])[:peak_window].min() + PH_G_W[2]))
 
     # 4. Maximum speed: hold the maximal tilt command until terminal velocity.
-    a_hold = 0.9 * out["lateral_a_max_measured"]
-    rec = run_accel(lambda t: np.array([a_hold, 0, 0]), 40.0)
+    a_hold = v_hold_frac * out["lateral_a_max_measured"]
+    rec = run(lambda t: np.array([a_hold, 0, 0]), v_hold_T)
     sp = np.linalg.norm(rec["v"], axis=1)
     out["v_max_measured"] = float(sp[-500:].mean())
     out["v_max_settled"] = bool(abs(sp[-500:].mean() - sp[-2500:-2000].mean()) < 0.1)
 
     # 5. Body-rate range demanded: peak roll rate in a hard 90 deg attitude step.
     bridge = AccelBridge(rate_limit=40.0)
-    rec = run_accel(lambda t: np.array([0, 3000.0 if t > 0.1 else 0, 0]), 1.0, bridge=bridge)
+    rec = run(lambda t: np.array([0, 3000.0 if t > 0.1 else 0, 0]), 1.0, bridge=bridge)
     out["peak_rate_hard_attitude_step"] = float(np.abs(rec["omega"]).max())
 
     # 6. Jerk limit and turn-rate limit derived from the measurements.
     out["max_jerk_m_s3"] = out["lateral_a_max_measured"] / max(out["tau_accel_s"], 1e-3)
     out["omega_max_turn"] = out["lateral_a_max_measured"] / max(out["v_max_measured"], 1e-3)
+    return out
 
+
+def main():
+    out = measure()
     path = ROOT / "results" / "tables"
     path.mkdir(parents=True, exist_ok=True)
     (path / "quad_limits.json").write_text(json.dumps(out, indent=2))

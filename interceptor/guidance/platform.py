@@ -1,9 +1,9 @@
 """Platform kinematic envelopes for the guidance layer (plan P1.7, P2).
 
-The values are the v2 notebook presets, copied unchanged during the
-consolidation phase.  ``load_platforms`` overlays the sourced values in
-``configs/platforms.yaml`` when it is available; the presets remain the
-fallback so importing this module never depends on the working directory.
+``PLATFORMS`` (the default used by the environment) holds the sourced values of
+``configs/platforms.yaml``.  ``LEGACY_PLATFORMS`` / ``from_preset`` are the v2
+notebook presets, kept only so the golden-fixture parity tests can replay the
+notebook; they are the fallback when the config file is absent.
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ from typing import Dict, Mapping, Optional
 
 from .maneuvers import PlatformType
 
-__all__ = ["InterceptorLimits", "PLATFORMS", "load_platforms", "G_ACCEL"]
+__all__ = ["InterceptorLimits", "PLATFORMS", "LEGACY_PLATFORMS", "load_platforms", "G_ACCEL"]
 
 G_ACCEL = 9.81
 
@@ -99,9 +99,11 @@ class InterceptorLimits:
                       "platform": platform, **values})
 
 
-PLATFORMS: Dict[PlatformType, InterceptorLimits] = {
+# Notebook-v2 presets: used only by the golden-fixture parity tests.
+LEGACY_PLATFORMS: Dict[PlatformType, InterceptorLimits] = {
     p: InterceptorLimits.from_preset(p) for p in PlatformType
 }
+PLATFORMS: Dict[PlatformType, InterceptorLimits] = dict(LEGACY_PLATFORMS)
 
 
 def _unwrap_leaf(value):
@@ -113,15 +115,15 @@ def _unwrap_leaf(value):
 def load_platforms(path: "str | Path | None" = "configs/platforms.yaml") -> Dict[PlatformType, InterceptorLimits]:
     """Load ``platforms.yaml``; fall back silently to the presets."""
     if path is None:
-        return dict(PLATFORMS)
+        return dict(LEGACY_PLATFORMS)
     p = Path(path)
     if not p.exists():
-        return dict(PLATFORMS)
+        return dict(LEGACY_PLATFORMS)
     import yaml
 
     data = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
     root = data.get("platforms", data)
-    out = dict(PLATFORMS)
+    out = dict(LEGACY_PLATFORMS)
     for platform in PlatformType:
         raw = root.get(platform.value)
         if not raw:
@@ -131,3 +133,10 @@ def load_platforms(path: "str | Path | None" = "configs/platforms.yaml") -> Dict
         # A few config keys are descriptive rather than dataclass fields.
         out[platform] = InterceptorLimits.from_mapping(platform, flat)
     return out
+
+
+# Default envelopes are the sourced values in configs/platforms.yaml (every leaf
+# carries its reference).  The file is located relative to the package so the
+# default does not depend on the working directory; the notebook presets remain
+# the fallback when the file is absent (installed package without configs).
+PLATFORMS.update(load_platforms(Path(__file__).resolve().parents[2] / "configs" / "platforms.yaml"))

@@ -14,11 +14,11 @@ rates:
   physics:
     value: 1000
     unit: Hz
-    source: "implementation_plan.md decision S8: two RK4 steps per control step"
+    source: "Two RK4 steps per control step (plan decision S8); equals Crazyflie firmware RATE_MAIN_LOOP = RATE_1000_HZ (https://github.com/bitcraze/crazyflie-firmware/blob/master/src/modules/interface/stabilizer_types.h)"
   flight_controller:
     value: 500
     unit: Hz
-    source: "implementation_plan.md decision S8: matches the Crazyflie firmware loop"
+    source: "Crazyflie firmware stabilizer_types.h: ATTITUDE_RATE = RATE_500_HZ (https://github.com/bitcraze/crazyflie-firmware/blob/master/src/modules/interface/stabilizer_types.h); plan decision S8"
   guidance:
     value: 50
     unit: Hz
@@ -47,23 +47,23 @@ rotor_inertia:
 thrust_coefficient:
   value: 2.618e-8
   unit: N s^2/rad^2
-  source: "NanoBench hover system identification; interceptor/sim/constants.py PH_C_L"
+  source: "OWN_FIT: our own fit to NanoBench flight data (Ullah & Baca 2026, arXiv:2603.09908), not a value quoted by NanoBench (absent from its paper, README, code and metadata, checked 2026-11-14): median of m g / (4 Omega^2) over 9,179 hover samples in 10 trajectories (identify_params.py in the predecessor simulator repository). Rotor speed was not measured; it came from the ESC map that was later rejected (BUGS R-1), so the fit must be repeated with the current map (P3.4, BUGS #27); interceptor/sim/constants.py PH_C_L"
 torque_coefficient:
   value: 5.45e-11
   unit: N m s^2/rad^2
-  source: "NanoBench fitted c_l/480 drag-to-thrust ratio"
+  source: "PROJECT_CHOICE: thrust_coefficient / 480. The yaw identification on NanoBench data was too noisy to fit a torque coefficient, so a fixed torque-to-thrust ratio was assumed (BUGS #27); varied +/-15 % by domain randomisation"
 maximum_motor_speed:
   value: 2800.0
   unit: rad/s
-  source: "Bitcraze 7x16 mm coreless motor at 4.2 V, full throttle"
+  source: "Traced 2026-11-15 in the predecessor repository rl-drone-flight-simulator: PROJECT_CHOICE: 2800 rad/s is labelled 'best guess, typical small-quad max motor speed' (default_demo.py:601); no Bitcraze or NanoBench source was found. The earlier source text 'Bitcraze 7x16 mm coreless motor at 4.2 V, full throttle' was not supported and was removed. It sets the thrust ceiling, hence thrust-to-weight 2.05 and the acceleration limits"
 motor_time_constant:
   value: 0.02
   unit: s
-  source: "NanoBench motor step-response identification"
+  source: "PROJECT_CHOICE: assumed first-order motor lag (labelled best guess in the predecessor simulator); no step-response identification was done and the NanoBench paper gives no value (BUGS #27). Defended by the motor-lag rows of scripts/check_quad_limits_repeatability.py"
 motor_efficiency:
   value: 0.7
   unit: dimensionless
-  source: "Bitcraze motor/propeller efficiency measurement at hover"
+  source: "Traced 2026-11-15 in the predecessor repository rl-drone-flight-simulator: PROJECT_CHOICE: eta = 0.7 is labelled 'motor efficiency -- best guess' (default_demo.py:615). The earlier text 'Bitcraze measurement at hover' was not supported and was removed"
 battery_voltage_full:
   value: 4.2
   unit: V
@@ -89,11 +89,11 @@ aero:
   force_clip:
     value: 50.0
     unit: N
-    source: "Numerical guard above measured NanoBench peak specific force"
+    source: "Traced 2026-11-15 in the predecessor repository rl-drone-flight-simulator: PROJECT_CHOICE numerical guard: +-50 N is a bare literal (hover_env.py:359, swift_rl_env.py:292); no 'measured NanoBench peak' was found. The vehicle weighs 0.4 N, so the clip only guards against numerical blow-up"
   torque_clip:
     value: 5.0
     unit: N m
-    source: "Numerical guard above measured NanoBench peak torque"
+    source: "Traced 2026-11-15 in the predecessor repository rl-drone-flight-simulator: PROJECT_CHOICE numerical guard: +-5 N m is a bare literal (hover_env.py:360); no 'measured NanoBench peak' was found. The clip only guards against numerical blow-up"
   fx_raw:
     value: [6.582314e-02, -3.507132e-02, 0.0, -3.952726e-07]
     unit: "m/s^2 per [v, v|v|, Omega^2, v Omega^2]"
@@ -122,42 +122,42 @@ ground_effect:
   height:
     value: 0.15
     unit: m
-    source: "Cheeseman & Bennett image-vortex fit, scaled to Crazyflie rotor diameter"
+    source: "PROJECT_CHOICE: height of a linear thrust ramp 1 + g_max (1 - z/h) (EQ-SIX-10). This is not the Cheeseman and Bennett (1955) formula, which is only the reason a boost exists. Inactive above 0.15 m"
   max_gain:
     value: 0.20
     unit: dimensionless
-    source: "Cheeseman & Bennett image-vortex fit at z=0"
+    source: "PROJECT_CHOICE: gain of the linear thrust ramp at z = 0 (EQ-SIX-10); not taken from Cheeseman and Bennett (1955). Inactive above 0.15 m"
 wind:
   mean_std:
     value: 1.5
     unit: m/s
-    source: "Dryden low-altitude light-turbulence intensity, MIL-HDBK-1797"
+    source: "PROJECT_CHOICE: per-axis standard deviation of the episode mean wind for flight-controller domain randomisation (not a turbulence intensity; the earlier label 'light-turbulence intensity, MIL-HDBK-1797' was wrong and was corrected 2026-11-15). Scale check only: 1.5 m/s is about 3 knots, well inside the 15-knot W20 that MathWorks gives for light turbulence (Dryden Wind Turbulence Model page, read 2026-11-15)"
   theta_range:
     value: [0.2, 1.0]
     unit: 1/s
-    source: "Dryden longitudinal filter bandwidth mapping; docs/mathematics.md EQ-WIND-2"
+    source: "PROJECT_CHOICE mean-reversion rate of the Ornstein-Uhlenbeck gust (correlation time 1-5 s); used only for flight-controller domain randomisation; the closed loop uses the Dryden model (EQ-WIND-2) instead"
   sigma_range:
     value: [0.3, 2.0]
     unit: m/s
-    source: "Dryden low-altitude turbulence intensity range, MIL-HDBK-1797"
+    source: "PROJECT_CHOICE range of the Ornstein-Uhlenbeck diffusion coefficient used for flight-controller domain randomisation (interceptor/sim/aero.py wind_ou_step); it is not a turbulence intensity (earlier MIL-HDBK-1797 label corrected 2026-11-15). The stationary gust standard deviation is sigma/sqrt(2 theta) = 0.21 to 3.16 m/s over the sampled ranges. Cross-check: Dryden low-altitude sigma_w = 0.1 W20 with W20 = 15 / 30 / 45 knots for light / moderate / severe turbulence (MathWorks Dryden Wind Turbulence Model page, read 2026-11-15) gives 0.77 / 1.54 / 2.31 m/s, so the range covers calm to beyond severe. The handbook itself was not read"
 domain_randomisation:
   mass_fraction:
     value: [0.90, 1.10]
     unit: dimensionless
-    source: "NanoBench unit-to-unit mass spread"
+    source: "Traced 2026-11-15 in the predecessor repository rl-drone-flight-simulator: PROJECT_CHOICE: +-10 % domain-randomisation range (swift_rl_env.py:149); no rationale or source recorded. The earlier 'NanoBench unit-to-unit spread' text was not supported. Effect tested by P9.5"
   inertia_fraction:
     value: [0.90, 1.10]
     unit: dimensionless
-    source: "NanoBench unit-to-unit inertia spread"
+    source: "Traced 2026-11-15 in the predecessor repository rl-drone-flight-simulator: PROJECT_CHOICE: +-10 % domain-randomisation range (swift_rl_env.py:150); no rationale or source recorded. The earlier 'NanoBench unit-to-unit spread' text was not supported. Effect tested by P9.5"
   thrust_fraction:
     value: [0.85, 1.15]
     unit: dimensionless
-    source: "Bitcraze motor-to-motor thrust scatter"
+    source: "Traced 2026-11-15 in the predecessor repository rl-drone-flight-simulator: PROJECT_CHOICE: +-15 % domain-randomisation range (swift_rl_env.py:151); no rationale or source recorded. The earlier 'Bitcraze motor-to-motor scatter' text was not supported. Effect tested by P9.5"
   torque_fraction:
     value: [0.85, 1.15]
     unit: dimensionless
-    source: "Bitcraze motor-to-motor drag-torque scatter"
+    source: "Traced 2026-11-15 in the predecessor repository rl-drone-flight-simulator: PROJECT_CHOICE: +-15 % domain-randomisation range (swift_rl_env.py:152); no rationale or source recorded. The earlier 'Bitcraze motor-to-motor scatter' text was not supported. Effect tested by P9.5"
   aero_fraction:
     value: [0.80, 1.20]
     unit: dimensionless
-    source: "NanoBench fit residual envelope"
+    source: "Traced 2026-11-15 in the predecessor repository rl-drone-flight-simulator: PROJECT_CHOICE: +-20 % domain-randomisation range on the aero polynomial coefficients (swift_rl_env.py:153-156); no rationale or source recorded. The earlier 'NanoBench fit residual envelope' text was not supported. Effect tested by P9.5"

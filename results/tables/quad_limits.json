@@ -4,13 +4,13 @@
   "analytic_vertical_up_a_max": 10.288036719706243,
   "analytic_vertical_down_a_max": 9.81,
   "tau_accel_s": 0.17400000000000002,
-  "accel_step_final": 3.6506339898450557,
-  "lateral_a_max_measured": 14.78621487690635,
-  "vertical_up_a_max_measured": 9.446960537112686,
-  "vertical_down_a_max_measured": 9.414443807881613,
-  "v_max_measured": 21.990270630989283,
+  "accel_step_final": 3.6732797171428877,
+  "lateral_a_max_measured": 15.37107132146109,
+  "vertical_up_a_max_measured": 9.593246824828556,
+  "vertical_down_a_max_measured": 9.510003122788094,
+  "v_max_measured": 27.66792829833691,
   "v_max_settled": true,
   "peak_rate_hard_attitude_step": 4.392459127747948,
-  "max_jerk_m_s3": 84.978246419002,
-  "omega_max_turn": 0.6723980402528206
+  "max_jerk_m_s3": 88.33949035322465,
+  "omega_max_turn": 0.5555555571677923
 }

@@ -75,9 +75,9 @@ PH_MIX        = np.column_stack([
     PH_SPIN_SIGN,              # yaw   = spin-reaction direction
 ])
 
-PH_C_L        = 2.618e-8    # N/(rad/s)^2   lift coeff  (NanoBench sysid hover data)
+PH_C_L        = 2.618e-8    # N/(rad/s)^2   lift coeff  (our fit to NanoBench hover data, BUGS #27)
 PH_C_D        = 5.45e-11    # N*m/(rad/s)^2 drag coeff  (c_l/480 ratio)
-PH_K_MOT      = 0.02        # s             motor first-order lag time constant
+PH_K_MOT      = 0.02        # s             motor first-order lag time constant (assumed, BUGS #27)
 PH_OMEGA_MAX  = 2800.0      # rad/s         maximum motor speed
 
 PH_ETA        = 0.7                                            # motor efficiency
@@ -158,7 +158,13 @@ NOM_TZ_RAW   = np.array([-1.432000e-03, 7.798700e-02])
 # Linear rotor-drag coefficients D = diag(kx, ky, kz) [1/s], EQ-SIX-11.  ASSUMPTION:
 # order of magnitude of published quadrotor rotor-drag identifications
 # (Faessler et al., RA-L 2018); NOT fitted to a Crazyflie.  Replace on NanoBench refit (P3.5).
-ROTOR_DRAG_XYZ = (0.5, 0.5, 0.7)
+# Faessler, Franchi & Scaramuzza (2018), arXiv:1712.02402, Sec. VII-C, 610 g quadrotor:
+# d_x = 0.544 / 0.491 1/s, d_y = 0.386 / 0.236 1/s (circle / lemniscate).  kx = ky = 0.5
+# is inside that d_x range and above the d_y range.  The paper does not identify d_z
+# (it sets d_z = 0).  kz is set equal to kx (isotropic) so all three coefficients share
+# one justification; kz = 0 would leave vertical speed unbounded in this model.
+# Changed 2026-11-14 from the unsourced kz = 0.7 (BUGS #27).
+ROTOR_DRAG_XYZ = (0.5, 0.5, 0.5)
 
 # ---------------------------------------------------------------------------
 # Hover equilibrium

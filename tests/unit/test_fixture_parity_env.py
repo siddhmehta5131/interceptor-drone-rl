@@ -5,6 +5,10 @@ related by ``T = diag(1, -1, -1)``.  Positions, velocities, accelerations and
 the body-rate vector transform with ``T``; scalars (range, closing speed,
 t_go, reward, visible) are unchanged.  This is the same convention already
 used by the manoeuvre parity test.
+
+P5.9 replaced the notebook reward with the potential-based guidance reward, so
+this replay passes ``legacy_reward=True``; observations, trajectories and
+velocity outputs are still compared bit-for-bit against the notebook.
 """
 
 from __future__ import annotations
@@ -15,7 +19,9 @@ import numpy as np
 import pytest
 
 from interceptor.guidance.env import UnifiedInterceptEnv
+from interceptor.guidance.seeker import SensorNoiseConfig
 from interceptor.guidance.maneuvers import ManeuverType, PlatformType
+from interceptor.guidance.platform import InterceptorLimits
 
 FIX = Path(__file__).resolve().parents[1] / "fixtures"
 T = np.array([1.0, -1.0, -1.0])
@@ -52,7 +58,9 @@ def test_notebook_environment_replay(platform, mode, seed):
     env = UnifiedInterceptEnv(
         platform=platform, mode=MODES[mode], target_set="evasive",
         noise_scale=float(fx["noise_scale"]),
-        fixed_maneuver=ManeuverType(str(fx["maneuver"])), seed=seed)
+        fixed_maneuver=ManeuverType(str(fx["maneuver"])), seed=seed,
+        legacy_reward=True, limits=InterceptorLimits.from_preset(platform),
+        noise_config=SensorNoiseConfig())  # notebook-v2 noise, not configs/seeker.yaml
     obs, _ = env.reset()
     obs_hist, rewards, vout = [obs.copy()], [], []
     done = False

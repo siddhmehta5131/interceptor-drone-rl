@@ -1,0 +1,8 @@
+kind,case,tau_accel_s,lateral_a_max_measured,vertical_up_a_max_measured,vertical_down_a_max_measured,v_max_measured,peak_rate_hard_attitude_step,max_rel_change_pct
+procedure,baseline,0.1740,15.3711,9.5932,9.5100,27.6679,4.3925,0.0
+procedure,settings_A,0.1740,15.4384,9.6081,9.5355,26.2452,4.3925,5.1
+procedure,settings_B,0.1760,15.3511,9.5723,9.4785,29.1671,4.3925,5.4
+physics,motor_lag_x0.5,0.1780,15.1449,9.7705,9.5988,27.2609,4.2119,4.1
+physics,motor_lag_x2,0.1760,16.0438,9.2833,9.3408,28.8788,4.6531,5.9
+physics,kz_0,0.1740,17.1327,10.0823,9.8100,512.9275,4.3925,1753.9
+physics,kz_0.7,0.1740,14.7862,9.4470,9.4144,21.9903,4.3925,20.5

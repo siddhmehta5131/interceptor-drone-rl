@@ -2,7 +2,7 @@
 # Every numeric leaf is {value, unit, source}.
 
 model: "range-dependent angular noise, alpha-beta-gamma filter, Bernoulli dropouts"
-source: "NanoBench Vicon residual analysis and Crazyflie onboard estimator covariance; equations EQ-SEEK-1..4"
+source: "PROJECT_CHOICE noise model (no datasheet gives this exact model); robustness covered by P9.1 noise_scale sweep; filter form Bar-Shalom, Li & Kirubarajan (2001); equations EQ-SEEK-1..4. Corrected 2026-11-14: earlier text claimed motion-capture residual and radio packet-loss measurements that were never made"
 
 enabled:
   value: true
@@ -11,40 +11,32 @@ enabled:
 position_sigma_base:
   value: 0.5
   unit: m
-  source: "NanoBench Vicon position residual floor; EQ-SEEK-1"
+  source: "PROJECT_CHOICE range-independent floor; swept x0-4 by P9.1 noise_scale. Cross-check: Echodyne (manufacturer) statement hosted by US ITA, https://www.trade.gov/sites/default/files/2024-08/ECHODYNE.pdf : EchoShield angular tracking accuracy <0.5 deg az x <0.5 deg el (8.7 mrad); EchoGuard ~1 deg az, ~1.5 deg el, range accuracy ~1-2 m (accuracy statistic not defined as 1-sigma): nominal 0.5 m is below the 1-2 m radar range accuracy; EQ-SEEK-1"
 position_sigma_angular:
-  value: 0.0025
+  value: 0.008727
   unit: rad
-  source: "Vicon angular residual per metre of range; EQ-SEEK-1"
+  source: "0.5 deg = 8.727 mrad: Echodyne EchoShield counter-UAS radar angular tracking accuracy <0.5 deg az x <0.5 deg el (Echodyne manufacturer statement hosted by the US International Trade Administration, 2024, https://www.trade.gov/sites/default/files/2024-08/ECHODYNE.pdf). The statistic is not stated; the bound is used as 1-sigma, the pessimistic reading. Changed 2026-11-14 from the unsourced 2.5 mrad. P9.1 noise_scale sweeps x0-4 (x0.25 is close to the old value, x2 = EchoGuard ~1 deg); EQ-SEEK-1"
 velocity_sigma_fraction:
   value: 0.03
   unit: dimensionless
-  source: "3% of nominal target speed, NanoBench differentiated-position residual; EQ-SEEK-2"
+  source: "PROJECT_CHOICE 3% of nominal target speed (radars report Doppler, not a fixed fraction); swept by P9.1 noise_scale; EQ-SEEK-2"
 acceleration_sigma_fraction:
   value: 0.18
   unit: dimensionless
-  source: "18% of target manoeuvre limit, NanoBench acceleration residual; EQ-SEEK-2"
+  source: "PROJECT_CHOICE 18% of target manoeuvre limit (acceleration is not directly measured by real sensors; this stands in for tracker output); swept by P9.1 noise_scale; EQ-SEEK-2"
 dropout_probability:
   value: 0.04
   unit: dimensionless
-  source: "4% packet loss measured on Crazyflie radio at 50 Hz; EQ-SEEK-3"
+  source: "PROJECT_CHOICE 4% per-step dropout (not a measurement); scales with P9.1 noise_scale; EQ-SEEK-3"
 ema_alpha_position:
   value: 0.65
   unit: dimensionless
-  source: "Alpha-beta-gamma steady-state gain for 50 Hz, sigma_a=0.18 a_max; EQ-SEEK-4"
+  source: "PROJECT_CHOICE fixed gain (BUGS #13); the P5.4 Kalman tracker (EQ-KF-1..4) derives gains from the noise model instead; EQ-SEEK-4"
 ema_alpha_velocity:
   value: 0.55
   unit: dimensionless
-  source: "Alpha-beta-gamma steady-state gain for 50 Hz; EQ-SEEK-4"
+  source: "PROJECT_CHOICE fixed gain (BUGS #13); superseded by the P5.4 Kalman tracker; EQ-SEEK-4"
 ema_alpha_acceleration:
   value: 0.35
   unit: dimensionless
-  source: "Alpha-beta-gamma steady-state gain for 50 Hz; EQ-SEEK-4"
-coast_acceleration_decay:
-  value: 0.98
-  unit: "per 20 ms step"
-  source: "Constant-acceleration coast damping through dropouts; EQ-SEEK-3"
-noise_floor:
-  value: 0.0
-  unit: m
-  source: "No additive floor beyond the range-dependent term; EQ-SEEK-1"
+  source: "PROJECT_CHOICE fixed gain (BUGS #13); superseded by the P5.4 Kalman tracker; EQ-SEEK-4"

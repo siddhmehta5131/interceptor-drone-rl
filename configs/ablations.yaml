@@ -1,0 +1,29 @@
+# Run matrices for P9.2, P9.3, P9.5 (plan section 4, P9).  Each entry is merged into the
+# runner config by notebooks/05_ablations_and_sweeps.ipynb.  All use the quad, arm A3
+# (apn_rl), 3 seeds (configs/training.yaml seeds.training) and the full-model budget.
+guidance_ablations:            # P9.2
+  full:            {}
+  no_priv_critic:  {guidance: {obs_ablate: [privileged]}}   # critic block zeroed: no privileged information
+  no_history:      {guidance: {obs_ablate: [history]}}
+  no_prediction:   {guidance: {obs_ablate: [prediction]}}
+sensitivity:                   # P9.3
+  authority_0.20:  {guidance: {residual_authority: 0.20}}
+  authority_0.35:  {guidance: {residual_authority: 0.35}}   # default, see env.py
+  authority_0.50:  {guidance: {residual_authority: 0.50}}
+  gamma_0.99:      {guidance: {gamma: 0.99}}
+  gamma_horizon:   {}                                       # gamma = 0.1**(1/1100), EQ-GUIDE-8
+fc_randomisation:              # P9.5
+  with_dr:    {fc: {domain_randomization: true}}
+  without_dr: {fc: {domain_randomization: false}}
+# Reward-weight sweep (docs/tuned_values_plan.md, family B): the three largest weights
+# (terminal bonus, progress potential, residual-action penalty), each at 0.5x and 1.5x
+# with the others nominal.  The nominal point is guidance_ablations.full.  6 variants x
+# 3 seeds; evaluated with the nominal reward-free metrics (kill rate, miss), so the
+# comparison does not depend on the reward scale itself.
+reward_weights:
+  kill_bonus_0.5:  {guidance: {reward_scale: {kill_bonus: 0.5}}}
+  kill_bonus_1.5:  {guidance: {reward_scale: {kill_bonus: 1.5}}}
+  w_progress_0.5:  {guidance: {reward_scale: {w_progress: 0.5}}}
+  w_progress_1.5:  {guidance: {reward_scale: {w_progress: 1.5}}}
+  w_res_rl_0.5:    {guidance: {reward_scale: {w_res_rl: 0.5}}}
+  w_res_rl_1.5:    {guidance: {reward_scale: {w_res_rl: 1.5}}}

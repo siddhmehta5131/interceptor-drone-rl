@@ -52,7 +52,7 @@ physical:
   gravity:
     value: 9.81
     unit: m/s^2
-    source: "CODATA standard gravity"
+    source: "Standard gravity 9.80665 m/s^2 rounded to 9.81 (project-wide value, same as mavsim_public)"
 
 propulsion:
   mass_vs_time:

@@ -88,9 +88,11 @@ class InterceptAnimator:
 
     def _add_stage_banner(self) -> None:
         try:
+            text = (f"Model: {self.model_name}  |  Stage {self.stage}  |  APN + RL Interceptor"
+                    if self.stage else str(self.model_name))
             self.renderer.plotter.add_text(
-                f"Model: {self.model_name}  |  Stage {self.stage}  |  APN + RL Interceptor",
-                position="upper_left",
+                text,
+                position="upper_edge",
                 font_size=13,
                 color="white",
                 name="banner",

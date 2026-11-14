@@ -1,18 +1,16 @@
-# Drone models
+# Meshes (P10.5)
 
-`interceptor_drone.obj` and `target_drone.obj` are loaded by the PyVista
-visualiser (see `visualiser/scene_builder.py`).
+| Mesh | Used for | Source | Licence |
+|---|---|---|---|
+| `interceptor_drone.obj` | quad interceptor | **Unrecorded.** Origin not documented when it was added (finding F21). | **Unknown: do not redistribute until the source page is identified, or replace it.** |
+| `target_drone.obj` | quad target | **Unrecorded** (F21). | **Unknown**, as above. |
+| `primitive:fixed_wing` | fixed-wing interceptor | Generated in code by `visualiser/scene_builder.py::primitive_mesh` (cylinder, cone, box wing/tail). | Project code, no third-party asset. |
+| `primitive:missile` | missile interceptor | Same function (cylinder body, cone nose, four box fins). | Project code, no third-party asset. |
+| placeholder quad | fallback when an OBJ is missing | `scene_builder.placeholder_drone` (box body, four cylinder rotors). | Project code. |
 
-Source options (pick free / CC-licensed assets):
-
-- Free3D      https://free3d.com/3d-models/quadcopter
-- GrabCAD     https://grabcad.com/library?query=quadcopter
-- Sketchfab   https://sketchfab.com/tags/drone
-
-Both OBJ meshes are committed.  The visualiser auto-scales them using
-`models.scale` in `configs/visualiser.yaml`.
-
-## Licence
-
-Real downloaded meshes keep their own licence -- check the source page before
-redistribution.  The placeholder geometry generated here is public domain.
+The two OBJ files are the only items with an open licence question. Resolve it
+by either (a) finding the original download page and recording its licence here,
+or (b) deleting the two files and pointing `configs/visualiser.yaml` at
+`primitive:`-style meshes (the renderer then falls back to `placeholder_drone`
+for the quad). Videos in `results/videos/` use the OBJ meshes for the quad
+until this is decided.

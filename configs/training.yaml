@@ -1,0 +1,74 @@
+# training.yaml -- algorithm and budget definitions (plan P6.3, P7.2).
+#
+# Hyperparameters are the RL Baselines3 Zoo defaults for the respective
+# algorithms (Raffin et al., 2021, "Stable-Baselines3: Reliable Reinforcement
+# Learning Implementations", JMLR 22(268)).  PPO, SAC and TD3 share the same
+# MLP widths so P6.4 compares algorithms, not capacity.
+#
+# DISCOUNT: the `gamma: 0.99` entries below are the Zoo defaults and apply to the
+# flight-controller task only.  For guidance training the runner replaces gamma with
+# the environment's shaping discount, 0.1**(1/1100) = 0.99791 (EQ-GUIDE-8,
+# configs/guidance.yaml reward.gamma), because potential-based shaping needs the
+# learner and the shaping to use the same discount (Ng, Harada & Russell 1999;
+# BUGS #26).  The value actually used is written to <run>/hyperparameters.json.
+#
+# `source` records where a value came from; budgets are filled from the P7.2
+# throughput benchmark (`scripts/benchmark_training.py`).
+
+network:
+  pi: [256, 256, 128]
+  vf: [256, 256, 128]
+  activation: relu
+
+algorithms:
+  ppo:
+    n_steps: 2048
+    batch_size: 64
+    n_epochs: 10
+    gamma: 0.99          # FC task; guidance uses 0.99791 (see DISCOUNT note above)
+    gae_lambda: 0.95
+    clip_range: 0.2
+    ent_coef: 0.0
+    learning_rate: 3.0e-4
+    vf_coef: 0.5
+    max_grad_norm: 0.5
+  sac:
+    buffer_size: 1000000
+    learning_starts: 100
+    batch_size: 256
+    tau: 0.005
+    gamma: 0.99          # FC task; guidance uses 0.99791 (see DISCOUNT note above)
+    train_freq: 1
+    gradient_steps: 1
+    ent_coef: auto
+    learning_rate: 3.0e-4
+  td3:
+    buffer_size: 1000000
+    learning_starts: 100
+    batch_size: 256
+    tau: 0.005
+    gamma: 0.99          # FC task; guidance uses 0.99791 (see DISCOUNT note above)
+    train_freq: 1
+    gradient_steps: 1
+    policy_delay: 2
+    target_policy_noise: 0.2
+    target_noise_clip: 0.5
+    learning_rate: 3.0e-4
+
+# Equal budget for P6.4 and for A3/A4 in P7.4 (environment steps).
+budgets:
+  algorithm_selection_steps: 200000
+  fc_train_steps: 1000000
+  guidance_train_steps: 5000000
+  source: "laptop SubprocVecEnv benchmark 2026-11-13: FC 281 steps/s, guidance 2583 steps/s; Colab rerun pending"
+
+# Seeding protocol (plan section 6).
+seeds:
+  training: [0, 1, 2]
+  evaluation_start: 10000
+  eval_stride: 1000
+
+# P6.5 decision. Provisional until notebook 02 confirms it; see
+# docs/algorithm_selection.md section 7.
+selected_algo: ppo
+selected_algo_source: "analytic preference, docs/algorithm_selection.md; P6.4 confirmation pending"

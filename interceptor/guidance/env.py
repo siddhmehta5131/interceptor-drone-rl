@@ -17,6 +17,8 @@ step, against the true target.
 
 from __future__ import annotations
 
+import dataclasses
+
 from typing import Any, Dict, Optional
 
 import numpy as np
@@ -28,16 +30,17 @@ try:
 except Exception:  # pragma: no cover
     gym, spaces, _HAVE_GYM = None, None, False
 
-from interceptor.envs.target_generator import PolynomialTargetPath
+from interceptor.guidance.polynomial_path import PolynomialTargetPath
 from .kinematics import (
     apply_interceptor_constraints, closest_approach_distance,
     compute_3d_apn_command, compute_engagement_kinematics,
     compute_optimal_intercept_oracle, heading_rate_from_acceleration,
 )
 from .maneuvers import ManeuverType, PlatformType
-from .observation import AsymmetricObsBuilder
+from .observation import AsymmetricObsBuilder, ObservationScales
+from .reward import GuidanceReward, notebook_reward
 from .platform import InterceptorLimits, PLATFORMS
-from .seeker import SeekerSensorFilter, SensorNoiseConfig
+from .seeker import SeekerSensorFilter, SensorNoiseConfig, load_sensor_noise_config
 from .targets import HARD_MANEUVERS, GenericEvasiveTarget, PolynomialTarget, StaticTarget
 
 __all__ = ["UnifiedInterceptEnv", "MODES", "TARGET_SETS"]
@@ -67,8 +70,16 @@ class UnifiedInterceptEnv(_Base):
         polynomial_order: int = 1,
         N_nav: float = 4.0,
         seed: Optional[int] = None,
+        obs_scales: Optional[ObservationScales] = None,
+        reward_fn: Optional[GuidanceReward] = None,
+        legacy_reward: bool = False,
         use_apn: Optional[bool] = None,
         pure_apn_mode: Optional[bool] = None,
+        residual_authority: float = 0.35,
+        gamma: Optional[float] = None,
+        obs_ablate: tuple = (),
+        maneuver_shape_scale: float = 1.0,
+        reward_scale: Optional[dict] = None,
     ):
         if not _HAVE_GYM:
             raise ImportError("gymnasium is required to use UnifiedInterceptEnv")
@@ -83,7 +94,7 @@ class UnifiedInterceptEnv(_Base):
         self.mode = mode
         self.target_set = target_set
         self.limits = limits if limits is not None else PLATFORMS[platform]
-        self.noise_cfg = noise_config or SensorNoiseConfig()
+        self.noise_cfg = noise_config or load_sensor_noise_config()
         self.noise_scale = float(noise_scale)
         self.fixed_maneuver = fixed_maneuver
         self.polynomial_order = int(polynomial_order)
@@ -94,7 +105,19 @@ class UnifiedInterceptEnv(_Base):
 
         self.rng = np.random.default_rng(seed)
         self.sensor = SeekerSensorFilter(self.noise_cfg, self.limits, self.rng)
-        self.obs_builder = AsymmetricObsBuilder(self.limits)
+        self.obs_builder = AsymmetricObsBuilder(self.limits, scales=obs_scales,
+                                           ablate=tuple(obs_ablate))
+        self.residual_authority = float(residual_authority)  # fraction of a_n_max (P9.3)
+        self.maneuver_shape_scale = float(maneuver_shape_scale)  # "maneuver_shape" sweep in eval/sweeps.py
+        if reward_fn is None:
+            reward_fn = GuidanceReward() if gamma is None else GuidanceReward(gamma=float(gamma))
+        if reward_scale:
+            # Multiply named reward weights (reward-weight sweep, configs/ablations.yaml).
+            reward_fn = dataclasses.replace(reward_fn, **{
+                k: getattr(reward_fn, k) * float(m) for k, m in reward_scale.items()})
+        self.reward_fn = reward_fn
+        self.legacy_reward = bool(legacy_reward)
+        self.gamma = float(self.reward_fn.gamma)
 
         self._all_maneuvers = list(ManeuverType)
         weights = np.array([2.5 if m in HARD_MANEUVERS else 1.0
@@ -117,6 +140,10 @@ class UnifiedInterceptEnv(_Base):
         self.traj_M = []
         self.traj_T = []
         self.traj_T_noisy = []
+        # P5.12: shared guidance log, one row per decision.
+        self.traj_a_des = []
+        self.traj_v_des = []
+        self.traj_omega_des = []
         self.last_info: Dict[str, Any] = {}
 
     # ------------------------------------------------------------------ helpers
@@ -161,7 +188,7 @@ class UnifiedInterceptEnv(_Base):
                 maneuver = self._all_maneuvers[idx]
             self.target = GenericEvasiveTarget(
                 p_T0, v_T0, maneuver, lim.v_target_nominal,
-                lim.a_target_max, self.rng)
+                lim.a_target_max, self.rng, shape_scale=self.maneuver_shape_scale)
         elif self.target_set == "static":
             self.target = StaticTarget(p_T0)
         else:
@@ -202,6 +229,9 @@ class UnifiedInterceptEnv(_Base):
         self.traj_M = [self.p_M.copy()]
         self.traj_T = [self.target.p_W.copy()]
         self.traj_T_noisy = [self.sensor.raw_pos.copy()]
+        self.traj_a_des = []
+        self.traj_v_des = []
+        self.traj_omega_des = []
         obs = self.obs_builder.build(
             p_M=self.p_M, v_M=self.v_M, est_p_T=est_p, est_v_T=est_v,
             est_a_T=est_a, visible=visible, dt=self.dt,
@@ -239,7 +269,7 @@ class UnifiedInterceptEnv(_Base):
                 a_apn = compute_3d_apn_command(
                     kin_cmd, est_a, self.v_M, lim, self.N_nav,
                     include_axial_boost=True)
-                a_rl = act * (0.35 * lim.a_n_max) if self.mode == "apn_rl" else np.zeros(3)
+                a_rl = act * (self.residual_authority * lim.a_n_max) if self.mode == "apn_rl" else np.zeros(3)
             a_raw = a_apn + a_rl
         else:
             a_apn = np.zeros(3)
@@ -289,25 +319,27 @@ class UnifiedInterceptEnv(_Base):
                         and kin_true.r > self.min_miss_distance + 60.0)
         timeout = bool(self.step_count >= self.max_steps)
 
-        r_progress = 2.5 * (self.prev_dist - kin_true.r) / max(lim.v_max * self.dt, 1e-3)
         v_hat = self.v_M / max(float(np.linalg.norm(self.v_M)), 1e-6)
-        r_align = 0.35 * float(np.dot(v_hat, kin_true.los_vec))
-        r_los = -0.15 * float(np.linalg.norm(kin_true.los_rate_vec))
-        r_zem = -0.25 * (kin_true.zem_norm / max(kin_true.r, 10.0))
         if self.mode == "apn_rl":
-            r_residual = -0.04 * float(np.linalg.norm(act)) ** 2
+            residual_weight = self.reward_fn.w_res_rl
         elif self.mode == "pure_rl":
-            r_residual = -0.015 * float(np.linalg.norm(act)) ** 2
+            residual_weight = self.reward_fn.w_res_pure
         else:
-            r_residual = 0.0
-        r_smooth = -0.03 * float(np.sum((act - self.prev_action) ** 2))
-        reward = r_progress + r_align + r_los + r_zem + r_residual + r_smooth - 0.005
-        if killed:
-            reward += 150.0 + 50.0 * (1.0 - self.step_count / self.max_steps)
-        elif crashed:
-            reward -= 80.0
-        elif diverged:
-            reward -= 25.0 * (self.min_miss_distance / lim.r_init_max)
+            residual_weight = 0.0
+        common = dict(
+            distance=kin_true.r, prev_distance=self.prev_dist,
+            los_vec=kin_true.los_vec, los_rate_vec=kin_true.los_rate_vec,
+            zem_norm=kin_true.zem_norm, v_hat=v_hat, action=act,
+            prev_action=self.prev_action, residual_weight=residual_weight,
+            step_count=self.step_count, max_steps=self.max_steps,
+            r_init_max=lim.r_init_max, killed=killed, crashed=crashed,
+            diverged=diverged, min_miss_distance=self.min_miss_distance,
+        )
+        if self.legacy_reward:
+            reward, reward_terms = notebook_reward(
+                v_max=lim.v_max, dt=self.dt, **common)
+        else:
+            reward, reward_terms = self.reward_fn.compute(**common)
         self.prev_dist = kin_true.r
         self.prev_action = act.copy()
 
@@ -334,16 +366,23 @@ class UnifiedInterceptEnv(_Base):
             "a_des": a_cmd.copy(), "v_des": self.v_M.copy(),
             "omega_des": self.omega_M.copy(),
             "a_apn": np.asarray(a_apn).copy(), "a_rl": a_rl.copy(),
-            "distance": kin_true.r,
+            "distance": kin_true.r, "reward_terms": reward_terms,
         }
         self.last_info = info
+        self.traj_a_des.append(info["a_des"].copy())
+        self.traj_v_des.append(info["v_des"].copy())
+        self.traj_omega_des.append(info["omega_des"].copy())
         return obs, float(reward), terminated, truncated, info
 
     # ------------------------------------------------------------------- misc
     def get_trajectory_log(self):
+        """Return the shared trajectory-log arrays (P5.12, P10.1)."""
         return {"interceptor": np.asarray(self.traj_M),
                 "target": np.asarray(self.traj_T),
-                "target_noisy": np.asarray(self.traj_T_noisy)}
+                "target_noisy": np.asarray(self.traj_T_noisy),
+                "a_des": np.asarray(self.traj_a_des),
+                "v_des": np.asarray(self.traj_v_des),
+                "omega_des": np.asarray(self.traj_omega_des)}
 
     def render(self):
         return None

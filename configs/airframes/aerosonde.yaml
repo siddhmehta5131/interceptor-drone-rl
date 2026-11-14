@@ -75,7 +75,7 @@ physical:
   gravity:
     value: 9.81
     unit: m/s^2
-    source: "CODATA standard gravity"
+    source: "Standard gravity 9.80665 m/s^2 rounded to 9.81, the value in mavsim_public aerosonde_parameters.py (https://github.com/byu-magicc/mavsim_public/blob/main/mavsim_python/parameters/aerosonde_parameters.py)"
 
 aerodynamics:
   alpha_stall:
@@ -219,17 +219,17 @@ derived_limits:
     unit: m/s^2
     source: "-2.0 g idle-thrust/drag limit; docs/mathematics.md EQ-FW-4"
   a_n_max:
-    value: 102.9
+    value: 37.278
     unit: m/s^2
-    source: "10.5 g aero/structural limit, decision Q11; docs/mathematics.md EQ-FW-5"
+    source: "3.8 g positive limit manoeuvring load factor, normal category: 14 CFR 23.337 Limit maneuvering load factors (2011 ed., US Government Publishing Office), https://www.govinfo.gov/content/pkg/CFR-2011-title14-vol1/pdf/CFR-2011-title14-vol1-sec23-337.pdf; the same +3.8 g is used as a UAV design requirement (data/lethality_and_gload.csv G01). Structural limit governs above 28.5 m/s, where the aerodynamic limit 0.5 rho V^2 S CL_max/(m g) exceeds 3.8 (EQ-FW-5). Changed 2026-11-14 from the unsourced 10.5 g"
   a_n_down_max:
-    value: 49.05
+    value: 14.911
     unit: m/s^2
-    source: "5.0 g negative-load limit, decision Q11; docs/mathematics.md EQ-FW-5"
+    source: "0.4 x positive limit load factor = 1.52 g, normal category: 14 CFR 23.337 Limit maneuvering load factors (2011 ed., US Government Publishing Office), https://www.govinfo.gov/content/pkg/CFR-2011-title14-vol1/pdf/CFR-2011-title14-vol1-sec23-337.pdf. Changed 2026-11-14 from the unsourced 5.0 g"
   omega_max:
-    value: 3.5
+    value: 1.44
     unit: rad/s
-    source: "Coordinated turn at 25 m/s and 10.5 g, capped by roll-rate response; EQ-FW-6"
+    source: "Coordinated turn g sqrt(n^2-1)/V at 25 m/s trim and n = 3.8 (14 CFR 23.337); EQ-FW-6"
   tau_accel:
     value: 0.12
     unit: s
@@ -237,4 +237,4 @@ derived_limits:
   max_jerk:
     value: 180.0
     unit: m/s^3
-    source: "a_n_max / tau_accel = 102.9 / 0.12 rounded down; EQ-FW-7"
+    source: "Kept at 180 m/s^3, below a_n_max / tau_accel = 37.278 / 0.12 = 311; EQ-FW-7 (project choice)"

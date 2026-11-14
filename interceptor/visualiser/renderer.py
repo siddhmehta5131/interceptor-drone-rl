@@ -204,9 +204,11 @@ class InterceptRenderer:
             if n < 1e-6:
                 continue
             try:
-                arrow = self.pv.Arrow(
-                    start=interceptor_pos, direction=v / n, scale=n * arrow_scale * 20.0
-                )
+                # Length: ``arrow_length`` metres for |a| = 30 m/s^2, clipped to [0.1, 1.5]x,
+                # so the arrow stays proportionate at any scene scale.
+                length = float(self.config.get("arrow_length", 12.0)) * float(
+                    np.clip(n / 30.0, 0.1, 1.5)) * arrow_scale / 0.6
+                arrow = self.pv.Arrow(start=interceptor_pos, direction=v / n, scale=length)
                 self._add_dynamic_mesh(arrow, name, color=color)
             except Exception:
                 pass
@@ -300,6 +302,14 @@ class InterceptRenderer:
             elif mode == "fixed":
                 self.plotter.camera.position = (center[0] + 60.0, center[1] - 60.0, center[2] + 40.0)
                 self.plotter.camera.focal_point = tuple(center)
+            elif mode == "auto":
+                # Scale-aware follow camera: sits at 1.8x the current range (never closer
+                # than ``auto_min_distance``) so both vehicles stay large in the frame.
+                rng = float(np.linalg.norm(target_pos - interceptor_pos))
+                dist = max(1.8 * rng, float(cam.get("auto_min_distance", 40.0)))
+                d = np.array([1.0, -1.0, 0.55])
+                d = d / np.linalg.norm(d)
+                self.plotter.camera_position = [tuple(center + d * dist), tuple(center), (0, 0, 1)]
             elif mode == "orbit":
                 theta = 0.4 * len(self.interceptor_trail)
                 r = distance * 3.0

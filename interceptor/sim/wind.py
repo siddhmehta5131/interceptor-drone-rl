@@ -84,6 +84,9 @@ def dryden_spectrum(
     h_m = max(float(altitude), 0.1)
     h_ft = h_m / FT
     V = max(float(airspeed), V_MIN)
+    # Low-altitude Dryden model, MIL-F-8785C form (L_w = h, L_u = L_v = h / lam^1.2,
+    # sigma_w = 0.1 W20, sigma_u/sigma_w = 1 / lam^0.4), as tabulated by MathWorks:
+    # https://www.mathworks.com/help/aeroblks/drydenwindturbulencemodelcontinuous.html
     lam = 0.177 + 0.000823 * h_ft
     sigma_w = 0.1 * float(W20)
     sigma_uv = sigma_w / lam**0.4

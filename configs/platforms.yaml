@@ -12,43 +12,43 @@
 
 platforms:
   quadcopter:
-    description: "Crazyflie 2.1 interceptor, omnidirectional"
+    description: "Crazyflie 2.1 interceptor, omnidirectional; envelope measured in closed loop (P4.9)"
     v_min:
       value: 0.0
       unit: m/s
       source: "Multirotor can hover; EQ-KIN-1"
     v_max:
-      value: 45.0
+      value: 27.7
       unit: m/s
-      source: "Drag-limited Crazyflie sprint estimate; replaced by measured P4.9"
+      source: "Measured on the validated 500 Hz Crazyflie flight-control stack, plan P4.9: results/tables/quad_limits.json (scripts/measure_quad_limits.py); v_max_measured = 27.67 m/s with rotor drag (0.5, 0.5, 0.5) 1/s. Top speed is drag-limited and the drag coefficients are assumed (BUGS #27): 21.99 m/s with the earlier kz = 0.7; sensitivity in results/tables/quad_limits_repeatability.csv. Changed 2026-11-14 from the unsupported 45 m/s estimate"
     a_t_max:
-      value: 31.392
+      value: 15.4
       unit: m/s^2
-      source: "3.2 g collective thrust margin; analytic, replaced by measured P4.9"
+      source: "Measured on the validated 500 Hz Crazyflie flight-control stack, plan P4.9: results/tables/quad_limits.json (scripts/measure_quad_limits.py); omnidirectional vehicle, along-track limit = measured lateral limit 15.37 m/s^2. Changed from 3.2 g analytic"
     a_t_min:
-      value: -31.392
+      value: -15.4
       unit: m/s^2
-      source: "3.2 g negative collective; analytic, replaced by measured P4.9"
+      source: "Measured on the validated 500 Hz Crazyflie flight-control stack, plan P4.9: results/tables/quad_limits.json (scripts/measure_quad_limits.py); omnidirectional vehicle, symmetric along-track limit. Changed from -3.2 g analytic"
     a_n_max:
-      value: 51.012
+      value: 15.4
       unit: m/s^2
-      source: "5.2 g lateral thrust component at hover; analytic, replaced by measured P4.9"
+      source: "Measured on the validated 500 Hz Crazyflie flight-control stack, plan P4.9: results/tables/quad_limits.json (scripts/measure_quad_limits.py); lateral_a_max_measured = 15.37 m/s^2 (analytic g sqrt(TW^2-1) = 17.5). Changed from 5.2 g analytic"
     a_n_down_max:
-      value: 9.81
+      value: 9.5
       unit: m/s^2
-      source: "1.0 g downward normal limit; analytic, replaced by measured P4.9"
+      source: "Measured on the validated 500 Hz Crazyflie flight-control stack, plan P4.9: results/tables/quad_limits.json (scripts/measure_quad_limits.py); vertical_down_a_max_measured = 9.51 m/s^2"
     tau_accel:
-      value: 0.05
+      value: 0.17
       unit: s
-      source: "Inner rate-loop closed-loop bandwidth; measured P4.9"
+      source: "Measured on the validated 500 Hz Crazyflie flight-control stack, plan P4.9: results/tables/quad_limits.json (scripts/measure_quad_limits.py); tau_accel_s = 0.174, consistent with 1/Kp of the Crazyflie firmware attitude loop (PID_ROLL_KP 6.0, https://github.com/bitcraze/crazyflie-firmware/blob/master/src/platform/interface/platform_defaults_cf2.h)"
     max_jerk:
-      value: 300.0
+      value: 88.3
       unit: m/s^3
-      source: "a_n_max / tau_accel = 51.012 / 0.05 rounded; EQ-KIN-3"
+      source: "Measured on the validated 500 Hz Crazyflie flight-control stack, plan P4.9: results/tables/quad_limits.json (scripts/measure_quad_limits.py); max_jerk_m_s3 = 88.34 = a_n_max / tau_accel; EQ-KIN-3"
     omega_max:
-      value: 6.0
+      value: 4.4
       unit: rad/s
-      source: "Crazyflie body-rate limit at 500 Hz; measured P4.9"
+      source: "Measured on the validated 500 Hz Crazyflie flight-control stack, plan P4.9: results/tables/quad_limits.json (scripts/measure_quad_limits.py); peak_rate_hard_attitude_step = 4.39 rad/s"
     can_hover:
       value: true
       unit: dimensionless
@@ -58,29 +58,29 @@ platforms:
       unit: dimensionless
       source: "Thrust vector can point in any direction; EQ-KIN-2"
     kill_radius:
-      value: 3.0
+      value: 1.3
       unit: m
-      source: "2 x rotor span; configs/guidance.yaml EQ-GEO-4"
+      source: "Hit-to-kill contact rule r_kill = target half-span + interceptor half-span (EQ-GEO-4); no warhead is assumed because no credible lethal-radius data exists (data/lethality_and_gload.csv): 2.5/2 + 0.092/2 = 1.30 m. Shahed-136 wingspan 2.5 m (IRGC specification poster reported by Janes, https://www.janes.com/osint-insights/defence-news/air/irgc-confirms-specs-for-shahed-136-attack-uav); Crazyflie 2.1 size 92 mm motor-to-motor (Bitcraze datasheet, https://www.bitcraze.io/documentation/hardware/crazyflie_2_1/crazyflie_2_1-datasheet.pdf). Changed 2026-11-14 from 3.0 m"
     r_init_min:
-      value: 150.0
+      value: 92.0
       unit: m
-      source: "10 s at 15 m/s closing; configs/guidance.yaml EQ-GEO-5"
+      source: "Same 10 s minimum time-to-intercept window as before, scaled to the measured speed class (150 m x 27.7/45); EQ-GEO-5 (project choice)"
     r_init_max:
-      value: 450.0
+      value: 277.0
       unit: m
-      source: "25 s at 18 m/s closing; configs/guidance.yaml EQ-GEO-5"
+      source: "Same 25 s maximum time-to-intercept window as before, scaled to the measured speed class (450 m x 27.7/45); EQ-GEO-5 (project choice)"
     alt_init:
       value: 150.0
       unit: m
       source: "Above 35 m target floor plus 8 s vertical manoeuvre margin; EQ-GEO-6"
     v_target_nominal:
-      value: 18.0
+      value: 18.3
       unit: m/s
-      source: "Q5 baseline: 0.4 x interceptor v_max; configs/guidance.yaml"
+      source: "v_max / speed_ratio = 27.7 / 1.51; the Crazyflie-class model cannot fly real attack-drone speeds, so the real interceptor/target speed ratio is preserved: Wild Hornets Sting official maximum speed 280 km/h (manufacturer product page 'Ukrainian FPV Interceptor STING by Wild Hornets': 'Maximum speed: 280 km/h'; page needs a login, text read by the project author 2026-11-14; also reported by https://www.runtimewire.com/article/wild-hornets-sting-interceptor-speed-tradeoff) over Shahed-136 speed 185 km/h (Janes, Binnie J. (17 May 2023) 'IRGC confirms specs for Shahed-136 attack UAV': IRGC exhibition poster, Qom, gives 185 km/h, 200 kg, 50 kg warhead, 2500 km, https://www.janes.com/osint-insights/defence-news/air/irgc-confirms-specs-for-shahed-136-attack-uav; no manufacturer datasheet has been released for the Shahed-136). Speed ratio is swept 0.3-1.1 in P9.1; EQ-TGT-1"
     a_target_max:
-      value: 24.525
+      value: 7.404
       unit: m/s^2
-      source: "Q5 baseline: 2.5 g evasive target; EQ-TGT-1"
+      source: "a_n_max / a_ratio = 15.4 / 2.08; a_ratio is the Q5 project choice (no g data exists for one-way attack drones), swept in P9; EQ-TGT-1"
     dt:
       value: 0.02
       unit: s
@@ -90,9 +90,9 @@ platforms:
       unit: s
       source: "Guidance geometry: longest spawn at 25 m/s closing; EQ-GEO-5"
     speed_ratio:
-      value: 2.5
+      value: 1.51
       unit: dimensionless
-      source: "Q5 baseline interceptor/target speed ratio = 45/18; EQ-TGT-1"
+      source: "Real fielded pair: Wild Hornets Sting official maximum speed 280 km/h (manufacturer product page 'Ukrainian FPV Interceptor STING by Wild Hornets': 'Maximum speed: 280 km/h'; page needs a login, text read by the project author 2026-11-14; also reported by https://www.runtimewire.com/article/wild-hornets-sting-interceptor-speed-tradeoff) / Shahed-136 185 km/h (Janes, Binnie J. (17 May 2023) 'IRGC confirms specs for Shahed-136 attack UAV': IRGC exhibition poster, Qom, gives 185 km/h, 200 kg, 50 kg warhead, 2500 km, https://www.janes.com/osint-insights/defence-news/air/irgc-confirms-specs-for-shahed-136-attack-uav) = 280/185. Spread: CSIS Missile Threat 'Shahed-131 and -136 at a Glance' gives 180 km/h (page read by the project author 2026-11-14; ratio 1.56); Sting record 315 km/h (ratio 1.70); swept in P9.1; EQ-TGT-1"
     a_ratio:
       value: 2.08
       unit: dimensionless
@@ -117,13 +117,13 @@ platforms:
       unit: m/s^2
       source: "configs/airframes/aerosonde.yaml derived_limits; EQ-FW-4"
     a_n_max:
-      value: 102.9
+      value: 37.278
       unit: m/s^2
-      source: "configs/airframes/aerosonde.yaml derived_limits; EQ-FW-5"
+      source: "3.8 g positive limit manoeuvring load factor, normal category: 14 CFR 23.337 Limit maneuvering load factors (2011 ed., US Government Publishing Office), https://www.govinfo.gov/content/pkg/CFR-2011-title14-vol1/pdf/CFR-2011-title14-vol1-sec23-337.pdf; the same +3.8 g is used as a UAV design requirement (data/lethality_and_gload.csv G01). Structural limit governs above 28.5 m/s, where the aerodynamic limit 0.5 rho V^2 S CL_max/(m g) exceeds 3.8 (EQ-FW-5). Changed 2026-11-14 from the unsourced 10.5 g"
     a_n_down_max:
-      value: 49.05
+      value: 14.911
       unit: m/s^2
-      source: "configs/airframes/aerosonde.yaml derived_limits; EQ-FW-5"
+      source: "0.4 x positive limit load factor = 1.52 g, normal category: 14 CFR 23.337 Limit maneuvering load factors (2011 ed., US Government Publishing Office), https://www.govinfo.gov/content/pkg/CFR-2011-title14-vol1/pdf/CFR-2011-title14-vol1-sec23-337.pdf. Changed 2026-11-14 from the unsourced 5.0 g"
     tau_accel:
       value: 0.12
       unit: s
@@ -133,9 +133,9 @@ platforms:
       unit: m/s^3
       source: "configs/airframes/aerosonde.yaml derived_limits; EQ-FW-7"
     omega_max:
-      value: 3.5
+      value: 1.44
       unit: rad/s
-      source: "coordinated turn at 25 m/s and 10.5 g; EQ-FW-6"
+      source: "Coordinated turn g sqrt(n^2-1)/V at 25 m/s trim and n = 3.8 (14 CFR 23.337); EQ-FW-6"
     can_hover:
       value: false
       unit: dimensionless
@@ -145,9 +145,9 @@ platforms:
       unit: dimensionless
       source: "Thrust acts along body x only; EQ-KIN-2"
     kill_radius:
-      value: 12.0
+      value: 3.0
       unit: m
-      source: "Aerosonde 2.9 m span plus 9 m lethal-fragment radius; EQ-GEO-4"
+      source: "Hit-to-kill contact rule r_kill = target half-span + interceptor half-span (EQ-GEO-4); no warhead is assumed because no credible lethal-radius data exists (data/lethality_and_gload.csv): 3.1/2 + 2.8956/2 = 3.00 m. Orlan-10 reconnaissance UAV (Special Technology Center): cruising speed 110 km/h = 30.6 m/s, maximum 150 km/h, wingspan 3.1 m, MTOW 16.5 kg (Airforce Technology project profile, 24 Mar 2023, https://www.airforce-technology.com/projects/orlan-10-unmanned-aerial-vehicle-uav/, read 2026-11-14; trade press, no manufacturer datasheet read; other secondary sources give 90-100 km/h cruise); Aerosonde span 2.8956 m (mavsim_public aerosonde_parameters.py). Changed 2026-11-14 from 7.45 m (TB2 target)"
     r_init_min:
       value: 400.0
       unit: m
@@ -161,13 +161,13 @@ platforms:
       unit: m
       source: "Above 35 m target floor plus 965 m manoeuvre margin; EQ-GEO-6"
     v_target_nominal:
-      value: 25.0
+      value: 30.6
       unit: m/s
-      source: "Aerosonde trim speed, Beard & McLain Appendix E; configs/guidance.yaml"
+      source: "Orlan-10 reconnaissance UAV (Special Technology Center): cruising speed 110 km/h = 30.6 m/s, maximum 150 km/h, wingspan 3.1 m, MTOW 16.5 kg (Airforce Technology project profile, 24 Mar 2023, https://www.airforce-technology.com/projects/orlan-10-unmanned-aerial-vehicle-uav/, read 2026-11-14; trade press, no manufacturer datasheet read; other secondary sources give 90-100 km/h cruise). Changed 2026-11-14 from the Bayraktar TB2 (46.3 m/s, Baykar), which is faster than the 40 m/s Aerosonde interceptor and gave 2/30 pure-APN kills (BUGS #24); the TB2 and Shahed-136 (51 m/s) cases are covered by the P9.1 target_speed_ratio sweep up to 1.1"
     a_target_max:
-      value: 41.202
+      value: 37.278
       unit: m/s^2
-      source: "Q5 baseline: same 4.2 g manoeuvre capability as interceptor; EQ-TGT-1"
+      source: "Target UAV limited to the same 3.8 g normal-category limit load factor: 14 CFR 23.337 Limit maneuvering load factors (2011 ed., US Government Publishing Office), https://www.govinfo.gov/content/pkg/CFR-2011-title14-vol1/pdf/CFR-2011-title14-vol1-sec23-337.pdf; EQ-TGT-1. Changed 2026-11-14 from 4.2 g"
     dt:
       value: 0.02
       unit: s
@@ -177,13 +177,13 @@ platforms:
       unit: s
       source: "Spawn range / closing speed + 4 s; EQ-GEO-5"
     speed_ratio:
-      value: 1.6
+      value: 1.31
       unit: dimensionless
-      source: "Q5 baseline interceptor/target speed ratio = 40/25; EQ-TGT-1"
+      source: "Interceptor/target speed ratio = 40/30.6; EQ-TGT-1; follows v_target_nominal (Orlan-10 cruise, Airforce Technology)"
     a_ratio:
       value: 1.0
       unit: dimensionless
-      source: "Q5 baseline equal manoeuvre capability; EQ-TGT-1"
+      source: "Interceptor/target accel ratio = 37.278/37.278; EQ-TGT-1"
 
   missile:
     description: "AIM5 missile interceptor, boost-coast"
@@ -194,7 +194,7 @@ platforms:
     v_max:
       value: 1200.0
       unit: m/s
-      source: "configs/airframes/aim5.yaml derived_limits; EQ-MS-3"
+      source: "configs/airframes/aim5.yaml derived_limits; EQ-MS-3 | Cross-check: Astra Mk1 Mach 4.5 = 1348 m/s at 10 km ISA (I04), IRIS-T SLM 1000 m/s (I15), Akash Mach 2.5 (I01) (secondary source, data/interceptor_platforms.csv I01 I04 I15)"
     a_t_max:
       value: 176.58
       unit: m/s^2
@@ -232,29 +232,29 @@ platforms:
       unit: dimensionless
       source: "Thrust along body x; EQ-KIN-2"
     kill_radius:
-      value: 10.0
+      value: 4.98
       unit: m
-      source: "AIM5 warhead lethal radius; EQ-GEO-4"
+      source: "Hit-to-kill contact rule r_kill = target half-span + interceptor half-span (EQ-GEO-4); no warhead is assumed because no credible lethal-radius data exists (data/lethality_and_gload.csv): 9.8/2 + 0.15/2 = 4.98 m. F-16C wingspan 32 ft 8 in (9.8 m) (US Air Force fact sheet F-16 Fighting Falcon (Air Combat Command), https://www.af.mil/About-Us/Fact-Sheets/Display/Article/104505/f-16-fighting-falcon/ (verified via Wayback snapshot 20251231004314)); AIM5 diameter 0.15 m (Zipfel CADAC AIM5). Changed 2026-11-14 from 10 m"
     r_init_min:
       value: 3500.0
       unit: m
-      source: "8.75 s at 400 m/s closing; EQ-GEO-5"
+      source: "8.75 s at 400 m/s closing; EQ-GEO-5 | Cross-check: inside the 25 km active-seeker homing range of Astra Mk1 (Wikipedia) (secondary source, data/interceptor_sensors.csv S03)"
     r_init_max:
       value: 7000.0
       unit: m
-      source: "17.5 s at 400 m/s closing; EQ-GEO-5"
+      source: "17.5 s at 400 m/s closing; EQ-GEO-5 | Cross-check: inside the 25 km active-seeker homing range of Astra Mk1 (Wikipedia) (secondary source, data/interceptor_sensors.csv S03)"
     alt_init:
       value: 4500.0
       unit: m
-      source: "Above 35 m target floor plus 4465 m manoeuvre margin; EQ-GEO-6"
+      source: "Above 35 m target floor plus 4465 m manoeuvre margin; EQ-GEO-6 | Cross-check: below the 20 km engagement ceilings of Astra Mk1 and Akash (secondary source, data/interceptor_sensors.csv S01 S03) and the F-16C 15 km service ceiling (T03)"
     v_target_nominal:
       value: 400.0
       unit: m/s
-      source: "Q5 baseline: 1/3 of missile v_max; configs/guidance.yaml"
+      source: "Q5 baseline: 1/3 of missile v_max; configs/guidance.yaml | Cross-check: 400 m/s = Mach 1.34 at 10 km ISA (a = 299.5 m/s), inside the fighter envelope of F-16C 1,500 mph, Mach 2 at altitude (US Air Force fact sheet F-16 Fighting Falcon (Air Combat Command), https://www.af.mil/About-Us/Fact-Sheets/Display/Article/104505/f-16-fighting-falcon/ (verified via Wayback snapshot 20251231004314)); Mach 2 at 10 km ISA = 599 m/s, so 400 m/s is 67 % of the F-16 top speed"
     a_target_max:
-      value: 107.91
+      value: 88.29
       unit: m/s^2
-      source: "Q5 baseline: 11 g evasive target; EQ-TGT-1"
+      source: "9 g fighter structural/FCS limit: F-16C 'can withstand up to nine G's' with full internal fuel (US Air Force fact sheet F-16 Fighting Falcon (Air Combat Command), https://www.af.mil/About-Us/Fact-Sheets/Display/Article/104505/f-16-fighting-falcon/ (verified via Wayback snapshot 20251231004314)); secondary cross-checks J-20 +9 g, JF-17 Block III +8 g (data/threat_platforms.csv T02 T04, not used for the value); was 11 g before 2026-11-14; EQ-TGT-1"
     dt:
       value: 0.02
       unit: s
@@ -268,28 +268,78 @@ platforms:
       unit: dimensionless
       source: "Q5 baseline interceptor/target speed ratio = 600/400 at Q12; EQ-TGT-1"
     a_ratio:
-      value: 3.32
+      value: 4.06
       unit: dimensionless
-      source: "Q5 baseline interceptor/target accel ratio = 358.1/107.91; EQ-TGT-1"
+      source: "Interceptor/target accel ratio = 358.1/88.29; EQ-TGT-1; follows a_target_max (secondary source, data/threat_platforms.csv T02 T03 T04)"
+
+# P5.8: per-platform observation normalisation (fix F18).  Divisors keep the
+# actor frame, history and future blocks O(1) on every vehicle.  Lengths use
+# r_init_max, speeds v_max, times max_time, accelerations a_n_max /
+# a_target_max from the platform entries above (same values unless the entry
+# is revised by a later phase).  Consumed by
+# interceptor/guidance/observation.py::load_observation_scales.
+observation_scales:
+  quadcopter:
+    rel_pos: {value: 277.0, unit: m, source: "P5.8: r_init_max, EQ-GEO-5"}
+    rel_vel: {value: 27.7, unit: m/s, source: "P5.8: v_max, EQ-GEO-5"}
+    interceptor_vel: {value: 27.7, unit: m/s, source: "P5.8: v_max, EQ-GEO-5"}
+    range: {value: 277.0, unit: m, source: "P5.8: r_init_max, EQ-GEO-5"}
+    closing_vel: {value: 27.7, unit: m/s, source: "P5.8: v_max, EQ-GEO-5"}
+    los_rate: {value: 1.0, unit: rad/s, source: "P5.8: LOS rate already O(0.1-1), EQ-GEO-2"}
+    t_go: {value: 18.0, unit: s, source: "P5.8: max_time, EQ-APN-4"}
+    future_pos: {value: 277.0, unit: m, source: "P5.8: r_init_max, EQ-GEO-5"}
+    future_vel: {value: 27.7, unit: m/s, source: "P5.8: v_max, EQ-GEO-5"}
+    time_remaining: {value: 18.0, unit: s, source: "P5.8: max_time, EQ-GEO-5"}
+    optimal_accel: {value: 15.4, unit: m/s^2, source: "P5.8: a_n_max, EQ-KIN-2"}
+    optimal_vel: {value: 27.7, unit: m/s, source: "P5.8: v_max, EQ-GEO-5"}
+    target_accel: {value: 7.404, unit: m/s^2, source: "P5.8: a_target_max, EQ-TGT-1"}
+  fixed_wing:
+    rel_pos: {value: 900.0, unit: m, source: "P5.8: r_init_max, EQ-GEO-5"}
+    rel_vel: {value: 40.0, unit: m/s, source: "P5.8: v_max, EQ-FW-3"}
+    interceptor_vel: {value: 40.0, unit: m/s, source: "P5.8: v_max, EQ-FW-3"}
+    range: {value: 900.0, unit: m, source: "P5.8: r_init_max, EQ-GEO-5"}
+    closing_vel: {value: 40.0, unit: m/s, source: "P5.8: v_max, EQ-FW-3"}
+    los_rate: {value: 1.0, unit: rad/s, source: "P5.8: LOS rate already O(0.1-1), EQ-GEO-2"}
+    t_go: {value: 36.0, unit: s, source: "P5.8: max_time, EQ-APN-4"}
+    future_pos: {value: 900.0, unit: m, source: "P5.8: r_init_max, EQ-GEO-5"}
+    future_vel: {value: 40.0, unit: m/s, source: "P5.8: v_max, EQ-FW-3"}
+    time_remaining: {value: 36.0, unit: s, source: "P5.8: max_time, EQ-GEO-5"}
+    optimal_accel: {value: 37.278, unit: m/s^2, source: "P5.8: a_n_max, EQ-FW-5"}
+    optimal_vel: {value: 40.0, unit: m/s, source: "P5.8: v_max, EQ-FW-3"}
+    target_accel: {value: 37.278, unit: m/s^2, source: "P5.8: a_target_max, EQ-TGT-1"}
+  missile:
+    rel_pos: {value: 7000.0, unit: m, source: "P5.8: r_init_max, EQ-GEO-5"}
+    rel_vel: {value: 1200.0, unit: m/s, source: "P5.8: v_max, EQ-MS-3"}
+    interceptor_vel: {value: 1200.0, unit: m/s, source: "P5.8: v_max, EQ-MS-3"}
+    range: {value: 7000.0, unit: m, source: "P5.8: r_init_max, EQ-GEO-5"}
+    closing_vel: {value: 1200.0, unit: m/s, source: "P5.8: v_max, EQ-MS-3"}
+    los_rate: {value: 1.0, unit: rad/s, source: "P5.8: LOS rate already O(0.1-1), EQ-GEO-2"}
+    t_go: {value: 20.0, unit: s, source: "P5.8: max_time, EQ-APN-4"}
+    future_pos: {value: 7000.0, unit: m, source: "P5.8: r_init_max, EQ-GEO-5"}
+    future_vel: {value: 1200.0, unit: m/s, source: "P5.8: v_max, EQ-MS-3"}
+    time_remaining: {value: 20.0, unit: s, source: "P5.8: max_time, EQ-GEO-5"}
+    optimal_accel: {value: 358.1, unit: m/s^2, source: "P5.8: a_n_max, EQ-MS-1"}
+    optimal_vel: {value: 1200.0, unit: m/s, source: "P5.8: v_max, EQ-MS-3"}
+    target_accel: {value: 88.29, unit: m/s^2, source: "P5.8: a_target_max, EQ-TGT-1"}
 
 # P4.9: measured with AccelBridge -> RatePID (B1) -> 1000 Hz physics, linear rotor
-# drag (EQ-SIX-11, ASSUMED coefficients 0.5/0.5/0.7 1/s, not a Crazyflie fit).
+# drag (EQ-SIX-11, ASSUMED coefficients 0.5/0.5/0.5 1/s, not a Crazyflie fit).
 # Regenerate: python scripts/measure_quad_limits.py -> results/tables/quad_limits.json
 quad_closed_loop_limits:
   a_lateral_max:
-    value: 14.8
+    value: 15.4
     unit: m/s^2
     source: "measured, P4.9 (analytic g*sqrt(TW^2-1) = 17.5; gap = tilt-rate lag and drag)"
   a_up_max:
-    value: 9.4
+    value: 9.6
     unit: m/s^2
     source: "measured, P4.9 (analytic g*(TW-1) = 10.3)"
   a_down_max:
-    value: 9.4
+    value: 9.5
     unit: m/s^2
     source: "measured, P4.9 (analytic 1 g free fall = 9.81)"
   v_max:
-    value: 22.0
+    value: 27.7
     unit: m/s
     source: "measured, P4.9; equals a_max/k to first order, depends on the assumed rotor drag"
   tau_accel:
@@ -297,9 +347,9 @@ quad_closed_loop_limits:
     unit: s
     source: "measured, P4.9; consistent with 1/Kp = 1/6 s of the attitude loop, EQ-BRIDGE-4"
   max_jerk:
-    value: 85.0
+    value: 88.3
     unit: m/s^3
-    source: "a_lateral_max / tau_accel = 14.8/0.174, P4.9"
+    source: "a_lateral_max / tau_accel = 15.37/0.174, P4.9"
   omega_demand_peak:
     value: 4.4
     unit: rad/s

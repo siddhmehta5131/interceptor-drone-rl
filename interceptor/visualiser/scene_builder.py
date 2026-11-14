@@ -22,6 +22,7 @@ __all__ = [
     "quat_from_direction",
     "load_drone_mesh",
     "placeholder_drone",
+    "primitive_mesh",
     "trail_polydata",
     "cube_rotations",
     "rotation_matrix_from",
@@ -251,6 +252,8 @@ def load_drone_mesh(path: Optional[str], scale: float = 0.01, fallback_size: flo
     Returns ``(mesh, used_placeholder)``.
     """
     pv = require_pyvista()
+    if path and str(path).startswith("primitive:"):
+        return primitive_mesh(str(path).split(":", 1)[1], fallback_size), True
     if path:
         candidate = Path(path)
         if candidate.exists():
@@ -260,6 +263,31 @@ def load_drone_mesh(path: Optional[str], scale: float = 0.01, fallback_size: flo
             except Exception:
                 pass
     return placeholder_drone(fallback_size), True
+
+
+def primitive_mesh(kind: str, size: float = 1.5):
+    """Meshes built from primitives, nose along +x (no third-party asset, no licence issue)."""
+    pv = require_pyvista()
+    s = float(size)
+    if kind == "missile":
+        body = pv.Cylinder(center=(0, 0, 0), direction=(1, 0, 0), radius=0.12 * s, height=2.4 * s)
+        nose = pv.Cone(center=(1.5 * s, 0, 0), direction=(1, 0, 0), radius=0.12 * s, height=0.6 * s)
+        parts = [nose]
+        for ang in (0, 90, 180, 270):
+            c, sn = np.cos(np.radians(ang)), np.sin(np.radians(ang))
+            parts.append(pv.Cube(center=(-1.0 * s, 0.3 * s * c, 0.3 * s * sn),
+                                 x_length=0.5 * s,
+                                 y_length=0.6 * s * abs(c) + 0.02 * s,
+                                 z_length=0.6 * s * abs(sn) + 0.02 * s))
+        return body.merge(parts)
+    if kind == "fixed_wing":
+        fus = pv.Cylinder(center=(0, 0, 0), direction=(1, 0, 0), radius=0.12 * s, height=2.0 * s)
+        nose = pv.Cone(center=(1.2 * s, 0, 0), direction=(1, 0, 0), radius=0.12 * s, height=0.4 * s)
+        wing = pv.Cube(center=(0.1 * s, 0, 0), x_length=0.45 * s, y_length=2.4 * s, z_length=0.03 * s)
+        tail = pv.Cube(center=(-0.9 * s, 0, 0), x_length=0.3 * s, y_length=0.9 * s, z_length=0.03 * s)
+        fin = pv.Cube(center=(-0.9 * s, 0, 0.18 * s), x_length=0.3 * s, y_length=0.03 * s, z_length=0.4 * s)
+        return fus.merge([nose, wing, tail, fin])
+    return placeholder_drone(size)
 
 
 def placeholder_drone(size: float = 1.5):

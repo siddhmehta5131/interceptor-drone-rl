@@ -51,5 +51,5 @@ def test_aerosonde_limit_formulas_are_physical():
     assert v_stall == pytest.approx(cfg["derived_limits"]["v_min"]["value"], rel=0.08)
     n = aerosonde_load_factor(25.0, rho, area, cl=0.5, mass=mass)
     assert 0.0 < n < 2.0
-    omega = aerosonde_turn_rate(25.0, 10.5)
-    assert omega == pytest.approx(cfg["derived_limits"]["omega_max"]["value"], rel=0.30)
+    omega = aerosonde_turn_rate(25.0, 3.8)  # 14 CFR 23.337 normal category
+    assert omega == pytest.approx(cfg["derived_limits"]["omega_max"]["value"], rel=0.02)

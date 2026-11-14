@@ -28,20 +28,36 @@ implements the equivalent, correct form:
 where ``perp(x) = x - (x . R_hat) R_hat``.  This is identical to
 ``N' * Vc * lambda_dot`` resolved into the plane perpendicular to the LOS.
 
-All functions are pure NumPy; no other project dependencies.
+The axial (along-velocity) speed-management term is deliberately *separate*
+from the perpendicular APN law (P5.5), because the benchmark's A1/A2 arms must
+differ by exactly one factor at a time (fix F2):
+
+    a_axial = 0.8 * a_t_max * R_hat      (omnidirectional, active)
+            = a_t_max * v_hat_M          (non-holonomic, active)
+            = 0                          (inactive)
+
+with "active" meaning ``|v_M| < 0.96 v_max`` or ``v_cl < 0.45 v_max``
+(EQ-APN-3).  See :func:`compute_axial_acceleration`.
+
+All functions are pure NumPy; ``InterceptorLimits`` is imported for typing
+only, so this module still has no runtime project dependency.
 """
 
 from __future__ import annotations
 
-from typing import Dict, Tuple
+from typing import TYPE_CHECKING, Dict, Optional, Tuple
 
 import numpy as np
+
+if TYPE_CHECKING:  # pragma: no cover - import cycle-free typing only
+    from .platform import InterceptorLimits
 
 __all__ = [
     "compute_los_rate",
     "compute_closing_velocity",
     "compute_time_to_go",
     "compute_zem",
+    "compute_axial_acceleration",
     "compute_apn_command",
 ]
 
@@ -109,6 +125,59 @@ def compute_zem(V_rel: np.ndarray, a_target: np.ndarray, t_go: float,
 def _perp(vec: np.ndarray, R_hat: np.ndarray) -> np.ndarray:
     """Component of ``vec`` perpendicular to the unit LOS ``R_hat``."""
     return vec - np.dot(vec, R_hat) * R_hat
+
+
+def compute_axial_acceleration(
+    v_M: np.ndarray,
+    limits: "InterceptorLimits",
+    los_vec: np.ndarray,
+    closing_speed: Optional[float] = None,
+) -> np.ndarray:
+    """Axial speed-management term ``a_axial`` (P5.5, EQ-APN-3).
+
+    The notebook v2 speed boost is kept out of the perpendicular APN law so
+    that arm A1 (textbook APN) and arm A2 (APN + axial) differ in exactly this
+    factor and nothing else (fix F2).  The term is active when the interceptor
+    is below ``0.96 v_max`` **or** the closing speed is below
+    ``0.45 v_max``; otherwise it is zero:
+
+    .. code-block:: text
+
+        active = (|v_M| < 0.96 v_max) or (v_cl < 0.45 v_max)
+
+        a_axial = 0.8 * a_t_max * R_hat        if omnidirectional and active
+                = a_t_max * v_hat_M            if non-holonomic  and active
+                = 0                            otherwise
+
+    Parameters
+    ----------
+    v_M : (3,) interceptor velocity (world frame).
+    limits : per-platform :class:`InterceptorLimits` envelope.  Only
+        ``v_max``, ``a_t_max``, ``omnidirectional`` are read.
+    los_vec : (3,) unit line-of-sight vector, interceptor -> target.
+    closing_speed : optional scalar ``v_cl`` from the engagement geometry.
+        When omitted it is estimated as ``dot(v_M, los_vec)``, which is the
+        interceptor's closing rate and matches ``v_cl`` in a static-target
+        engagement.  Callers with the full relative velocity (e.g. the
+        unified environment) should pass the exact value.
+
+    Returns
+    -------
+    (3,) axial acceleration command.  Its direction is the LOS for an
+    omnidirectional platform and the velocity direction for a
+    non-holonomic one; the magnitude never exceeds ``a_t_max``.
+    """
+    v_M = np.asarray(v_M, dtype=float)
+    los_vec = np.asarray(los_vec, dtype=float)
+    speed = float(np.linalg.norm(v_M))
+    v_cl = (float(closing_speed) if closing_speed is not None
+            else float(np.dot(v_M, los_vec)))
+
+    if speed >= 0.96 * limits.v_max and v_cl >= 0.45 * limits.v_max:
+        return np.zeros(3, dtype=float)
+    if limits.omnidirectional:
+        return 0.8 * limits.a_t_max * los_vec
+    return limits.a_t_max * (v_M / max(speed, 1e-6))
 
 
 def compute_apn_command(

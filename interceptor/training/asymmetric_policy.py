@@ -23,9 +23,7 @@ So our strategy is:
   3. Expose ``latent_dim_pi`` / ``latent_dim_vf`` so SB3's ``_build()`` can
      size the action/value heads.
 
-``policy_kwargs_for(model_def, obs_dim)``
-    Returns ``(policy_class, policy_kwargs)`` -- asymmetric when the model
-    declares privileged critic fields, plain ``MlpPolicy`` otherwise.
+``training/algos.py::build_model(asymmetric=True)`` passes ``actor_obs_dim``.
 """
 
 from __future__ import annotations
@@ -37,18 +35,8 @@ from torch import nn
 
 from stable_baselines3.common.policies import ActorCriticPolicy, MlpExtractor
 
-# MlpPolicy was moved between SB3 minor releases; support both import paths.
-try:
-    from stable_baselines3.common.policies import MlpPolicy as _MlpPolicy
-except ImportError:
-    # SB3 >= 2.9 removed it from common.policies; fall back to algo-level alias.
-    from stable_baselines3.ppo.policies import MlpPolicy as _MlpPolicy  # type: ignore
 
-
-__all__ = [
-    "AsymmetricActorCriticPolicy",
-    "policy_kwargs_for",
-]
+__all__ = ["AsymmetricActorCriticPolicy"]
 
 
 class _SplitExtractor(nn.Module):
@@ -114,7 +102,7 @@ class AsymmetricActorCriticPolicy(ActorCriticPolicy):
         if actor_obs_dim is None:
             raise ValueError(
                 "AsymmetricActorCriticPolicy requires 'actor_obs_dim' in "
-                "policy_kwargs; build it with policy_kwargs_for() so the "
+                "policy_kwargs (training/algos.py build_model passes it) so the "
                 "value is recorded in the saved checkpoint."
             )
         self.actor_obs_dim = int(actor_obs_dim)
@@ -164,43 +152,3 @@ class AsymmetricActorCriticPolicy(ActorCriticPolicy):
     # extract_features is intentionally NOT overridden.
     # SB3's default returns the full obs as a flat Tensor, which is exactly
     # what _SplitExtractor.forward() expects (it slices internally).
-
-
-def policy_kwargs_for(
-    model: object,
-    obs_dim: int,
-    *,
-    policy_kwargs: Optional[dict] = None,
-    privileged_fields: Optional[object] = None,
-) -> Tuple[type, dict]:
-    """Return ``(policy_class, policy_kwargs)`` for a model definition.
-
-    Returns ``(_MlpPolicy, kwargs)`` when there are no privileged columns, so
-    the caller can pass the result straight to ``PPO(policy=...)``.
-    """
-    fields = privileged_fields if privileged_fields is not None else getattr(
-        model, "privileged_critic", ()
-    )
-    fields = tuple(fields or ())
-    kwargs = dict(policy_kwargs or {})
-
-    if not fields:
-        return _MlpPolicy, kwargs
-
-    from ..envs.obs_builder import PRIVILEGED_FIELDS
-
-    priv_dim = 0
-    for name in fields:
-        if name not in PRIVILEGED_FIELDS:
-            raise ValueError(
-                f"unknown privileged critic field {name!r}; "
-                f"known fields: {sorted(PRIVILEGED_FIELDS)}"
-            )
-        priv_dim += PRIVILEGED_FIELDS[name]
-
-    actor_dim = int(obs_dim) - priv_dim
-    if actor_dim <= 0:
-        raise ValueError(
-            f"obs_dim={obs_dim} is not larger than the privileged block ({priv_dim})"
-        )
-    return AsymmetricActorCriticPolicy, {**kwargs, "actor_obs_dim": actor_dim}

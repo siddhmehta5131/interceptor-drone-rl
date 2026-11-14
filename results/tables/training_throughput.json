@@ -1,0 +1,19 @@
+{
+  "hardware": "local laptop (Colab rerun pending)",
+  "rows": [
+    {
+      "name": "fc",
+      "n_envs": 4,
+      "steps": 4000,
+      "seconds": 14.250305699999444,
+      "steps_per_s": 280.69573272383593
+    },
+    {
+      "name": "guidance",
+      "n_envs": 4,
+      "steps": 4000,
+      "seconds": 1.5483256999996229,
+      "steps_per_s": 2583.435771944478
+    }
+  ]
+}

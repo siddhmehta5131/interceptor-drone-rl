@@ -1,21 +1,8 @@
-"""P1.11: unified config, logging and seeding."""
+"""P1.11: logging and seeding (the 3-stage config loader is archived)."""
 
 import numpy as np
 
-from interceptor.common import (
-    TrainConfig, derive_seed, get_logger, load_config, make_rng,
-    seed_everything,
-)
-from interceptor.common.config import ConfigError
-from interceptor.utils.config_loader import TrainConfig as LegacyTrainConfig
-
-
-def test_config_loader_is_single_implementation():
-    cfg = load_config("configs/config.yaml")
-    assert isinstance(cfg, TrainConfig)
-    assert isinstance(cfg, LegacyTrainConfig)
-    assert cfg.config_hash
-    assert cfg.stage_numbers()
+from interceptor.common import derive_seed, get_logger, make_rng, seed_everything
 
 
 def test_make_rng_and_derived_seeds_are_reproducible():
@@ -33,4 +20,3 @@ def test_seed_everything_returns_seed_and_logger_hierarchy():
     seed_everything(5)
     assert np.random.random() == first
     assert get_logger("unit").name == "interceptor.unit"
-    assert isinstance(ConfigError("x"), ValueError)

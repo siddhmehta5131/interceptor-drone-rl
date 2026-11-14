@@ -11,10 +11,11 @@ EQ-APN-3, EQ-APN-5, EQ-APN-6, EQ-KIN-4.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional, Tuple
+from typing import Tuple
 
 import numpy as np
 
+from .apn import compute_axial_acceleration
 from .platform import InterceptorLimits
 
 __all__ = [
@@ -88,24 +89,15 @@ def compute_optimal_intercept_oracle(p_int, v_int, p_target, v_target,
     return opt_a, opt_v
 
 
-def compute_axial_acceleration(v_M, limits: InterceptorLimits, los_vec,
-                               closing_speed: Optional[float] = None) -> np.ndarray:
-    """Separate axial speed-management term (P5.5; notebook v2 boost)."""
-    v_M = np.asarray(v_M, dtype=float)
-    los_vec = np.asarray(los_vec, dtype=float)
-    speed = float(np.linalg.norm(v_M))
-    v_cl = float(closing_speed) if closing_speed is not None else float(np.dot(v_M, los_vec))
-    if speed < 0.96 * limits.v_max or v_cl < 0.45 * limits.v_max:
-        if limits.omnidirectional:
-            return 0.80 * limits.a_t_max * los_vec
-        return limits.a_t_max * (v_M / max(speed, 1e-6))
-    return np.zeros(3)
-
-
 def compute_3d_apn_command(kin: EngagementKinematics, a_T_est, v_M,
                            limits: InterceptorLimits, N_nav: float = 4.0,
                            include_axial_boost: bool = True) -> np.ndarray:
-    """Textbook perpendicular APN, optionally plus the axial speed term."""
+    """Textbook perpendicular APN, optionally plus the axial speed term.
+
+    The axial term lives in :func:`interceptor.guidance.apn.
+    compute_axial_acceleration` (EQ-APN-3) and is re-exported here for
+    compatibility with the environment and the P1 fixture replay.
+    """
     v_rel = kin.v_rel
     a_T_est = np.asarray(a_T_est, dtype=float)
     v_rel_perp = v_rel - np.dot(v_rel, kin.los_vec) * kin.los_vec

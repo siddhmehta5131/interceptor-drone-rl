@@ -1,0 +1,68 @@
+{
+  "quadcopter": {
+    "apn_raw": {
+      "platform": "quadcopter",
+      "mode": "apn_raw",
+      "N_prime": 3.0,
+      "episodes": 100,
+      "kill_rate": 0.62,
+      "median_miss": 2.9204220093359803,
+      "iqr_miss": 57.784421869911185,
+      "median_time": 9.97
+    },
+    "apn_filtered": {
+      "platform": "quadcopter",
+      "mode": "apn_filtered",
+      "N_prime": 5.0,
+      "episodes": 100,
+      "kill_rate": 0.93,
+      "median_miss": 2.5955881282374365,
+      "iqr_miss": 0.4708438821722565,
+      "median_time": 7.73
+    }
+  },
+  "fixed_wing": {
+    "apn_raw": {
+      "platform": "fixed_wing",
+      "mode": "apn_raw",
+      "N_prime": 3.0,
+      "episodes": 100,
+      "kill_rate": 0.79,
+      "median_miss": 11.029266342027697,
+      "iqr_miss": 1.9255930677289719,
+      "median_time": 12.170000000000002
+    },
+    "apn_filtered": {
+      "platform": "fixed_wing",
+      "mode": "apn_filtered",
+      "N_prime": 3.5,
+      "episodes": 100,
+      "kill_rate": 0.93,
+      "median_miss": 9.919757677172864,
+      "iqr_miss": 2.2849818463888116,
+      "median_time": 9.440000000000001
+    }
+  },
+  "missile": {
+    "apn_raw": {
+      "platform": "missile",
+      "mode": "apn_raw",
+      "N_prime": 3.0,
+      "episodes": 100,
+      "kill_rate": 0.92,
+      "median_miss": 6.522182957386185,
+      "iqr_miss": 3.6043613156971857,
+      "median_time": 6.61
+    },
+    "apn_filtered": {
+      "platform": "missile",
+      "mode": "apn_filtered",
+      "N_prime": 3.5,
+      "episodes": 100,
+      "kill_rate": 0.98,
+      "median_miss": 6.666167474416438,
+      "iqr_miss": 4.216012581745195,
+      "median_time": 5.0600000000000005
+    }
+  }
+}

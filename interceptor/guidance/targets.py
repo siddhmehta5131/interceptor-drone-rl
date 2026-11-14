@@ -12,7 +12,7 @@ from typing import Optional, Tuple
 
 import numpy as np
 
-from interceptor.envs.target_generator import PolynomialTargetPath
+from interceptor.guidance.polynomial_path import PolynomialTargetPath
 from .kinematics import EngagementKinematics, compute_engagement_kinematics
 from .maneuvers import ManeuverType
 
@@ -31,7 +31,11 @@ class GenericEvasiveTarget:
 
     def __init__(self, p0, v0, maneuver: ManeuverType, v_nominal: float,
                  a_max: float, rng: np.random.Generator,
-                 floor_altitude: float = 35.0):
+                 floor_altitude: float = 35.0, shape_scale: float = 1.0):
+        # shape_scale multiplies every shape constant of the manoeuvre laws (rates,
+        # switch times, mixing fractions, gains, angles); amplitudes stay at a_max.
+        # 1.0 is the nominal law; the "maneuver_shape" sweep (eval/sweeps.py) uses 0.5 / 1 / 1.5.
+        self.shape_scale = float(shape_scale)
         self.p_W = np.array(p0, dtype=float)
         self.v_W = np.array(v0, dtype=float)
         self.a_W = np.zeros(3)
@@ -44,7 +48,11 @@ class GenericEvasiveTarget:
         self.scissor_sign = 1.0 if rng.random() > 0.5 else -1.0
         self.split_s_completed = False
         self.phi_phase = float(rng.uniform(0.0, 2.0 * np.pi))
-        self.omega_base = float(rng.uniform(1.1, 2.0))
+        # Weave rate 1.1-2.0 rad/s = 0.18-0.32 Hz.  Cross-check only: Chadwick & Zarchan
+        # (1995, doi:10.1109/ACC.1995.532784, abstract) give 0.5-1 Hz as the weave range
+        # most critical for fast-response PN interceptors (spiralling ballistic missiles);
+        # these targets weave more slowly than that range.
+        self.omega_base = float(rng.uniform(1.1, 2.0))  # PROJECT_CHOICE weave rate; cross-check Chadwick & Zarchan (1995)
 
     @staticmethod
     def _heading(v) -> float:
@@ -71,17 +79,20 @@ class GenericEvasiveTarget:
         t_hat, n_h, n_v = self._unit_tangent_and_normals()
         speed_T = float(np.linalg.norm(self.v_W))
         m = self.maneuver
+        s = self.shape_scale
+        w = s * self.omega_base
+        frac = lambda c: min(s * c, 1.0)  # mixing fraction of a_max, never above 1
         if m == ManeuverType.NONE:
             return np.zeros(3)
         if m == ManeuverType.CONSTANT_G:
-            return self.a_max * n_h if t >= 0.25 else np.zeros(3)
+            return self.a_max * n_h if t >= s * 0.25 else np.zeros(3)
         if m == ManeuverType.SINUSOIDAL_WEAVE:
-            return self.a_max * np.sin(self.omega_base * t + self.phi_phase) * n_h
+            return self.a_max * np.sin(w * t + self.phi_phase) * n_h
         if m == ManeuverType.BARREL_ROLL:
-            phase = self.omega_base * t + self.phi_phase
+            phase = w * t + self.phi_phase
             return self.a_max * (np.cos(phase) * n_h + np.sin(phase) * n_v)
         if m == ManeuverType.TERMINAL_BREAK:
-            if kin.t_go <= 2.5:
+            if kin.t_go <= s * 2.5:
                 u = np.cross(np.cross(t_hat, kin.los_vec), t_hat)
                 n = np.linalg.norm(u)
                 return self.a_max * (u / n if n > 1e-6 else n_h)
@@ -90,8 +101,8 @@ class GenericEvasiveTarget:
             perp = kin.los_vec - np.dot(kin.los_vec, t_hat) * t_hat
             n = np.linalg.norm(perp)
             steer = perp / n if n > 1e-6 else n_h
-            return (0.25 * self.a_max * t_hat + 0.7 * self.a_max * steer
-                    + 0.4 * self.a_max * np.sin(self.omega_base * t) * n_h)
+            return (frac(0.25) * self.a_max * t_hat + frac(0.7) * self.a_max * steer
+                    + frac(0.4) * self.a_max * np.sin(w * t) * n_h)
         if m == ManeuverType.SPLIT_S:
             dpsi = abs(float(np.arctan2(
                 np.sin(self._heading(self.v_W) - self.psi_ref),
@@ -99,13 +110,13 @@ class GenericEvasiveTarget:
             if dpsi > 2.8 and abs(self.v_W[2]) < 0.2 * max(speed_T, 1.0):
                 self.split_s_completed = True
             if self.split_s_completed:
-                return 0.2 * self.a_max * t_hat
-            return -self.a_max * n_v + 0.2 * self.a_max * t_hat
+                return frac(0.2) * self.a_max * t_hat
+            return -self.a_max * n_v + frac(0.2) * self.a_max * t_hat
         if m == ManeuverType.SQUARE_BANG_BANG:
-            sign = 1.0 if np.sin(self.omega_base * t + self.phi_phase) >= 0 else -1.0
+            sign = 1.0 if np.sin(w * t + self.phi_phase) >= 0 else -1.0
             return self.a_max * sign * n_h
         if m == ManeuverType.SCISSOR:
-            psi_max = np.deg2rad(65.0)
+            psi_max = s * np.deg2rad(65.0)
             dpsi = float(np.arctan2(
                 np.sin(self._heading(self.v_W) - self.psi_ref),
                 np.cos(self._heading(self.v_W) - self.psi_ref)))
@@ -113,45 +124,45 @@ class GenericEvasiveTarget:
                 self.scissor_sign = -1.0
             elif dpsi <= -psi_max:
                 self.scissor_sign = 1.0
-            return -0.25 * self.a_max * t_hat + self.scissor_sign * self.a_max * n_h
+            return -frac(0.25) * self.a_max * t_hat + self.scissor_sign * self.a_max * n_h
         if m == ManeuverType.NOTCHING:
             radial_vel = float(np.dot(self.v_W, kin.los_vec))
             perp = kin.los_vec - np.dot(kin.los_vec, t_hat) * t_hat
             n = np.linalg.norm(perp)
             n_lambda = perp / n if n > 1e-6 else n_h
             a_centripetal = speed_T ** 2 / max(kin.r, 50.0)
-            a_mag = np.clip(-4.0 * radial_vel + a_centripetal, -self.a_max, self.a_max)
+            a_mag = np.clip(-(s * 4.0) * radial_vel + a_centripetal, -self.a_max, self.a_max)
             return a_mag * n_lambda
         if m == ManeuverType.TURN_INTO_MISSILE:
             threat = -kin.los_vec
             perp = threat - np.dot(threat, t_hat) * t_hat
             n = np.linalg.norm(perp)
-            return self.a_max * (perp / n if n > 1e-6 else n_h) + 0.2 * self.a_max * t_hat
+            return self.a_max * (perp / n if n > 1e-6 else n_h) + frac(0.2) * self.a_max * t_hat
         if m == ManeuverType.CRANK:
             az = float(np.arctan2(kin.los_vec[1], kin.los_vec[0]))
-            side = 1.0 if np.sin(0.35 * t + self.phi_phase) >= 0 else -1.0
-            psi_des = az + side * np.deg2rad(60.0)
+            side = 1.0 if np.sin(s * 0.35 * t + self.phi_phase) >= 0 else -1.0
+            psi_des = az + side * s * np.deg2rad(60.0)
             err = float(np.arctan2(np.sin(psi_des - self._heading(self.v_W)),
                                    np.cos(psi_des - self._heading(self.v_W))))
-            a_lat = np.clip(3.0 * max(speed_T, 5.0) * err, -self.a_max, self.a_max)
+            a_lat = np.clip(s * 3.0 * max(speed_T, 5.0) * err, -self.a_max, self.a_max)
             return a_lat * n_h
         if m == ManeuverType.SPEED_CHANGE:
-            sign = 1.0 if np.sin(1.2 * t + self.phi_phase) >= 0 else -1.0
-            return 0.8 * self.a_max * sign * t_hat
+            sign = 1.0 if np.sin(s * 1.2 * t + self.phi_phase) >= 0 else -1.0
+            return frac(0.8) * self.a_max * sign * t_hat
         if m == ManeuverType.MINIMUM_RANGE_TURN:
-            if kin.t_go <= 4.0:
-                return -0.3 * self.a_max * t_hat + self.a_max * n_h
+            if kin.t_go <= s * 4.0:
+                return -frac(0.3) * self.a_max * t_hat + self.a_max * n_h
             return np.zeros(3)
         if m == ManeuverType.DIVE_DENSE_AIR:
-            gamma_dive = np.deg2rad(-30.0) if self.p_W[2] > 100.0 else 0.0
+            gamma_dive = s * np.deg2rad(-30.0) if self.p_W[2] > 100.0 else 0.0
             horiz = np.hypot(self.v_W[0], self.v_W[1])
             gamma = float(np.arctan2(self.v_W[2], max(horiz, 1e-6)))
-            a_pitch = np.clip(3.0 * max(speed_T, 5.0) * (gamma_dive - gamma),
+            a_pitch = np.clip(s * 3.0 * max(speed_T, 5.0) * (gamma_dive - gamma),
                               -self.a_max, self.a_max)
-            return 0.25 * self.a_max * t_hat + a_pitch * n_v
+            return frac(0.25) * self.a_max * t_hat + a_pitch * n_v
         if m == ManeuverType.SPIRAL_CORKSCREW:
-            phase = self.omega_base * t + 0.18 * t ** 2 + self.phi_phase
-            return (0.2 * self.a_max * t_hat
+            phase = w * t + s * 0.18 * t ** 2 + self.phi_phase
+            return (frac(0.2) * self.a_max * t_hat
                     + self.a_max * (np.cos(phase) * n_h + np.sin(phase) * n_v))
         return np.zeros(3)
 
@@ -223,11 +234,11 @@ class PolynomialTarget:
 
 def make_target(target_set: str, maneuver: Optional[ManeuverType], p0, v0,
                 *, v_nominal: float, a_max: float, rng: np.random.Generator,
-                floor_altitude: float = 35.0):
+                floor_altitude: float = 35.0, shape_scale: float = 1.0):
     if target_set == "evasive":
         man = maneuver if maneuver is not None else ManeuverType.NONE
         return GenericEvasiveTarget(p0, v0, man, v_nominal, a_max, rng,
-                                    floor_altitude=floor_altitude)
+                                    floor_altitude=floor_altitude, shape_scale=shape_scale)
     if target_set == "static":
         return StaticTarget(p0)
     raise ValueError("polynomial targets are built by the environment")
