@@ -1,9 +1,12 @@
 """Uniform PPO / SAC / TD3 construction (plan P6.3).
 
 The three algorithms are built from Stable-Baselines3 with the same MLP
-widths, a symmetric (non-privileged) MLP policy, and the RL Baselines3 Zoo
-default hyperparameters recorded in ``configs/training.yaml``.  Keeping the
-constructor in one place is what makes the P6.4 comparison fair.
+widths, a symmetric (non-privileged) MLP policy, and the hyperparameters
+recorded in ``configs/training.yaml`` (SB3 2.9.0 library defaults, which match
+PPO Table 3 / SAC Table 1 / TD3 Sec. 6.1; TD3 learning rate 3e-4 and the shared
+[256, 256, 128] network are project choices; each line of that file names its
+source).  Keeping the constructor in one place is what makes the P6.4
+comparison fair.
 """
 
 from __future__ import annotations
@@ -63,7 +66,7 @@ def build_model(
     asymmetric: bool = False,
     actor_obs_dim: Optional[int] = None,
 ):
-    """Build one SB3 model with the shared network and Zoo hyperparameters.
+    """Build one SB3 model with the shared network and configured hyperparameters.
 
     ``asymmetric=True`` selects the privileged-critic PPO policy (P7.3); the
     actor sees the first ``actor_obs_dim`` columns, the critic all of them.
@@ -100,6 +103,17 @@ def build_model(
             "MlpPolicy", env, seed=seed, device=device, verbose=0,
             tensorboard_log=tensorboard_log,
             policy_kwargs=_q_policy_kwargs(net, activation), **hp)
+    # TD3 explores with Gaussian action noise N(0, sigma * max_action) (Fujimoto et al.
+    # 2018, Sec. 6.1; sfujim/TD3 main.py L44 and L122). SB3's TD3 adds no noise unless an
+    # ActionNoise object is passed (BUGS #31), so it is built here from the config.
+    noise_std = hp.pop("action_noise_std", None)
+    if noise_std:
+        import numpy as np
+        from stable_baselines3.common.noise import NormalActionNoise
+        space = env.action_space
+        half_range = (np.asarray(space.high, dtype=np.float64) - np.asarray(space.low, dtype=np.float64)) / 2.0
+        hp["action_noise"] = NormalActionNoise(
+            mean=np.zeros(space.shape), sigma=float(noise_std) * half_range)
     return TD3(
         "MlpPolicy", env, seed=seed, device=device, verbose=0,
         tensorboard_log=tensorboard_log,

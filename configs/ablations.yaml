@@ -27,3 +27,14 @@ reward_weights:
   w_progress_1.5:  {guidance: {reward_scale: {w_progress: 1.5}}}
   w_res_rl_0.5:    {guidance: {reward_scale: {w_res_rl: 0.5}}}
   w_res_rl_1.5:    {guidance: {reward_scale: {w_res_rl: 1.5}}}
+# Network-size ablation (configs/training.yaml PROJECT_CHOICE note): the nominal
+# [256, 256, 128] ReLU is a project choice.  Variants are the two published
+# reference networks: 2 x 64 tanh (Schulman et al. 2017, Sec. 6.1, p. 6) and
+# 2 x 256 ReLU (Haarnoja et al. 2018, App. D Table 1; github.com/sfujim/TD3 TD3.py
+# L18-20).  Andrychowicz et al. (2021, arXiv:2006.05990, Sec. 3.2, pp. 5-6): the
+# optimal policy width depends on the environment and tanh beat ReLU, so the width
+# and activation are tested here rather than cited.  Nominal point is
+# guidance_ablations.full.  2 variants x 3 seeds.
+network:
+  net_64x64_tanh:   {network: {pi: [64, 64], vf: [64, 64], activation: tanh}}
+  net_256x256_relu: {network: {pi: [256, 256], vf: [256, 256], activation: relu}}

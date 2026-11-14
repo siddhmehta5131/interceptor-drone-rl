@@ -21,12 +21,12 @@ comparison; it is evaluated separately in P7.4.
 |---|---|
 | Observation | task-specific; FC actor 33, guidance actor 85 |
 | Action | FC 4 motors in [-1, 1]; guidance 3 residuals in [-1, 1] |
-| Network | `pi` and `vf`/`qf` MLPs `[256, 256, 128]`, ReLU |
-| Discount | 0.99 for the algorithm comparison (P6.4); 0.99791 in the final guidance model |
+| Network | `pi` and `vf`/`qf` MLPs `[256, 256, 128]`, ReLU. Project choice carried over from the v1 notebooks; closest published networks are 2 x 256 ReLU (SAC, TD3 reference code) and 2 x 64 tanh (PPO). Defended by the `network` ablation in `configs/ablations.yaml` (Andrychowicz et al. 2021, arXiv:2006.05990, Sec. 3.2, pp. 5-6: the optimal policy width depends on the environment; tanh beat ReLU) |
+| Discount | 0.99 for flight-controller runs; every guidance run, including the P6.4 comparison, uses the shaping discount 0.99791 (`training/runner.py`, BUGS #26) |
 | Seeds | 0, 1, 2 |
 | Budget | equal environment steps, `budgets.algorithm_selection_steps` in `configs/training.yaml` |
 | Evaluation | fixed, disjoint seeds; 100 episodes per cell (§6 of the implementation plan) |
-| Hyperparameters | RL Baselines3 Zoo defaults, recorded in `configs/training.yaml` |
+| Hyperparameters | Stable-Baselines3 2.9.0 library defaults (file and line recorded per value), which equal PPO App. A Table 3 / Table 1 (Schulman et al. 2017), SAC App. D Table 1 (Haarnoja et al. 2018) and TD3 Sec. 6.1 / App. C Table 3 (Fujimoto et al. 2018). TD3 exploration noise N(0, 0.1) from Fujimoto et al. Sec. 6.1 (SB3 adds none by default; BUGS #31). Project choice: TD3 learning rate 3e-4 (paper and SB3 1e-3; the authors' code github.com/sfujim/TD3 uses 3e-4, and it equals the PPO/SAC step size). Every line of `configs/training.yaml` names its source; `tests/unit/test_algos.py` checks every value against the installed SB3 |
 
 The constructor is `training/algos.py::build_model`, so every algorithm gets
 the identical network and environment wrappers.  Any change to the comparison
@@ -89,7 +89,7 @@ L = -L^{\text{CLIP}} + c_v \mathbb{E}\left[(V_\phi(s_t)-\hat R_t)^2\right]
     - c_e \mathbb{E}\left[\mathcal H(\pi_\theta(\cdot\mid s_t))\right],
 $$
 
-with $c_v=0.5$ and $c_e=0$ for the Zoo default.
+with $c_v=0.5$ (SB3 default) and $c_e=0$ (Schulman et al. 2017, Sec. 6.1: no entropy bonus).
 
 PPO is on-policy: each batch of `n_steps` is used for `n_epochs` passes and then
 discarded.  It therefore needs no replay buffer and handles a non-stationary

@@ -1,59 +1,96 @@
 # training.yaml -- algorithm and budget definitions (plan P6.3, P7.2).
 #
-# Hyperparameters are the RL Baselines3 Zoo defaults for the respective
-# algorithms (Raffin et al., 2021, "Stable-Baselines3: Reliable Reinforcement
-# Learning Implementations", JMLR 22(268)).  PPO, SAC and TD3 share the same
-# MLP widths so P6.4 compares algorithms, not capacity.
+# SOURCES (all opened and checked 2026-11-15; every line below names its own source).
+#  * SB3 = Stable-Baselines3 2.9.0 as installed, constructor defaults read from the
+#    source files stable_baselines3/ppo/ppo.py, sac/sac.py, td3/td3.py (line numbers
+#    given per value) and confirmed with inspect.signature.  Raffin et al. (2021),
+#    JMLR 22(268).  These are the plain library defaults, not per-environment tuned
+#    hyperparameter files (BUGS #30).
+#  * PPO = Schulman et al. (2017), arXiv:1707.06347v2.  Appendix A, Table 3, p. 10
+#    ("PPO hyperparameters used for the Mujoco 1 million timestep benchmark":
+#    horizon 2048, Adam stepsize 3e-4, 10 epochs, minibatch 64, discount 0.99,
+#    GAE 0.95); Table 1, p. 6 (clip eps 0.1 / 0.2 / 0.3 score 0.76 / 0.82 / 0.70);
+#    Sec. 6.1, p. 6 (2 x 64 tanh MLP, no parameter sharing "so coefficient c1 is
+#    irrelevant", "we don't use an entropy bonus").
+#  * SAC = Haarnoja et al. (2018a), arXiv:1801.01290, Appendix D, Table 1 "SAC
+#    Hyperparameters" (Adam 3e-4, discount 0.99, replay 1e6, 2 hidden layers of 256,
+#    minibatch 256, ReLU, tau 0.005, target update interval 1, gradient steps 1);
+#    Sec. 4.2 ("we take a single environment step followed by one or several gradient
+#    steps").  SAC-auto = Haarnoja et al. (2018b), arXiv:1812.05905, Sec. 5
+#    (automatic temperature) and Appendix D Table 1 (entropy target -dim(A)).
+#  * TD3 = Fujimoto et al. (2018), arXiv:1802.09477, Sec. 6.1 (d = 2; target noise
+#    N(0, 0.2) clipped to (-0.5, 0.5); tau 0.005; critics trained once per time step;
+#    exploration noise N(0, 0.1); paper networks 400-300 ReLU, Adam 1e-3, minibatch
+#    100, replay = entire history of a 1e6-step run) and Appendix C, Table 3 (discount
+#    0.99, 1 iteration per time step).  TD3-code = the authors' reference
+#    implementation github.com/sfujim/TD3, commit 34770cc (2023-07-14): TD3.py L18-20
+#    (256-256 ReLU), L83 and L87 (Adam lr 3e-4), L104 (batch 256); main.py L44
+#    (expl_noise 0.1), L45 (batch 256); utils.py L6 (buffer 1e6).
+#  * PROJECT_CHOICE (two values match neither SB3 nor the paper):
+#    - network [256, 256, 128] ReLU, carried over from the v1 notebooks; no paper uses
+#      it.  Published references: 2 x 64 tanh (PPO Sec. 6.1), 2 x 256 ReLU (SAC
+#      Table 1, TD3-code).  Andrychowicz et al. (2021), arXiv:2006.05990, Sec. 3.2,
+#      pp. 5-6: "the optimal width of the policy MLP depends on the complexity of the
+#      environment", two hidden layers work well, and "tanh activations perform best
+#      and relu worst" (PPO-family agents).  Defence: the `network` group in
+#      configs/ablations.yaml runs both published networks against ours.
+#      PPO, SAC and TD3 share the network so P6.4 compares algorithms, not capacity.
+#    - TD3 learning_rate 3e-4: the TD3 paper and SB3 (td3.py L84) use 1e-3.  Defence:
+#      it is the value of the authors' own current code (TD3-code L83, L87), and it
+#      equals the PPO and SAC step size, so the P6.4 comparison does not confound the
+#      algorithm with the optimiser step size.
 #
-# DISCOUNT: the `gamma: 0.99` entries below are the Zoo defaults and apply to the
-# flight-controller task only.  For guidance training the runner replaces gamma with
-# the environment's shaping discount, 0.1**(1/1100) = 0.99791 (EQ-GUIDE-8,
-# configs/guidance.yaml reward.gamma), because potential-based shaping needs the
-# learner and the shaping to use the same discount (Ng, Harada & Russell 1999;
-# BUGS #26).  The value actually used is written to <run>/hyperparameters.json.
+# DISCOUNT: the `gamma: 0.99` entries below (PPO Table 3, SAC Table 1, TD3 App. C
+# Table 3, SB3 default) apply to the flight-controller task only.  For guidance
+# training the runner replaces gamma with the environment's shaping discount,
+# 0.1**(1/1100) = 0.99791 (EQ-GUIDE-8, configs/guidance.yaml reward.gamma), because
+# potential-based shaping needs the learner and the shaping to use the same discount
+# (Ng, Harada & Russell 1999; BUGS #26).  The value actually used is written to
+# <run>/hyperparameters.json.
 #
 # `source` records where a value came from; budgets are filled from the P7.2
 # throughput benchmark (`scripts/benchmark_training.py`).
 
 network:
-  pi: [256, 256, 128]
-  vf: [256, 256, 128]
-  activation: relu
+  pi: [256, 256, 128]   # PROJECT_CHOICE: v1 notebooks; tested by ablations.yaml `network` group (Andrychowicz 2021 Sec. 3.2: policy width must be tuned per task)
+  vf: [256, 256, 128]   # PROJECT_CHOICE: equal to pi so PPO/SAC/TD3 compare at equal capacity; tested by ablations.yaml `network` group
+  activation: relu      # PROJECT_CHOICE: ReLU as in Haarnoja 2018 Table 1 and sfujim/TD3 TD3.py L26-27; Andrychowicz 2021 Sec. 3.2 found tanh best for PPO, so the ablations.yaml `network` group includes 2 x 64 tanh
 
 algorithms:
   ppo:
-    n_steps: 2048
-    batch_size: 64
-    n_epochs: 10
-    gamma: 0.99          # FC task; guidance uses 0.99791 (see DISCOUNT note above)
-    gae_lambda: 0.95
-    clip_range: 0.2
-    ent_coef: 0.0
-    learning_rate: 3.0e-4
-    vf_coef: 0.5
-    max_grad_norm: 0.5
+    n_steps: 2048          # Schulman 2017 App. A Table 3 horizon T = 2048; SB3 ppo.py L85
+    batch_size: 64         # Schulman 2017 App. A Table 3 minibatch 64; SB3 ppo.py L86
+    n_epochs: 10           # Schulman 2017 App. A Table 3 epochs 10; SB3 ppo.py L87
+    gamma: 0.99            # Schulman 2017 App. A Table 3 discount 0.99; SB3 ppo.py L88; FC task only, guidance uses 0.99791 (DISCOUNT note)
+    gae_lambda: 0.95       # Schulman 2017 App. A Table 3 GAE parameter 0.95; SB3 ppo.py L89
+    clip_range: 0.2        # Schulman 2017 Table 1 eps = 0.2 best (0.82 vs 0.76 / 0.70); SB3 ppo.py L90
+    ent_coef: 0.0          # Schulman 2017 Sec. 6.1 "we don't use an entropy bonus"; SB3 ppo.py L93
+    learning_rate: 3.0e-4  # Schulman 2017 App. A Table 3 Adam stepsize 3e-4; SB3 ppo.py L84
+    vf_coef: 0.5           # SB3 ppo.py L94 (Schulman 2017 Sec. 6.1: c1 irrelevant when policy and value networks are separate, as here)
+    max_grad_norm: 0.5     # SB3 ppo.py L95 (not specified in Schulman 2017)
   sac:
-    buffer_size: 1000000
-    learning_starts: 100
-    batch_size: 256
-    tau: 0.005
-    gamma: 0.99          # FC task; guidance uses 0.99791 (see DISCOUNT note above)
-    train_freq: 1
-    gradient_steps: 1
-    ent_coef: auto
-    learning_rate: 3.0e-4
+    buffer_size: 1000000   # Haarnoja 2018 App. D Table 1 replay buffer 1e6; SB3 sac.py L96
+    learning_starts: 100   # SB3 sac.py L97 (not specified in Haarnoja 2018 Table 1)
+    batch_size: 256        # Haarnoja 2018 App. D Table 1 minibatch 256; SB3 sac.py L98
+    tau: 0.005             # Haarnoja 2018 App. D Table 1 target smoothing 0.005; SB3 sac.py L99
+    gamma: 0.99            # Haarnoja 2018 App. D Table 1 discount 0.99; SB3 sac.py L100; FC task only, guidance uses 0.99791 (DISCOUNT note)
+    train_freq: 1          # Haarnoja 2018 Sec. 4.2 one environment step per iteration; SB3 sac.py L101
+    gradient_steps: 1      # Haarnoja 2018 App. D Table 1 gradient steps 1; SB3 sac.py L102
+    ent_coef: auto         # Haarnoja 2018b arXiv:1812.05905 Sec. 5 automatic temperature, App. D Table 1 entropy target -dim(A); SB3 sac.py L108, L110, L171
+    learning_rate: 3.0e-4  # Haarnoja 2018 App. D Table 1 Adam 3e-4; SB3 sac.py L95
   td3:
-    buffer_size: 1000000
-    learning_starts: 100
-    batch_size: 256
-    tau: 0.005
-    gamma: 0.99          # FC task; guidance uses 0.99791 (see DISCOUNT note above)
-    train_freq: 1
-    gradient_steps: 1
-    policy_delay: 2
-    target_policy_noise: 0.2
-    target_noise_clip: 0.5
-    learning_rate: 3.0e-4
+    buffer_size: 1000000   # SB3 td3.py L85; sfujim/TD3 utils.py L6 max_size 1e6; Fujimoto 2018 Sec. 6.1 keeps the entire history of a 1e6-step run
+    learning_starts: 100   # SB3 td3.py L86 (Fujimoto 2018 Sec. 6.1 used 1000 or 10000 random steps on MuJoCo; same warm-up as SAC here)
+    batch_size: 256        # SB3 td3.py L87; sfujim/TD3 TD3.py L104 and main.py L45 (Fujimoto 2018 Sec. 6.1 paper value 100)
+    tau: 0.005             # Fujimoto 2018 Sec. 6.1 tau = 0.005; SB3 td3.py L88
+    gamma: 0.99            # Fujimoto 2018 App. C Table 3 discount 0.99; SB3 td3.py L89; FC task only, guidance uses 0.99791 (DISCOUNT note)
+    train_freq: 1          # Fujimoto 2018 Sec. 6.1 critics trained once per time step; SB3 td3.py L90
+    gradient_steps: 1      # Fujimoto 2018 App. C Table 3 iterations per time step 1; SB3 td3.py L91
+    policy_delay: 2        # Fujimoto 2018 Sec. 6.1 d = 2; SB3 td3.py L97
+    target_policy_noise: 0.2  # Fujimoto 2018 Sec. 6.1 N(0, 0.2); SB3 td3.py L98
+    target_noise_clip: 0.5    # Fujimoto 2018 Sec. 6.1 clipped to (-0.5, 0.5); SB3 td3.py L99
+    action_noise_std: 0.1  # Fujimoto 2018 Sec. 6.1 exploration noise N(0, 0.1); sfujim/TD3 main.py L44 expl_noise 0.1 (x max_action = 1 here); SB3 default is no noise (BUGS #31)
+    learning_rate: 3.0e-4  # PROJECT_CHOICE: sfujim/TD3 TD3.py L83, L87 by Fujimoto; paper and SB3 td3.py L84 use 1e-3; kept equal to PPO/SAC so P6.4 does not confound algorithm with step size
 
 # Equal budget for P6.4 and for A3/A4 in P7.4 (environment steps).
 budgets:

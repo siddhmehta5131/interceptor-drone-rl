@@ -89,6 +89,11 @@ def _resolve_config(config: dict) -> dict:
     cfg.setdefault("algo_overrides", {})
     cfg.setdefault("asymmetric", False)
     cfg.setdefault("actor_obs_dim", None)
+    # Network shape: configs/training.yaml unless overridden (ablations.yaml `network`
+    # group). Stored in config.json so every run records the network it trained.
+    net = dict(defaults["network"])
+    net.update(cfg.get("network") or {})
+    cfg["network"] = net
     if "total_steps" not in cfg:
         cfg["total_steps"] = int(defaults["budgets"]["algorithm_selection_steps"])
     if str(cfg["algo"]).lower() not in ALGOS:
@@ -217,7 +222,7 @@ def train(run_id: str, config: dict, *, run_root: Optional[Path] = None) -> dict
     hp = dict(load_training_config()["algorithms"][str(cfg["algo"]).lower()])
     # The guidance reward's potential-based shaping uses env.gamma (EQ-GUIDE-8, horizon
     # gamma); Ng, Harada & Russell (1999) policy invariance needs the learner to use the
-    # same discount, so it overrides the Zoo default. An explicit override still wins.
+    # same discount, so it overrides the SB3 default 0.99. An explicit override still wins.
     if hasattr(env, "gamma") and "gamma" in hp:
         hp["gamma"] = float(env.gamma)
     hp.update(cfg.get("algo_overrides") or {})
@@ -238,7 +243,7 @@ def train(run_id: str, config: dict, *, run_root: Optional[Path] = None) -> dict
     else:
         model = build_model(
             str(cfg["algo"]), env, seed=int(cfg["seed"]),
-            config={"network": load_training_config()["network"],
+            config={"network": cfg["network"],
                     "algorithms": {str(cfg["algo"]).lower(): hp}},
             device=cfg["device"], asymmetric=bool(cfg["asymmetric"]),
             actor_obs_dim=cfg["actor_obs_dim"])

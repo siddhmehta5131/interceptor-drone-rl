@@ -16,12 +16,40 @@ def cfg():
 
 
 @pytest.mark.parametrize("algo", ALGOS)
-def test_zoo_hyperparameters_are_recorded(cfg, algo):
+def test_cited_hyperparameters_are_recorded(cfg, algo):
     hp = cfg["algorithms"][algo]
     assert hp["learning_rate"] == pytest.approx(3e-4)
     assert hp["gamma"] == pytest.approx(0.99)
     assert cfg["network"]["pi"] == [256, 256, 128]
     assert cfg["network"]["vf"] == [256, 256, 128]
+
+
+@pytest.mark.parametrize("algo", ALGOS)
+def test_values_equal_sb3_defaults_except_project_choices(cfg, algo):
+    """configs/training.yaml cites SB3 2.9.0 defaults line by line; only the
+    TD3 learning rate (PROJECT_CHOICE) and TD3 exploration noise (paper value,
+    SB3 has none) may differ from the installed library."""
+    import inspect
+    from stable_baselines3 import PPO, SAC, TD3
+    cls = {"ppo": PPO, "sac": SAC, "td3": TD3}[algo]
+    defaults = {k: v.default for k, v in inspect.signature(cls.__init__).parameters.items()}
+    allowed = {("td3", "learning_rate"), ("td3", "action_noise_std")}
+    for key, value in cfg["algorithms"][algo].items():
+        if (algo, key) in allowed:
+            continue
+        assert defaults[key] == value, f"{algo}.{key}: yaml {value} != SB3 {defaults[key]}"
+
+
+def test_td3_gets_gaussian_exploration_noise(cfg):
+    """Fujimoto et al. (2018) Sec. 6.1: exploration noise N(0, 0.1) (BUGS #31)."""
+    import numpy as np
+    from stable_baselines3.common.noise import NormalActionNoise
+    env = FlightControllerEnv(domain_randomization=False, wind=False)
+    model = build_model("td3", env, seed=0, config=cfg)
+    assert isinstance(model.action_noise, NormalActionNoise)
+    half = (env.action_space.high - env.action_space.low) / 2.0
+    np.testing.assert_allclose(model.action_noise._sigma, 0.1 * half)
+    assert "action_noise_std" in cfg["algorithms"]["td3"]  # build_model must not mutate cfg
 
 
 @pytest.mark.parametrize("algo", ALGOS)

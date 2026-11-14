@@ -50,3 +50,23 @@ def test_learner_gamma_matches_shaping_gamma(tmp_path: Path):
     hp = json.loads((tmp_path / "g0" / "hyperparameters.json").read_text(encoding="utf-8"))
     assert hp["gamma"] == pytest.approx(GuidanceReward().gamma)
     assert hp["gamma"] == pytest.approx(0.1 ** (1 / 1100), rel=1e-9)
+
+
+def test_network_override_is_used_and_recorded(tmp_path: Path):
+    """ablations.yaml `network` group: the override reaches SB3 and config.json."""
+    import torch.nn as nn
+    from training.runner import load_run_model
+    cfg = dict(_config(64), network={"pi": [64, 64], "vf": [64, 64], "activation": "tanh"})
+    train("n0", cfg, run_root=tmp_path)
+    saved = json.loads((tmp_path / "n0" / "config.json").read_text(encoding="utf-8"))
+    assert saved["network"] == {"pi": [64, 64], "vf": [64, 64], "activation": "tanh"}
+    model = load_run_model(tmp_path / "n0")
+    assert model.policy.net_arch == {"pi": [64, 64], "vf": [64, 64]}
+    assert model.policy.activation_fn is nn.Tanh
+
+
+def test_default_network_recorded(tmp_path: Path):
+    from training.algos import load_training_config
+    train("n1", _config(64), run_root=tmp_path)
+    saved = json.loads((tmp_path / "n1" / "config.json").read_text(encoding="utf-8"))
+    assert saved["network"] == load_training_config()["network"]

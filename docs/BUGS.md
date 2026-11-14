@@ -232,7 +232,7 @@ fixture-parity tests only. Tests: `tests/unit/test_seeker_config.py` (5 tests).
 
 ### 26. Learner discount did not match the shaping discount (FIXED 2026-11-14)
 The guidance reward shapes with `gamma = 0.1**(1/1100) = 0.99791` (EQ-GUIDE-8), but
-`training/runner.py` passed the Zoo default `gamma = 0.99` from `configs/training.yaml` to
+`training/runner.py` passed the SB3 default `gamma = 0.99` from `configs/training.yaml` to
 PPO/SAC/TD3; the horizon gamma lived only in the legacy `configs/model.yaml`. That breaks the
 policy-invariance condition of potential-based shaping (Ng, Harada & Russell 1999) and undoes
 the P5.9 horizon fix. The runner now sets the learner's gamma to `env.gamma` (an explicit
@@ -286,3 +286,34 @@ The bridge-rate smoke test reported a median acceleration-tracking RMS of 31-78 
 vehicle whose limit is 15.4 m/s^2. Likely causes: the APN command is compared before the bridge's
 thrust/tilt saturation, and the "actual" acceleration is a 50 Hz finite difference of velocity.
 Not investigated; do not quote this metric until it is.
+
+### 30. RL hyperparameter sources were mislabelled (FIXED 2026-11-15)
+`configs/training.yaml`, `training/algos.py`, `docs/algorithm_selection.md`, decision D024 and
+the audit regex called the PPO/SAC/TD3 hyperparameters the defaults of the per-environment tuned
+hyperparameter files of the RL Baselines3 collection. They are the plain Stable-Baselines3 2.9.0
+constructor defaults. Every value was then checked against the installed SB3 source and the
+papers (PDFs read 2026-11-15) and now names its table/section and SB3 file:line. Errors found
+while checking the interrupted 2026-11-15 rewrite:
+- Andrychowicz et al. (2021) was cited as Sec. 3.5 for network width; that section is "Training
+  setup". The network findings are in Sec. 3.2, pp. 5-6. Fixed in `training.yaml`,
+  `ablations.yaml`, `algorithm_selection.md`.
+- SAC `train_freq: 1` was cited to "Table 1 target update interval 1", which is a different SB3
+  argument (`target_update_interval`). Now cited to Haarnoja et al. (2018) Sec. 4.2 (one
+  environment step per iteration).
+- TD3 `learning_rate: 3e-4` was labelled as cited; it matches neither the paper (1e-3, Sec. 6.1)
+  nor SB3 (1e-3, td3.py L84). Now PROJECT_CHOICE (authors' code sfujim/TD3 TD3.py L83/L87 uses
+  3e-4; equal to PPO/SAC so P6.4 compares algorithms at one step size).
+- TD3 `learning_starts: 100` (SB3) differs from the paper's 1000/10000 random steps; now stated.
+`tests/unit/test_algos.py::test_values_equal_sb3_defaults_except_project_choices` now fails if a
+YAML value drifts from the installed SB3 default. No result is stale: only labels changed.
+
+### 31. TD3 explored without action noise (FIXED 2026-11-15)
+SB3's `TD3` adds exploration noise only when an `ActionNoise` object is passed; `build_model`
+passed none, so after the 100 random warm-up steps TD3 acted deterministically. Fujimoto et al.
+(2018) Sec. 6.1 add N(0, 0.1) to every action (sfujim/TD3 main.py L44, L122). `training.yaml`
+now has `td3.action_noise_std: 0.1` and `build_model` builds `NormalActionNoise` with
+sigma = 0.1 x half the action range (= 0.1 for our [-1, 1] actions). Test:
+`test_td3_gets_gaussian_exploration_noise`. Stale: any TD3 run made before this commit. None
+exists (P6.4 not yet run; `results/` holds no algorithm-selection tables), so nothing has to be
+re-run; `results/tables/training_throughput.json` TD3 steps/s may shift slightly (noise sampling
+is cheap) but it is a laptop benchmark only.

@@ -68,7 +68,7 @@ DECISIONS = [
     ("guidance", "Fixed-wing structural load factor", "+3.8 g / -1.52 g (14 CFR 23.337 normal category)", "implementation_plan Q11", "NEEDS_CITATION", "UAS load-factor standard", "", ""),
     ("guidance", "Missile flight condition", "Mach 2 at 10 km, post burnout", "Q12", "NEEDS_CITATION", "Missile performance references", "", ""),
     ("rl", "Algorithm choice", "PPO (provisional) from PPO/SAC/TD3 comparison", "docs/algorithm_selection.md", "NEEDS_CITATION", "Schulman 2017; Haarnoja 2018; Fujimoto 2018", "schulman2017; haarnoja2018; fujimoto2018", "Final decision pending 18-run experiment"),
-    ("rl", "Hyperparameters", "RL Baselines3 Zoo defaults", "training.yaml", "cited", "SB3 paper", "raffin2021", ""),
+    ("rl", "Hyperparameters", "SB3 2.9.0 library defaults = PPO / SAC / TD3 paper tables; TD3 lr 3e-4 and network [256, 256, 128] are project choices", "configs/training.yaml: Schulman 2017 App. A Table 3; Haarnoja 2018 App. D Table 1; Fujimoto 2018 Sec. 6.1; sfujim/TD3; SB3 2.9.0 source", "cited", "", "ppo; sac; td3; sb3", "Each value cites its table/section and SB3 file:line; tests/unit/test_algos.py checks them against the installed SB3"),
     ("rl", "Discount gamma", "0.99791", "P5.9", "derived_or_internal", "Sutton and Barto", "sutton_barto2018", ""),
     ("rl", "Potential-based reward shaping", "progress term", "P5.9, EQ-GUIDE-1", "NEEDS_CITATION", "Ng, Harada, Russell 1999", "ng1999", ""),
     ("rl", "Reward weights", "guidance.yaml reward block", "P5.9", "NEEDS_CITATION", "Document sweeps", "", ""),
