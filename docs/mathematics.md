@@ -115,9 +115,17 @@ the two forms are tested to be algebraically equivalent.
 
 ### 1.5 Navigation constant
 
-Classical guidance accepts `3 <= N' <= 5`; below 3 the miss distance grows
-with the initial heading error, above 5 the loop amplifies noise and target
-acceleration estimates. The admissible range is
+For a zero-lag interceptor with perfect information the linear-quadratic optimal
+PN law has effective navigation ratio `N' = 3`, and the optimal APN law is PN
+plus `N' a_T / 2` with the same ratio (Palumbo, Blauwkamp & Lloyd 2010, Johns
+Hopkins APL Technical Digest 29(1), Eq. 22 p. 49 and Eq. 27 p. 51; the same
+paper is the source of EQ-APN-2). Against a hard-turning target PN with gain 3
+needs three times the target acceleration and APN half of that; at gain 4 the
+two need the same and above 4 APN needs more, and "higher gains may lead to
+excessive noise throughput" (p. 52, Fig. 7). The lower bound 3 is therefore
+cited; the upper bound 5 is a project choice that brackets the noise trade-off
+(no published upper bound was found; Zarchan's text is a library item, see
+`docs/library_pending.md`). The swept range is
 
 \[
 N'_{\min}=3,\qquad N'_{\max}=5.
@@ -126,7 +134,12 @@ N'_{\min}=3,\qquad N'_{\max}=5.
 
 P5.11 sweeps `N'` over this range separately for A1/A2 and each platform and
 selects by kill rate then median miss. The result is written back to
-`configs/platforms.yaml` with `source: sweep P5.11`.
+`configs/guidance.yaml` (`navigation.N_prime_by_platform`) with
+`source: sweep P5.11`. In the last sweep (stale since the 2026-11-14 value
+changes, rerun in Colab) the quadcopter A2 pick `N' = 5` lies on the upper
+grid edge, but its kill rate was 0.93 at every grid point and the median miss
+varied by at most 0.13 m, so the pick is a tie-break on a flat response, not a
+trend that the grid cuts off.
 
 ### 1.6 Kill radius and engagement geometry
 

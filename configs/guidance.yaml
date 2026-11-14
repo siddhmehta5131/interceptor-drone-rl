@@ -11,7 +11,7 @@ navigation:
   N_prime:
     value: 4.0
     unit: dimensionless
-    source: "classical APN admissible range 3-5; Zarchan, Tactical and Strategic Missile Guidance"
+    source: "PROJECT_CHOICE: mid-point of the swept bracket 3-5, used where no per-platform sweep value applies; N' = 3 is LQ-optimal (Palumbo et al. 2010, APL Tech. Dig. 29(1), Eq. 22 p. 49, Eq. 27 p. 51); tested by sweep P5.11 (scripts/sweep_nav.py)"
   # P5.11 sweep (100 evasive episodes per cell, seeds 5000+, all 16 manoeuvres).
   # Selected by kill rate first, median miss second.
   N_prime_by_platform:
@@ -27,11 +27,11 @@ navigation:
   N_prime_min:
     value: 3.0
     unit: dimensionless
-    source: "Zarchan admissible lower bound; EQ-APN-7"
+    source: "Palumbo et al. 2010, APL Tech. Dig. 29(1), Eq. 22 p. 49 and Eq. 27 p. 51: effective navigation ratio of the LQ-optimal PN/APN law is 3; EQ-APN-7"
   N_prime_max:
     value: 5.0
     unit: dimensionless
-    source: "Zarchan admissible upper bound; EQ-APN-7"
+    source: "PROJECT_CHOICE: upper sweep bound; Palumbo et al. 2010 p. 52: higher gains may lead to excessive noise throughput, and above 4 APN needs more acceleration than PN against a hard turn; no published upper bound of 5 found (textbook check is library item L1, docs/library_pending.md); EQ-APN-7"
   t_go_min:
     value: 0.05
     unit: s

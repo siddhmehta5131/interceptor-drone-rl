@@ -75,8 +75,8 @@ RULES = [
     ("interceptor/fc/pid", None, "CITED_METHOD", ["cf_controllers"], "PID structure"),
     ("interceptor/fc/firmware_pid", None, "CITED_METHOD", ["cf_pid_defaults", "cf_rates"], "Crazyflie firmware PID gains and loop rate"),
     ("interceptor/fc/attitude", None, "CITED_METHOD", ["cf_controllers"], "attitude loop structure"),
-    ("interceptor/guidance/apn", None, "CITED_METHOD", ["zarchan"], "APN law"),
-    ("interceptor/guidance/kinematics", None, "CITED_METHOD", ["zarchan"], "engagement geometry"),
+    ("interceptor/guidance/apn", None, "CITED_METHOD", ["palumbo2010"], "APN law: Palumbo et al. 2010 Eq. 27 (p. 51); ZEM form and its equivalence to the LOS-rate form Eqs. 22-23 (p. 49)"),
+    ("interceptor/guidance/kinematics", None, "CITED_METHOD", ["palumbo2010"], "engagement geometry: closing speed V_c = -dR/dt, R = V_c t_go, ZEM = r + v t_go, LOS rate Eq. 23 (Palumbo et al. 2010, pp. 46-49)"),
     ("interceptor/guidance/tracker", None, "CITED_METHOD", ["barshalom"], "Kalman tracker"),
     ("interceptor/guidance/seeker", None, "CITED_METHOD", ["barshalom"], "filter form; noise fractions are project choices"),
     ("interceptor/guidance/reward", None, "CITED_METHOD", ["ng1999"], "potential-based shaping form; weights are project choices"),
@@ -121,6 +121,16 @@ LIB.update({
     "echodyne_ita": ("Echodyne Corp. company profile hosted by the US International Trade Administration (Aug 2024): EchoShield angular tracking accuracy <0.5 deg az x <0.5 deg el; EchoGuard azimuth accuracy a little under 1 deg, elevation ~1.5 deg, range ~1-2 m. Statistic (1-sigma or bound) not stated.", "https://www.trade.gov/sites/default/files/2024-08/ECHODYNE.pdf", "yes (PDF text read 2026-11-14)"),
     "cf_controllers": ("Bitcraze. Controllers (position/velocity/attitude/attitude-rate PID), crazyflie-firmware documentation.", "https://www.bitcraze.io/documentation/repository/crazyflie-firmware/master/functional-areas/sensor-to-control/controllers", "yes"),
 })
+
+# Sources opened and read on 2026-11-15 (text extracted from the PDF / source file)
+LIB.update({
+    "palumbo2010": ("Palumbo, N. F., Blauwkamp, R. A., Lloyd, J. M. (2010). Modern Homing Missile Guidance Theory and Techniques. Johns Hopkins APL Technical Digest 29(1):42-59. Eq. 22 (p. 49): LQ-optimal PN, effective navigation ratio N' = 3; Eq. 27 (p. 51): APN u = (3/t_go^2)(x1 + x2 t_go + 0.5 x3 t_go^2), i.e. PN plus N' a_T / 2; Fig. 7 and text (p. 52): gain 3 needs 3x target acceleration for PN (3-to-1 rule), APN half of PN; equal at gain 4, APN more above 4; 'higher gains may lead to excessive noise throughput'. No upper bound such as 5 is stated.", "https://www.jhuapl.edu/sites/default/files/2024-09/29-01-Palumbo_Homing.pdf", "yes (PDF text read 2026-11-15)"),
+    "beard_uavbook": ("Beard, R. W., McLain, T. W. Small Unmanned Aircraft: Theory and Practice, supplement / 2nd-edition draft 'uavbook' dated October 2, 2025, linked from the mavsim_public README. Sec. 3.3 Rigid-body Dynamics (pp. 34-37): Newton's second law, translation eq. (3.4), rotation eq. (3.8), inertia matrix eq. (3.9); App. B.6 Quaternion Kinematics (p. 332). Page numbers are those of the draft, not the 2012 print edition.", "https://drive.google.com/file/d/10iq7L_kAAdkjCFoq4EBRaT1u212BbyJ7/view", "yes (PDF downloaded and text read 2026-11-15)"),
+    "cadac_aim5": ("Zipfel, P. H. CADAC++ AIM5 example (readme.asc: 'adaptation of the FORTRAN AIM5 program, which was originally provided for my book Modeling and Simulation of Aerospace Vehicle Dynamics', Release 1.1, 25 Oct 2013). aim5_aero_deck.asc: reference area 0.01767 m^2, diameter 0.15 m; aim5_prop_deck.asc: mass 63.8 kg at t = 0, 38.6 kg from t = 3 s. Repository github.com/SwaggyTyrion/CADAC (MIT), commit f5405b8 (2019-05-25).", "https://github.com/SwaggyTyrion/CADAC/tree/f5405b82fedfbc9fc9bdacfb0dfd83eb0a46fa41/example/AIM5", "yes (files read 2026-11-15)"),
+    "sola2017": ("Solà, J. (2017). Quaternion kinematics for the error-state Kalman filter. arXiv:1711.02508. Sec. 4.6.2 (p. 52): integrators that are not unit-preserving should 're-normalize the quaternion if needed, using quaternion updates of the form q <- q/||q||'.", "https://arxiv.org/abs/1711.02508", "yes (PDF text read 2026-11-15)"),
+    "agarwal2021": ("Agarwal, R. et al. (2021). Deep Reinforcement Learning at the Edge of the Statistical Precipice. NeurIPS. arXiv:2108.13264. Table 1 (p. 3): with a handful of runs report stratified-bootstrap interval estimates, performance profiles and IQM; Sec. 3 (p. 5): 'claiming improvements with 3 or fewer runs may naturally raise eyebrows'; Sec. 4.1, Fig. 6 (p. 6): with 3 runs bootstrap CIs underestimate the true 95 % CI.", "https://arxiv.org/abs/2108.13264", "yes (PDF text read 2026-11-15)"),
+})
+
 
 NUM = re.compile(r"(?<![\w.])-?\d+\.?\d*(?:[eE][-+]?\d+)?(?![\w.])")
 DIM_CTX = re.compile(r"(zeros|ones|full|eye|reshape|range|round|empty|identity|normal|uniform|"
@@ -212,6 +222,13 @@ ANSWER = {
 # decision id -> (status, library keys, note); data CSVs are the sources for platform decisions
 DATA_REFS = "data/threat_platforms.csv, data/interceptor_platforms.csv, data/interceptor_sensors.csv (secondary web sources)"
 DECISION_RULES = {
+    "D002": ("CITED_METHOD", ["beard_uavbook"], "Newton-Euler rigid-body equations: uavbook Sec. 3.3, eqs. (3.4), (3.8), (3.9), pp. 34-37; quadrotor-specific forces and the derivation in docs/mathematics.md section 6"),
+    "D004": ("CITED_METHOD", ["beard_uavbook", "sola2017"], "quaternion kinematics: uavbook App. B.6 (p. 332); renormalisation q <- q/||q|| after each RK4 step because RK4 is not unit-preserving: Sola 2017 Sec. 4.6.2 (p. 52)"),
+    "D010": ("CITED_METHOD", ["palumbo2010"], "APN law EQ-APN-1/2 (PN plus N' a_T / 2) = Palumbo et al. 2010 Eq. 27 (p. 51) with general N'; Zarchan's text itself not read (docs/library_pending.md)"),
+    "D011": ("PROJECT_CHOICE", ["palumbo2010"], "N' = 3 is the LQ-optimal ratio (Palumbo et al. 2010 Eq. 22 p. 49, Eq. 27 p. 51); the upper sweep bound 5 is a project choice (p. 52: higher gains raise noise throughput; no published upper bound found). Tested by sweep P5.11 scripts/sweep_nav.py over N' = 3, 3.5, 4, 4.5, 5 (results/tables/nav_sweep.csv, stale until rerun)"),
+    "D020": ("CITED", ["cadac_aim5"], "AIM5 decks copied from the public CADAC++ AIM5 example by Zipfel (MIT); generic, not a fielded missile; the book itself is a library item (docs/library_pending.md)"),
+    "D025": ("DERIVED_INTERNAL", [], "gamma = rho^(1/H) (EQ-GUIDE-8, docs/mathematics.md section 9.2): H = 22 s / 0.02 s = 1100 steps, rho = 0.1 (PROJECT_CHOICE: a terminal bonus keeps 10 % of its value at the first decision); the learner uses the same gamma as the shaping (Ng et al. 1999, BUGS #26). Tested by configs/ablations.yaml sensitivity.gamma_0.99 vs sensitivity.gamma_horizon"),
+    "D030": ("PROJECT_CHOICE", ["agarwal2021", "wilson1927"], "3 training seeds set by the Colab budget; Agarwal et al. 2021 warn that 3 runs is weak (Sec. 3 p. 5) and that bootstrap CIs then under-cover (Sec. 4.1 p. 6), so results are reported with per-seed values, stratified bootstrap CIs and that caveat; 100 evaluation episodes per cell give a Wilson 95 % half-width of at most 9.6 percentage points (p = 0.5, docs/mathematics.md section 11.1)"),
     "D003": ("CITED_METHOD", ["hairer1993"], "RK4 order from the reference; step sizes justified by own convergence plot docs/figures/convergence.png and decision S8"),
     "D014": ("CITED_SECONDARY", [], "hit-to-kill contact rule from sourced spans: Shahed-136 2.5 m (Janes), Orlan-10 3.1 m (Airforce Technology, trade press), F-16C 9.8 m (USAF), Crazyflie 0.092 m (Bitcraze), Aerosonde 2.8956 m (mavsim), AIM5 0.15 m (CADAC); no warhead assumed (data/lethality_and_gload.csv)"),
     "D021": ("CITED", ["far23_337"], "switched 2026-11-14 to +3.8 g / -1.52 g (normal category); also the UAV design requirement in data/lethality_and_gload.csv G01"),

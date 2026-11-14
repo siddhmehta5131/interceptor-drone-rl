@@ -71,6 +71,7 @@ REFS = [
     (r"Andrychowicz", "Andrychowicz, M. et al. (2021). What Matters In On-Policy Reinforcement Learning? ICLR, arXiv:2006.05990 (Sec. 3.2 pp. 5-6 networks, Sec. 3.3 normalisation; read 2026-11-15)."),
     (r"Chadwick", "Chadwick, W. R., Zarchan, P. (1995). Interception of spiraling ballistic missiles. Proc. American Control Conference, vol. 6, p. 4476. doi:10.1109/ACC.1995.532784 (abstract only: weave frequencies of 0.5 to 1 Hz are most critical for fast-response PN interceptors)."),
     (r"(?<!& )Zarchan", "Zarchan, P. Tactical and Strategic Missile Guidance. AIAA Progress in Astronautics and Aeronautics."),
+    (r"Palumbo", "Palumbo, N. F., Blauwkamp, R. A., Lloyd, J. M. (2010). Modern Homing Missile Guidance Theory and Techniques. Johns Hopkins APL Technical Digest 29(1):42-59 (Eq. 22 p. 49, Eq. 27 p. 51, p. 52; read 2026-11-15)."),
     (r"Wilson", "Wilson, E. B. (1927). Probable inference, the law of succession, and statistical inference. JASA 22(158)."),
     (r"McNemar", "McNemar, Q. (1947). Note on the sampling error of the difference between correlated proportions. Psychometrika 12."),
     (r"\bNg\b.*199|Harada", "Ng, A. Y., Harada, D., Russell, S. (1999). Policy invariance under reward transformations. ICML."),
@@ -406,7 +407,7 @@ def main() -> None:
             status = smap[d[4]]
             _, ref = classify(d[3] + " " + (d[5] if status.startswith("CITED") else ""))
             rurl, rchk, note = "", "", ""
-            if status == "MISSING" and f"D{j:03d}" in DECISION_RULES:
+            if (status == "MISSING" or not ref) and f"D{j:03d}" in DECISION_RULES:
                 status, keys, note = DECISION_RULES[f"D{j:03d}"]
                 if keys:
                     ref = " | ".join(LIB[k][0] for k in keys)
@@ -433,6 +434,12 @@ def main() -> None:
     print("wrote docs/references.md")
     for k in sorted(stat):
         print(f"  {k[0]:9s} {k[1]:17s} {stat[k]}")
+    with OUT.open(encoding="utf8") as fh:
+        missing = [r["id"] for r in csv.DictReader(fh) if r["reference"] == "MISSING" or r["status"] == "MISSING"]
+    print(f"rows with reference or status MISSING: {len(missing)}")
+    if missing:
+        print("  " + ", ".join(missing[:40]))
+        sys.exit(1)
 
 
 if __name__ == "__main__":
