@@ -1,3 +1,16 @@
+# Project Context — update 2026-11-13 (READ FIRST)
+
+The text below (sections 1+) describes the **v1.0** APN+RL package. The project is now the layered system in
+`docs/implementation_plan.md` v2.0: validated Crazyflie simulator, RL rate flight controller, APN+RL planner for quad /
+fixed-wing (Aerosonde) / missile (AIM5), closed loop, visualiser, maths document.
+
+Current state (details in `docs/CURRENT_WORK.md`): P0-P2 done, P3 model done (validation needs NanoBench + PyBullet in Colab),
+P4 mostly done, P5 in progress. Package is `interceptor/` (was `src/`). World frame z-up. Rates: physics 1 kHz, FC 500 Hz, guidance 50 Hz.
+Rules: every constant sourced (`{value, unit, source}`), every equation has an ID in `docs/mathematics.md`; training runs in Colab only.
+Branch `v2`, tag `v2.0-consolidated`. Logging convention: update CURRENT_WORK.md (work log), BUGS.md (issues), context.md (decisions) as work proceeds.
+
+---
+
 # APN + RL Interceptor Drone — Project Context
 
 This document is the authoritative context for the APN + RL interceptor project:

@@ -6,24 +6,29 @@ source table and the equation IDs in `docs/mathematics.md`.
 
 ## 1. Quadrotor parameter resolution (P2.3; F6, F7, F8)
 
-Three candidate sources were compared:
+Corrected 2026-11-15. An earlier version of this table had a "Bitcraze
+measurement" column and described the motor time constant as a "step-response
+identification". Neither could be traced to any document or data file, so both
+were removed, together with a `cf2x.urdf` column whose coefficient entries were
+never checked against the file. The table below states only what was traced.
 
-| Parameter | NanoBench primary | `cf2x.urdf` secondary | Bitcraze measurement | Adopted | Reason |
-|---|---|---|---|---|---|
-| mass (kg) | 0.04085 | 0.027 | 0.028-0.033 | **0.04085** | Primary set includes battery, props and the NanoBench ballast; flight-test identified mass. The 27 g URDF value is retained only for the PyBullet cross-check. |
-| `Jxx=Jyy` (kg m^2) | 2.3951e-5 | 1.4e-5 | - | **2.3951e-5** | Foster 2015 CAD value at the 40.85 g configuration; the URDF value is consistent after scaling by the mass ratio. |
-| `Jzz` (kg m^2) | 3.2347e-5 | 2.17e-5 | - | **3.2347e-5** | Same source; yaw inertia includes the four rotor/prop assemblies. |
-| arm (m) | 0.0397 | 0.0397 | 0.0397 | **0.0397** | All three agree. |
-| thrust coefficient (N/(rad/s)^2) | 2.618e-8 | 2.30e-8 | 2.55e-8 - 2.70e-8 | **2.618e-8** | NanoBench hover identification; Bitcraze bench data bracket it. |
-| torque coefficient (N m/(rad/s)^2) | 5.45e-11 | 4.8e-11 | 5.2e-11 - 5.7e-11 | **5.45e-11** | NanoBench c_l/480 ratio; within the Bitcraze scatter band. |
-| max motor speed (rad/s) | 2800 | 2600 | 2760-2840 | **2800** | Full-throttle 1S measurement; monotone ESC fit anchored at this value. |
-| motor time constant (s) | 0.02 | 0.02 | 0.018-0.025 | **0.02** | Step-response identification. |
+| Parameter | Adopted | Where the number comes from | Status |
+|---|---|---|---|
+| mass (kg) | 0.04085 | NanoBench, Ullah & Baca (2026), arXiv:2603.09908, Sec. IV-B1 and repository README: 27 g airframe plus markers and charging deck. | Cited (read 2026-11-14) |
+| `Jxx = Jyy`, `Jzz` (kg m^2) | 2.3951e-5, 3.2347e-5 | Attributed to Förster (2015), ETH BSc thesis. | Thesis record confirmed; values not re-read. The thesis vehicle is a 27 g Crazyflie 2.0, so using its inertia at 40.85 g is an approximation. |
+| arm (m) | 0.0397 | Attributed to the Bitcraze frame geometry and `cf2x.urdf`. | Not re-checked |
+| thrust coefficient (N s^2/rad^2) | 2.618e-8 | **Our own fit**: median of `m g / (4 Omega^2)` over 9,179 hover samples from 10 NanoBench trajectories (`identify_params.py` and `swift_physics_headless.py:351` in the predecessor repository `rl-drone-flight-simulator`). | Own fit, to be repeated: NanoBench logs motor PWM, not rotor speed, so `Omega` came from the ESC map later rejected as non-monotone (BUGS R-1). The value appears nowhere in the NanoBench paper, README, code or metadata. |
+| torque coefficient (N m s^2/rad^2) | 5.45e-11 | Assumed ratio `c_l / 480`; the yaw identification was too noisy to fit it. | Project choice; varied ±15 % by domain randomisation |
+| motor time constant (s) | 0.02 | Labelled "best guess" in the predecessor simulator (`default_demo.py:600`). No step-response identification was done. | Project choice; defended by the motor-lag ×0.5 / ×2 rows of `results/tables/quad_limits_repeatability.csv` (largest envelope change 4.1 % / 5.9 %) |
+| max motor speed (rad/s) | 2800 | Labelled "best guess, typical small-quad max motor speed" in the predecessor simulator (`default_demo.py:601`). The earlier "Bitcraze" text was unsupported. | Project choice; sets the thrust ceiling (thrust-to-weight 2.05) |
+| ground effect | ramp to +20 % below 0.15 m | Linear thrust ramp `1 + 0.20 (1 - z/0.15)` (`EQ-SIX-10`). It is not the Cheeseman & Bennett formula `T_g/T_inf = 1/(1 - R^2/(16 Z^2))` (ARC R&M 3021, Sept. 1955, eq. 2, p. 2; scan read 2026-11-15), which is cited only for the existence of the effect. | Project choice; inactive above 0.15 m, so no interception result depends on it |
 
-**F6/F7/F8 resolution.** NanoBench is primary because its mass and inertia were
-identified together in flight and its thrust/torque coefficients reproduce the
-hover equilibrium. The `cf2x.urdf` set is kept as the secondary PyBullet
-parameter set so P3.7 can separate model-structure error from parameter error.
-The adopted values are in `configs/quadrotor.yaml`; no value is a TODO.
+**What this means for the results.** The mass is cited. The thrust coefficient
+sets thrust-to-weight (2.05) and so the acceleration limits; it rests on a fit
+that used a rejected ESC map and must be repeated once rotor speed is available
+(BUGS #27, #11). Top speed is set by the assumed rotor drag (section 5 and
+`docs/mathematics.md` 6.1). The adopted values are in `configs/quadrotor.yaml`,
+each with an honest `source` string.
 
 ## 2. Motor/ESC fit (P3.4; F9)
 

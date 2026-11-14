@@ -94,6 +94,9 @@ a_{t,\max}\hat{\mathbf v}_M, & \text{non-holonomic and speed management active},
 \]
 
 with “active” meaning `||v_M|| < 0.96 v_max` **or** `v_cl < 0.45 v_max`.
+The term is implemented alone in `compute_axial_acceleration()`
+(`interceptor/guidance/apn.py`, re-exported by `kinematics.py`) and is only
+added by `compute_3d_apn_command(..., include_axial_boost=True)`.
 The normalised command is then `a_APN + a_axial`; the two arms A1/A2 differ in
 whether the measurement is raw or filtered and whether this term is present.
 
@@ -130,13 +133,18 @@ selects by kill rate then median miss. The result is written back to
 The kill radius is a physical rule, not a tuned threshold:
 
 \[
-r_{\rm kill} = \max(2\,\ell_{\rm span}, r_{\rm lethal}).
+r_{\rm kill} = \tfrac12 b_{\rm target} + \tfrac12 b_{\rm interceptor}.
 \tag{EQ-GEO-4}
 \]
 
-Quad: `2 * 0.0397 m` rotor span plus a 1.5 m debris margin gives 3 m. Aerosonde:
-2.9 m span plus 9 m fragment radius gives 12 m. AIM5: the warhead lethal radius
-is 10 m. Initial range follows a stated time-to-intercept window:
+This is a hit-to-kill contact rule: the interceptor must touch the target's
+span. No warhead is assumed, because no credible lethal-radius figure was found
+(`data/lethality_and_gload.csv`); the rule is therefore conservative.
+Quad against a Shahed-136 (span 2.5 m, Janes) with a Crazyflie (0.092 m, Bitcraze
+datasheet): 1.30 m. Aerosonde (2.8956 m) against an Orlan-10 (3.1 m, Airforce
+Technology profile, trade press): 3.00 m. AIM5 (0.15 m) against an F-16C (9.8 m, USAF fact sheet): 4.98 m. P9
+reports the full miss-distance distribution, so no conclusion depends on the
+radius. Initial range follows a stated time-to-intercept window:
 
 \[
 r_{0,\min}=v_{\rm cl,0}t_{\min},\qquad
@@ -165,8 +173,23 @@ a_{T,\max}=\rho_a a_{M,n,\max},
 \tag{EQ-TGT-1}
 \]
 
-with `rho_v = 0.40 (quad), 0.625 (fixed wing), 0.33 (missile)` and
-`rho_a = 0.48, 1.0, 0.30`. The ratios are design choices, not measurements;
+with `rho_v = 0.66 (quad), 0.765 (fixed wing), 0.33 (missile)` and
+`rho_a = 0.48, 1.0, 0.25`. The quad envelope is the closed-loop Crazyflie
+measurement of P4.9 (27.7 m/s, 15.4 m/s^2, 9.5 m/s^2 downward, jerk 88.3 m/s^3;
+section 6.1 states how far these depend on the assumed rotor drag); its target
+keeps the real speed ratio of a fielded pair, Sting 280 km/h (manufacturer
+product page) over Shahed-136 185 km/h (IRGC poster via Janes) = 1.51, giving
+18.3 m/s and, with the acceleration ratio 2.08, 7.404 m/s^2. Spawn range is
+92-277 m (the 10-25 s window of `EQ-GEO-5`).
+The fixed-wing target flies the Orlan-10 cruise speed, 110 km/h = 30.6 m/s
+(Airforce Technology profile, 24 Mar 2023; trade press, no manufacturer
+datasheet read), so the 40 m/s Aerosonde has a speed ratio of 1.31. The earlier
+choice, the Bayraktar TB2 at 46.3 m/s, was faster than the interceptor and is now
+covered by the P9.1 speed-ratio sweep instead. The missile-class target limit is the 9 g fighter
+limit (F-16C, J-20; JF-17 Block III is 8 g; `data/threat_platforms.csv` T02-T04,
+secondary sources), giving `rho_a = 88.29/358.1 = 0.25`. The quad acceleration ratio (2.08) remains a design choice
+because no g data exists for one-way attack drones. Every value's reference is in
+its `source` string in `configs/platforms.yaml` and in `docs/references.md`.
 P9 varies them in sensitivity sweeps and reports the effect on kill rate.
 
 ---
@@ -279,11 +302,14 @@ a_{t,\min}=\frac{T_{\rm idle}(V)-D(V)}{m}.
 The load factor and negative-load limits are
 
 \[
-n=\frac{L}{mg},\qquad |n|\le n_{\max}=10.5,
+n=\frac{L}{mg},\qquad -0.4\,n_{\max}\le n\le n_{\max}=3.8,
 \tag{EQ-FW-5}
 \]
 
-and the coordinated-turn rate is
+where 3.8 is the normal-category positive limit manoeuvring load factor and the
+negative limit is 0.4 times it (14 CFR 23.337, 2011 ed.). The aerodynamic limit
+`0.5 rho V^2 S C_Lmax / (m g)` is below 3.8 under 28.5 m/s, so the constant
+kinematic limit is optimistic at low speed. The coordinated-turn rate is
 
 \[
 \omega=\frac{g\sqrt{n^2-1}}{V}.
@@ -430,9 +456,9 @@ The range-dependent position standard deviation is
 \tag{EQ-SEEK-1}
 \]
 
-with `sigma_p0 = 0.5 m`, `alpha_r = 0.0025 rad`, and `kappa` the evaluation
-noise scale (headline 1.0). Velocity and acceleration noise are proportional
-to the platform's nominal target speed and manoeuvre limit:
+with `sigma_p0 = 0.5 m`, `alpha_r = 8.727 mrad` (0.5 deg), and `kappa` the
+evaluation noise scale (headline 1.0). Velocity and acceleration noise are
+proportional to the platform's nominal target speed and manoeuvre limit:
 
 \[
 \sigma_v=\kappa\,0.03\,v_{T,{\rm nom}},\qquad
@@ -440,21 +466,94 @@ to the platform's nominal target speed and manoeuvre limit:
 \tag{EQ-SEEK-2}
 \]
 
-A Bernoulli draw with probability 0.04 drops the measurement; the filter
-coasts with the constant-acceleration prediction and decays acceleration by
-0.98 per 20 ms step (`EQ-SEEK-3`). Otherwise the alpha-beta-gamma update is
+Each step a Bernoulli draw with probability `0.04 kappa` drops the measurement.
+The filter then coasts on its constant-acceleration prediction and holds the
+acceleration estimate unchanged:
+
+\[
+\hat p^+=\hat p+\hat v\,\Delta t+\tfrac12\hat a\,\Delta t^2,\qquad
+\hat v^+=\hat v+\hat a\,\Delta t,\qquad
+\hat a^+=\hat a .
+\tag{EQ-SEEK-3}
+\]
+
+Otherwise position, velocity and acceleration are each measured (`y_p, y_v, y_a`
+with the noise above) and each channel is blended with its own prediction, using
+the same `p^-`, `v^-` as `EQ-SEEK-3`:
 
 \[
 \begin{aligned}
-\hat p^+ &= \hat p^-+\alpha_p(y-\hat p^-),\\
-\hat v^+ &= \hat v^-+\alpha_v(y-\hat p^-)/\Delta t,\\
-\hat a^+ &= \hat a^-+\alpha_a(y-\hat p^-)/\Delta t^2,
+\hat p^+ &= \alpha_p\,y_p+(1-\alpha_p)\,\hat p^-,\
+\hat v^+ &= \alpha_v\,y_v+(1-\alpha_v)\,\hat v^-,\
+\hat a^+ &= \alpha_a\,y_a+(1-\alpha_a)\,\hat a,
 \end{aligned}
 \tag{EQ-SEEK-4}
 \]
 
-with `(alpha_p, alpha_v, alpha_a) = (0.65, 0.55, 0.35)` at 50 Hz. The same
-gains are used for every platform so the noise schedule is comparable.
+with `(alpha_p, alpha_v, alpha_a) = (0.65, 0.55, 0.35)` at 50 Hz. This is a
+fixed-gain complementary (exponential-smoothing) filter on three measured
+channels, not the residual-driven alpha-beta-gamma form, in which velocity and
+acceleration are inferred from the position residual alone. The same gains are
+used for every platform so the noise schedule is comparable. Implemented by
+`SeekerSensorFilter.observe` in `interceptor/guidance/seeker.py`; the values are
+read from `configs/seeker.yaml`.
+
+**Status of these numbers.** `sigma_p0`, the 3 % and 18 % fractions, the 4 %
+dropout and the fixed gains are project choices; no datasheet gives this model.
+(Earlier source text attributing them to motion-capture residuals and measured
+radio packet loss was wrong and was removed on 2026-11-14.) The one sourced
+value is the angular term: a manufacturer statement for counter-UAS radars
+(Echodyne, hosted by the US International Trade Administration, 2024) gives
+EchoShield angular tracking accuracy below 0.5° (8.727 mrad) and EchoGuard about
+1° azimuth (17.5 mrad), range accuracy 1–2 m. The statistic (1σ or bound) is not
+stated; we take the 0.5° bound as 1σ, the pessimistic reading. The P9.1 sweep
+scales all sigmas and the dropout probability by `kappa ∈ {0, 0.25, 0.5, 1, 2, 4}`:
+`kappa = 0.25` is close to the earlier unsourced 2.5 mrad, `kappa = 1` is
+EchoShield and `kappa = 2` is EchoGuard, so the sweep shows how results change
+from near-ideal to twice radar-grade noise.
+
+### 5A.1a Kalman tracker (P5.4)
+
+Option `filter_type="kalman"` replaces the fixed-gain filter. Per axis the state
+is `x=[p,v,a]`, with the white-noise-jerk constant-acceleration model
+(Bar-Shalom, Li and Kirubarajan 2001, section 6.2.3):
+
+\[
+x_{k+1}=Fx_k+w_k,\quad
+F=\begin{bmatrix}1&\Delta t&\Delta t^2/2\0&1&\Delta t\0&0&1\end{bmatrix}.
+\tag{EQ-KF-1}
+\]
+
+\[
+Q=q_j\begin{bmatrix}\Delta t^5/20&\Delta t^4/8&\Delta t^3/6\
+\Delta t^4/8&\Delta t^3/3&\Delta t^2/2\
+\Delta t^3/6&\Delta t^2/2&\Delta t\end{bmatrix}.
+\tag{EQ-KF-2}
+\]
+
+The seeker measures all three components, so `H=I` and
+
+\[
+y_k=x_k+v_k,\quad R=\mathrm{diag}(\sigma_p^2,\sigma_v^2,\sigma_a^2),
+\tag{EQ-KF-3}
+\]
+
+with the sigmas of EQ-SEEK-1/2 evaluated at the current range. The jerk
+spectral density is
+
+\[
+q_j=(a_{T,\max}/\tau_{\rm man})^2,
+\tag{EQ-KF-4}
+\]
+
+with manoeuvre time scale `tau_man = 1 s` (a design parameter, not a measured
+value). On dropout only the prediction runs. The update uses the Joseph form,
+`S=P+R`, `K=PS^{-1}`:
+
+\[
+P^+=(I-K)P(I-K)^\top+KRK^\top.
+\tag{EQ-KF-5}
+\]
 
 ### 5A.2 Rotor aerodynamic polynomial
 
@@ -537,8 +636,14 @@ U(t)=
 \tag{EQ-WIND-4}
 \]
 
-The existing `theta_range`/`sigma_range` entries in `configs/quadrotor.yaml`
-map the legacy OU parameters onto `EQ-WIND-1`. `tests/unit/test_dryden_wind.py`
+The `mean_std`, `theta_range` and `sigma_range` entries in
+`configs/quadrotor.yaml` belong to a separate, simpler gust model: an
+Ornstein-Uhlenbeck process used only to randomise wind while training the flight
+controller. They are project choices, not Dryden parameters; the stationary gust
+standard deviation `sigma / sqrt(2 theta)` spans 0.21-3.16 m/s, against Dryden
+`sigma_w = 0.1 W20` = 0.77 / 1.54 / 2.31 m/s for the light / moderate / severe
+`W20` of 15 / 30 / 45 knots (MathWorks Dryden block documentation, implementing
+MIL-F-8785C; the specification itself was not read). `tests/unit/test_dryden_wind.py`
 checks the parameters, the variances over 30 ten-minute realisations (5 %),
 the spectral shape against `EQ-WIND-3`, and the gust shape.
 
@@ -601,14 +706,33 @@ all interceptor work:
 \]
 
 It is dissipative by construction (`v . F = -m sum k_i v_i^2 <= 0`) and gives a
-terminal speed `a_max / k`. The values `k = (0.5, 0.5, 0.7) 1/s` are an
+terminal speed `a_max / k`. The values `k = (0.5, 0.5, 0.5) 1/s` are an
 **assumption** at the order of magnitude of published rotor-drag identifications
-(Faessler et al., RA-L 2018), not a Crazyflie fit, so every speed measured with
-it carries that caveat. The polynomial remains selectable
+(Faessler et al., RA-L 2018: `d_x` 0.49-0.54, `d_y` 0.24-0.39 1/s on a 610 g
+quadrotor, `d_z` not identified), not a Crazyflie fit. `k_z` was 0.7 until
+2026-11-14 and was set equal to `k_x, k_y` because no published value supports a
+different vertical coefficient.
+
+**The quad top speed is drag-limited, and the drag is assumed.** The repeatability
+study (`scripts/check_quad_limits_repeatability.py`,
+`results/tables/quad_limits_repeatability.csv`) re-measures the P4.9 envelope
+under changed settings. Largest change of any limit against the baseline
+(27.7 m/s, 15.4 m/s^2): measurement-procedure settings A 5.1 %, B 5.4 % (top speed
+moves with the hold fraction, slightly over the 5 % target); motor lag x0.5
+4.1 %, x2 5.9 %; `k_z = 0.7` gives 22.0 m/s (20.5 %); `k_z = 0` gives 513 m/s,
+that is, no bound. The acceleration limits, set by thrust-to-weight, move by at
+most 11 % across the drag cases; the top speed is only as good as the drag
+value. For that reason the guidance study keeps the interceptor/target speed
+ratio, not the absolute speed, tied to real vehicles (section 1.7), and P9.1
+sweeps that ratio. The polynomial remains selectable
 (`aero_model="polynomial"`) and is what the fixture-parity tests use.
 Implemented by `aero.rotor_drag_force_torque`.
 
-with `h_ge = 0.15 m` and `kappa_max = 0.20`.
+with `h_ge = 0.15 m` and `kappa_max = 0.20`. This linear ramp is a project
+choice. It is not the classical hover result of Cheeseman & Bennett (ARC R&M
+3021, 1955, eq. 2), `T_g/T_inf = 1/(1 - R^2/(16 Z^2))`, which is cited only as
+the reason a thrust increase near the ground exists. The ramp is inactive above
+0.15 m, so no interception result depends on it.
 
 ### 6.2 Rotation
 
@@ -681,6 +805,17 @@ and each rotor follows a first-order lag
 \qquad \tau_m=0.02\,{\rm s}.
 \tag{EQ-SIX-6}
 \]
+
+The maximum motor speed (2800 rad/s) and efficiency (0.7) are labelled "best guess" in the predecessor simulator and have no source; they set the thrust ceiling, hence thrust-to-weight 2.05 and the acceleration limits.
+
+**Status of the rotor constants.** `c_l = 2.618e-8` is our own fit (median of
+`m g / (4 Omega^2)` over 9,179 hover samples from 10 NanoBench trajectories), not
+a value published by NanoBench; rotor speed was not logged and came from an ESC
+map that was later rejected (BUGS R-1), so the fit has to be repeated. `c_d` is
+the assumed ratio `c_l / 480`. `tau_m = 0.02 s` is an assumed value with no
+step-response identification behind it; halving or doubling it changes the
+measured flight envelope by at most 4.1 % and 5.9 %
+(`results/tables/quad_limits_repeatability.csv`).
 
 The legacy simulator evaluated thrust at the half-step speed
 `Omega + dt/2 * Omega_dot`; that correction is retained for fixture parity but
@@ -790,7 +925,215 @@ headroom, `w_T` keeps the collective honest. Weights are in `configs/fc.yaml`
 and are subject to the P9.3 sensitivity run; they are design choices, not
 measurements.
 
-## 9-10. Forward references
+## 9. Guidance observation and reward
 
-Section 9 (guidance observation and reward) and section 10 (algorithms) are
-completed by P5 and P6. Reserved IDs: `EQ-TRK-*`, `EQ-GUIDE-*`.
+### 9.1 Observation
+
+One frame is the 16-value vector
+
+\[
+\mathbf x_t=\Big[
+\frac{\Delta\mathbf p}{s_{pos}},\,
+\frac{\Delta\mathbf v}{s_{vel}},\,
+\frac{\mathbf v_M}{s_{vel}},\,
+\frac{R}{s_{range}},\,
+\frac{v_c}{s_{closing}},\,
+\frac{\boldsymbol\omega_{LOS}}{s_{los}},\,
+\frac{t_{go}}{s_{tgo}},\,
+\mathbb 1_{\text{visible}}
+\Big],
+\tag{EQ-OBS-1}
+\]
+
+where `dp = est_p_T - p_M`, `dv = est_v_T - v_M`, `R = |dp|`,
+`vc = -dv.dp_hat`, `omega_LOS = dp x dv / max(R,15)^2` and
+`t_go = clip(R / max(vc,0.1), 0, max_time)`.  The divisors are the
+per-platform `ObservationScales` (`interceptor/guidance/observation.py`); they
+default to the platform envelope and are overridden by the sourced
+`observation_scales` block in `configs/platforms.yaml` (P5.8, fix F18).  Every
+component is clipped to `[-10, 10]`.
+
+The actor observation concatenates the current frame with `m` history frames
+sampled every `p` decisions, and `n` future samples of
+`(rel_pos(3), rel_vel(3), visible(1))` produced by the constant-acceleration
+prediction at horizons `q, 2q, ..., nq` steps:
+
+\[
+\mathbf o^{actor}=
+\big[\mathbf x_{t},\mathbf x_{t-p},\ldots,\mathbf x_{t-mp}\big]
+\;\Vert\;
+\big[\mathbf z_{t+q},\ldots,\mathbf z_{t+nq}\big],
+\qquad
+\dim = 16(1+m)+7n .
+\tag{EQ-OBS-2}
+\]
+
+With `m=3, p=2, n=3, q=5` this gives 16x4 + 7x3 = **85** actor values.  The
+privileged critic block is a separate **16** values (time remaining, optimal
+acceleration and velocity from the oracle, and the true target future position,
+velocity and acceleration), so the total is **101**.  Implemented by
+`AsymmetricObsBuilder` in `interceptor/guidance/observation.py`.
+
+### 9.2 Reward
+
+Let `d` be the true range, `r_init_max` the spawn-range scale and
+`w_progress` the progress weight.  The progress potential is
+
+\[
+\Phi(s)=-\frac{w_{progress}\,d}{r_{init,max}},
+\tag{EQ-GUIDE-1}
+\]
+
+and the progress reward is its discounted difference,
+
+\[
+r_{progress}=\gamma\,\Phi(s')-\Phi(s),
+\tag{EQ-GUIDE-2}
+\]
+
+which is potential-based shaping and therefore leaves the optimal policy
+unchanged (Ng, Harada & Russell, 1999).  The remaining shaping terms are
+
+\[
+r_{aux}=w_{align}\,\hat v_M\!\cdot\!\hat R
+      -w_{los}\|\boldsymbol\omega_{LOS}\|
+      -w_{zem}\frac{\mathrm{ZEM}}{\max(d,10)},
+\tag{EQ-GUIDE-3}
+\]
+
+with `v_hat_M` the unit interceptor velocity, `R_hat` the LOS direction and
+`ZEM` the zero-effort-miss norm.  Action penalties are
+
+\[
+r_{act}=-w_{res}\|\mathbf u\|^2-w_{smooth}\|\mathbf u_t-\mathbf u_{t-1}\|^2,
+\tag{EQ-GUIDE-4}
+\]
+
+where `u` is the normalised residual in `[-1,1]^3` and `w_res` is 0.04 in
+`apn_rl`, 0.015 in `pure_rl` and zero for the pure-APN arms.  The time cost is
+
+\[
+r_{time}=-c_{time},
+\tag{EQ-GUIDE-5}
+\]
+
+and the terminal terms are
+
+\[
+r_{term}=
+\begin{cases}
+B_{kill}+B_{speed}\left(1-\dfrac{k}{K}\right), & \text{killed},\\
+-B_{crash}, & \text{crashed},\\
+-B_{div}\dfrac{d_{miss}}{r_{init,max}}, & \text{diverged},
+\end{cases}
+\tag{EQ-GUIDE-6}
+\]
+
+with `k` the step index and `K` the episode step budget.  The total reward is
+
+\[
+r=r_{progress}+r_{aux}+r_{act}+r_{time}+r_{term}.
+\tag{EQ-GUIDE-7}
+\]
+
+The discount is chosen from the episode horizon `H` so that a terminal bonus
+at the first decision retains a fraction `rho`:
+
+\[
+\gamma=\rho^{1/H}.
+\tag{EQ-GUIDE-8}
+\]
+
+The notebook horizon is `H = 22 s / 0.02 s = 1100` steps.  With `rho = 0.1`,
+`gamma = 0.1^(1/1100) = 0.997909`, so a 150-point kill is worth 15.0 at step 0
+and `gamma^1100 = 0.1`.  The old `gamma = 0.995` discounted the same bonus to
+0.6 (fix F16).  The weights and the discount are in `configs/guidance.yaml`
+(`reward:`) and mirrored for PPO in `configs/model.yaml`; the implementation is
+`interceptor/guidance/reward.py::GuidanceReward`.  The exact v2 notebook reward
+is retained in `notebook_reward()` for golden-fixture replay only.
+
+## 10. Algorithms
+
+The algorithm derivations, criteria table and the pre-registered decision rule
+are written in `docs/algorithm_selection.md` (P6.1/P6.2).  PPO, SAC and TD3 are
+constructed by `training/algos.py`; the selected algorithm is recorded in
+`configs/training.yaml::selected_algo`.  Reserved equation IDs `EQ-ALG-*` are
+not needed because no algorithm equation is evaluated in code.
+
+## 11. Evaluation statistics
+
+The protocol reports a binomial kill rate, a miss-distance median/IQR, a paired
+McNemar test on kill outcomes and a paired bootstrap on miss distance.  The
+implementation is `interceptor/eval/stats.py`.
+
+**Evaluation protocol.** Each reported cell (platform, arm, target set) uses 100
+episodes on fixed seeds starting at 10000, shared across arms so that
+comparisons are paired. The count follows from the precision wanted: the Wilson
+95 % half-width (`EQ-EVAL-1`) is largest at `p_hat = 0.5`, where 100 episodes
+give at most ±9.6 percentage points (30 episodes would give ±16.9, 400 would
+give ±4.9). Differences between arms smaller than that are not claimed from the
+intervals; they are tested with the paired McNemar test (11.3). Sweeps and
+smoke tests use fewer episodes and are labelled as such. Training budgets
+(`configs/training.yaml`: 1,000,000 flight-controller steps, 5,000,000 guidance
+steps, 200,000 per run for algorithm selection, 3 training seeds) were set from
+the throughput benchmark (`results/tables/training_throughput.json`: 281 and
+2,583 steps/s on the laptop, about 1.0 h and 0.5 h per run at those rates; the
+Colab figures are still to be measured).
+
+### 11.1 Wilson score interval
+
+For `k` kills in `n` episodes with `p_hat = k/n` and `z = 1.959964` (95 %),
+
+\[
+\frac{\hat p+\frac{z^2}{2n}
+      \pm z\sqrt{\frac{\hat p(1-\hat p)}{n}+\frac{z^2}{4n^2}}}
+     {1+\frac{z^2}{n}}.
+\tag{EQ-EVAL-1}
+\]
+
+Unlike the normal approximation it stays inside `[0,1]` and is reliable for
+the small per-cell counts in the protocol.
+
+### 11.2 Median and IQR
+
+For a sample `x_(1) <= ... <= x_(n)`, the reported location and spread are
+
+\[
+\tilde x=\operatorname{median}(x),\qquad
+\mathrm{IQR}=Q_{0.75}-Q_{0.25},
+\tag{EQ-EVAL-2}
+\]
+
+where the quartiles use linear interpolation between order statistics.  The
+median is robust to the heavy right tail of miss distances.
+
+### 11.3 Exact McNemar test
+
+For paired binary outcomes let `b` be the number of seeds/episodes where A
+kills and B does not, and `c` the reverse.  Under the null `b` and `c` are
+exchangeable, so
+
+\[
+p=2\sum_{k=0}^{\min(b,c)}\binom{b+c}{k}2^{-(b+c)},
+\qquad p\leftarrow\min(p,1).
+\tag{EQ-EVAL-3}
+\]
+
+This is the exact two-sided binomial test on the discordant pairs (the
+implementation uses `scipy.stats.binomtest`).
+
+### 11.4 Paired bootstrap
+
+For paired samples `(x_i, y_i)`, draw `B` index sets with replacement and form
+
+\[
+\Delta_b = \operatorname{stat}(\{x_{i}:i\in I_b\})
+          - \operatorname{stat}(\{y_{i}:i\in I_b\}),
+\qquad
+\text{CI}=[\Delta_{(0.025)},\Delta_{(0.975)}].
+\tag{EQ-EVAL-4}
+\]
+
+The same indices are used for both arms, which preserves the pairing.  The
+default is `B = 2000` with the caller's explicit seed.
+

@@ -1,146 +1,56 @@
-# CURRENT_WORK — APN + RL Autonomous Interceptor Drone
+# CURRENT_WORK — Layered Interceptor System (plan v2.0)
 
-Implementation of `updation_plan.md` v1.0: a pivot **from** a physics-based
-quadrotor simulator (RK4 / PID / motor RPM / Crazyflie) **to** a pure 3-D
-path-planning interceptor that combines classical **Augmented Proportional
-Navigation (APN)** with a **PPO residual** policy. The environment emits velocity
-commands (`vx, vy, vz, ωx, ωy, ωz`), not motor commands.
+Last updated: 2026-11-15. Branch `v2` (remote `origin/v2`). Plan: `docs/implementation_plan.md`.
+The v1.0 status (APN+RL three-stage package, "all 12 phases complete") is superseded and kept only in git history.
 
-Status: **all 12 phases complete; suite green.** The previous physics project was
-archived to `C:\Users\ADMIN\Desktop\projects\github_repos\rl-drone-flight-simulator`
-(commit `493d370`, remote `github.com/siddhmehta5131/interceptor-drone-rl`) and
-the old tree was deleted here per plan §5.1. This workspace is a fresh
-implementation.
+Fast tests: **242 passed, 7 deselected** (`python -m pytest tests -q -m "not slow"`, about 60 s).
+Equation check: 96 equation IDs, all cited. Value audit: 1683 rows, 0 MISSING, 451 PROJECT_CHOICE
+(`docs/tuned_values_plan.md`). **Nothing since commit 5741b8b is committed.**
+**Every result table predates the current platform values and must be regenerated (BUGS #23).**
 
----
+## Progress against the plan
 
-## Deliverable layout
+| Phase | State | Evidence / what is missing |
+|---|---|---|
+| P0 Safeguard | DONE (P0.1 checkpoints and P0.5 Drive folder not verifiable from the repo) | tags `v1.0-local`, `v1.0-pre-consolidation`; `origin/v2`; `.gitignore` allows results/figures, ignores `models/*.obj`; `docs/baseline_2026-11.txt` |
+| P1 Consolidate | DONE | tag `v2.0-consolidated`; package `interceptor/`; 6 sim + 48 manoeuvre + 18 env golden fixtures; unified `guidance/env.py` with `mode` and `target_set` |
+| P2 Sources / derivations | DONE | `configs/*.yaml` and `configs/airframes/*` in `{value, unit, source}`; `docs/source_table.md`; `docs/mathematics.md` sections 1-5A |
+| P3 Simulator | Model work DONE; validation BLOCKED/PENDING | timestep parameter, Dryden wind, analytic tests, convergence, linear rotor-drag fallback (P3.5). Pending: P3.4 data fit, P3.5 held-out refit, P3.7 PyBullet cross-check, P3.8 NanoBench, P3.9 closed-loop wind, notebook `01_sim_validation` (written 2026-11-14, unexecuted) |
+| P4 Flight controller | MOSTLY DONE | `fc/` env, setpoints, metrics, B1 PID, B2 firmware PID, attitude loop, bridge, `quad_limits.json` (P4.9). Pending: P4.7 B3 (Colab), P4.10 B1/B2 full-metric results table |
+| P5 Guidance | DONE (code + A1/A2 evaluation) | P5.1-P5.12 complete. P5.13 tables come from `scripts/evaluate_guidance.py`. |
+| P6 Algorithms | DONE except compute | `docs/algorithm_selection.md` (PPO/SAC/TD3 derivations, criteria table, pre-registered rule, provisional PPO), `training/algos.py`, `configs/training.yaml`, tests, `notebooks/02_algorithm_selection.ipynb`. 18-run comparison pending (BUGS #19). |
+| P7 Training | DONE except runs/release | `training/runner.py` (resumable, checkpoints, DONE, curves, hashes), `training/manifest.py`, `scripts/build_manifest.py`, throughput benchmark, notebooks 03/04, asymmetric PPO. Checkpoints/release pending (BUGS #19). |
+| P8 Evaluation | CODE DONE; results partial | `eval/stats.py`, `scripts/evaluate_guidance.py`, `evaluate_guidance_arms.py`, `evaluate_fc.py`, `evaluate_closed_loop.py`, `collect_guidance_distributions.py`, `plot_guidance.py`, `notebooks/06_evaluate_all.ipynb`. Learned arms/B3/clean Colab pending (BUGS #19). |
+| P9 Extras | CODE DONE; runs pending | `eval/sweeps.py`, `scripts/sweep_robustness.py` (P9.1, P9.6), `scripts/residual_analysis.py` (P9.4), `configs/ablations.yaml` + env hooks `obs_ablate`, `residual_authority`, `gamma` (P9.2, P9.3, P9.5), `notebooks/05_ablations_and_sweeps.ipynb`. Needs checkpoints. |
+| P10 Visualiser | CODE DONE; delivered set partial | `visualiser/schema.py` (one log schema, adapters for guidance / fc / closed loop / legacy), `visualiser/render.py` (guidance, fc traces, side-by-side), `scripts/render_videos.py`, notebook 07, primitive meshes. Local 640x360 videos exist for closed loop, fc, quad guidance; A3 clips need a checkpoint. OBJ licence open (BUGS #21). |
+| P11 Documents | NOT STARTED | report, final docs, clean-room run. |
 
-```
-├── run.py                      ← one-file training runner (edit this)
-├── conftest.py                 ← pytest sys.path bootstrap + 'slow' marker
-├── requirements.txt            ← runtime + training deps (plan §18.1)
-├── configs/
-│   ├── stages.yaml             ← 3-stage curriculum (authoritative table)
-│   ├── model.yaml              ← PPO architecture + 6 privileged critic fields
-│   ├── config.yaml             ← global/obs/interceptor/apn/stages settings
-│   └── visualiser.yaml         ← PyVista scene / camera / HUD settings
-├── src/
-│   ├── api.py                  ← train_model() / evaluate_model()
-│   ├── results.py              ← TrainResult / ModelResult / StageOutcome
-│   ├── guidance/               ← apn.py, kinematic_model.py, optimal_trajectory.py
-│   ├── envs/                   ← stage_config, target_generator, obs_builder,
-│   │                             reward, intercept_env
-│   ├── prediction/             ← base, const_vel, kalman
-│   ├── training/               ← orchestrator, callbacks, curriculum,
-│   │                             asymmetric_policy, checkpoint_manager,
-│   │                             weight_transfer
-│   └── utils/                  ← config_loader, model_loader, logger
-├── visualiser/                 ← renderer, animator, scene_builder, cli
-├── scripts/                    ← train, evaluate, visualise, smoke_test,
-│                                 download_models
-├── tests/                      ← pytest suite (unit + integration)
-├── models/                     ← interceptor_drone.obj, target_drone.obj
-└── data/                       ← runs/, videos/, evaluation/
-```
+Estimate: P0-P8 code is essentially complete (about 75 % of plan tasks). The
+remaining work is compute: training, learned-arm evaluation, B3, and a clean
+Colab rerun. No trained checkpoints exist yet, so no RL performance numbers are
+reported.
 
-## Build phases — status
+## Deliverable checklist (plan section 9)
+D1 analytic tests ticked; rest of D1 pending. D2-D8, reproducibility: not started.
 
-| Phase | Deliverable | Status |
-|-------|-------------|--------|
-| 0 | Backup old project to GitHub | DONE — `493d370`, repo renamed `interceptor-drone-rl` |
-| 1 | Clean-slate deletion (plan §5.1) | DONE — old physics tree removed, index cleared |
-| 2 | New project structure (plan §6) | DONE |
-| 3 | APN engine (`apn.py`, `kinematic_model.py`, `optimal_trajectory.py`) | DONE |
-| 4 | Gymnasium env (`intercept_env.py`) | DONE — obs 101, action 3 |
-| 5 | Observation builder (16-dim frame, history, future, privileged) | DONE — actor 85 |
-| 6 | Reward (`reward.py`) | DONE — 13 tunable terms |
-| 7 | Optimal-trajectory oracle | DONE — trapezoidal + cubic-Hermite |
-| 8 | PPO training pipeline (orchestrator, policy, callbacks) | DONE |
-| 9 | 3-stage curriculum (`configs/stages.yaml`, scheduler) | DONE |
-| 10 | PyVista 3D visualiser + MP4 export | DONE |
-| 11 | Evaluation (`scripts/evaluate.py`) | DONE |
-| 12 | Tests + smoke suite; docs | DONE |
+## Intentionally left behind (P1.10)
+Old 8-stage environment, its training pipeline, `stage-runtime/`, probe scripts (in the archived simulator repo).
 
-## Verified behaviour
-
-* `python scripts/smoke_test.py` → **11/11 PASS**.
-* `python -m pytest tests/ -q -m "not slow"` → **52 passed, 1 deselected**.
-* `python -m pytest tests/ -q` (incl. end-to-end) → **53 passed**.
-* Observation dimensions: actor **85**, privileged **16**, env **101**;
-  action space **(3,)** — asserted for every stage.
-* **Pure-APN** (zero RL action) rollouts: stage 1 **12/12** kills, stage 2
-  **12/12**, stage 3 **0/12** — APN suffices for predictable targets; the RL
-  residual is required for evasive ones.
-* Visualiser writes valid MP4s off-screen. Two demo animations rendered
-  (APN-only, no trained model): `data/videos/stage1_static.mp4` (68 frames) and
-  `data/videos/stage2_polynomial.mp4` (105 frames).
-* Real drone meshes are wired up with **per-model transforms**: raw units differ
-  (interceptor 12.4×3.4×8.8, target 3.1×2.0×3.9), so each uses its own scale
-  (`interceptor_scale: 0.1612`, `target_scale: 0.5114`, ~2 m max dimension) and
-  proper cube-rotation code (`interceptor_rotation: I08`, `target_rotation: T21`)
-  to render upright and front-facing.
-
-## Key implementation choices (vs. the plan)
-
-1. **APN form.** The plan's literal `N'(V_rel × ω_LOS)` cross-product is not
-   dimensionally consistent along the LOS; the equivalent zero-effort-miss form
-   `N'·perp(V_rel)/t_go + (N'/2)·perp(a_T)` is implemented.
-2. **`t_go` bound.** Added `t_go_max = 20 s` (clip) — without it `t_go` explodes
-   when the interceptor opens the range and ZEM (and reward) blow up.
-3. **ZEM normalisation.** Reward uses `−k_ZEM·|ZEM|/max(distance,1)` instead of
-   the raw metric term.
-4. **Windows vec-env.** `DummyVecEnv` (SB3 `SubprocVecEnv` needs a `__main__`
-   guard on Windows); `n_parallel_envs = 8`.
-5. **Models & orientation.** `models/*.obj` are real user-supplied meshes in
-   mixed units, so the visualiser applies **per-model scale and rotation** (see
-   "Verified behaviour"). `scripts/download_models.py` can still emit
-   placeholders but only overwrites existing files with `--force`.
-6. **Shadows opt-in.** Plan §14.3 called `enable_shadows()` unconditionally; on
-   this headless GLES host the shadow shaders spam-error and roughly double
-   render time, so shadows are now opt-in (`visualiser.yaml` → `lighting.shadows`).
-   The visualiser CLI also gained `--resolution WxH` (e.g. `1280x720`) to speed
-   up CPU-only renders.
-
-## How to run
-
-```bash
-pip install -r requirements.txt
-
-python scripts/smoke_test.py                                   # 11/11 fast checks
-python -m pytest tests/ -q -m "not slow"                       # 52 unit tests
-python -m pytest tests/ -q                                     # + end-to-end
-
-python scripts/train.py --stages 1 --name smoke --steps 20000  # smoke train
-python scripts/train.py --stages 1,2,3 --name apn_rl_v1        # full curriculum
-
-python -m visualiser --model apn --stage all --output-dir data/videos
-python -m visualiser --model apn --stage 1 --resolution 1280x720 \
-  --output data/videos/stage1_static.mp4
-python scripts/evaluate.py --model data/runs/apn_rl_v1/ppo_interceptor/final.zip \
-  --stage 3 --episodes 100 --render
-```
-
-## Model orientation workflow
-
-`models/*.obj` do not share an axis convention or unit system, so each needs a
-rotation code + scale. To re-derive (or set up new assets):
-
-1. Run the orientation-shot generator (normalises each mesh to ~2 m, renders all
-   **24 proper cube rotations**, labels each with a code `I00..I23` / `T00..T23`
-   and a red=+X / green=+Y / blue=+Z triad) and inspect the contact sheets.
-2. Pick the code where the drone is upright and front-facing (+X forward).
-3. Set `models.interceptor_rotation` / `target_rotation` (and the matching
-   `interceptor_scale` / `target_scale`) in `configs/visualiser.yaml`.
-
-Helpers live in `visualiser/scene_builder.py` (`cube_rotations`,
-`rotation_matrix_from`, `apply_mesh_rotation`). Currently configured:
-`I08`, `T21`.
-
-## Open items / next work
-
-* Full training budgets are large (2 M / 5 M / 10 M steps). Only a smoke budget
-  has been run on this CPU host; the real curriculum should run on a GPU host.
-* `models/*.obj` are placeholders; drop in real meshes (see `models/README.md`).
-* Non-blocking defects are tracked in `BUGS.md` (VTK shader spam,
-  `weight_transfer.py` stale constants).
+## Work log (newest last)
+- 2026-11-13: audited repo against plan; rewrote this file, BUGS.md and context.md. Next: P5.4 Kalman tracker.
+- 2026-11-13: P5.4 done: Kalman tracker, 9 tests (consistency, error < raw, dropout coast), maths 5A.1a. Next: P5.5 axial term, then P5.8/P5.9.
+- 2026-11-13: P5.5 done: `compute_axial_acceleration` moved to `guidance/apn.py`, fully documented (EQ-APN-3, activation thresholds, omni vs non-holonomic), re-exported by `kinematics.py`; 6 new axial tests in `tests/test_apn.py`. Full fast suite 213 passed. Next: P5.8 per-platform observation scales.
+- 2026-11-13: P5.8 done: `ObservationScales` (per-platform divisors with `from_limits` fallback), sourced `observation_scales` block in `configs/platforms.yaml`, `load_observation_scales`, optional `obs_scales` on the env; 12 tests assert sourced config, 85/16/101 for all platforms and |obs| ≤ 10 on random episodes. Golden-fixture parity unchanged. Logged BUGS #18 (fixed-wing presets vs config mismatch). Full fast suite 225 passed. Next: P5.9 reward/gamma.
+- 2026-11-13: P5.9 done: `guidance/reward.py::GuidanceReward` with potential-based progress (EQ-GUIDE-1/2), auxiliary/LOS/ZEM shaping (3), terminal terms (6), action penalties (4), time cost (5), total (7) and horizon discount (8). `configs/guidance.yaml::reward` sources all weights; `model.yaml` gamma raised 0.995 → 0.99791 (10 % of a terminal bonus survives 1100 steps, F16 solved). Env gains `reward_fn`/`legacy_reward` and `info["reward_terms"]`; §9 of `mathematics.md` now documents observation + reward. Fixture replay uses `legacy_reward=True` (P5.9 intentionally changes reward; trajectories/obs stay bit-identical). 11 new tests; full fast suite 236 passed. Next: P5.10 oracle cost.
+- 2026-11-13: P9 and P10 code done: trajectory schema + renderer + side-by-side, sweeps/residual/kill-radius scripts, ablation hooks (history, prediction, privileged, authority, gamma), notebooks 05 and 07. Not done (need Colab/external data): P3.4/3.5 data fits, P3.7, P3.8, P4.7 B3, all training and learned-arm results, P11 documents.
+- 2026-11-14: wrote `notebooks/01_sim_validation.ipynb`; `run_closed_loop` takes `residual_authority` (BUGS #20). All planned code is now written.
+- 2026-11-14: value audit: `scripts/build_full_value_audit.py` -> `docs/full_value_audit.csv` (every config leaf, code constant/default/kwarg/literal, notebook value and decision, with CITED / CITED_PARTIAL / DERIVED_INTERNAL / MISSING). First-pass platform data in `data/*.csv` (secondary sources, not citation-grade). Configs unchanged.
+- 2026-11-14: `configs/platforms.yaml`: missile-class target limit 11 g -> 9 g (88.29 m/s^2, a_ratio 4.06, obs scale) from fighter g limits; cross-check sources attached to 7 more platform values; 3 quad/fixed-wing target-speed values flagged DATA DISAGREES (unchanged). Presets in `guidance/platform.py` (what the env and golden fixtures use, BUGS #18) NOT changed. Audit gains CITED_SECONDARY / DATA_DISAGREES. Fast suite 273 passed.
+- 2026-11-14: audit reference pass: `scripts/reference_library.py` (verified URLs), new statuses CITED_METHOD / PROJECT_CHOICE / NO_CITATION_APPLICABLE. 5 rows remain MISSING. Open: confirm NanoBench = arXiv 2512.14450; Dryden sigma_w=0.1*W20; Crazyflie rate-loop 100 vs 500 Hz; code g=9.81 vs 9.80665.
+- 2026-11-14: audit panel pass: every row in `docs/full_value_audit.csv` now has `panel_risk` and `panel_answer`; content classes NUMERICAL_GUARD / MATH_OR_DIMENSION / UNIT_CONVERSION; method references for curriculum, domain randomisation, manoeuvres, RK4, GAE, obs normalisation. 750 rows HIGH risk (743 tuned project choices, 4 data conflicts, 3 missing: seeker noise, kill radius, fixed-wing 10.5 g). No citations were invented for tuned values.
+- 2026-11-14: kill radius / fixed-wing g research -> `data/lethality_and_gload.csv`. Values unchanged. Fixed-wing 10.5 g / 5 g and 4.2 g target flagged DATA_DISAGREES (only UAV design requirement found: +3.8 / -1.5 g). Kill radii: missile 10 m weakly supported (9-15 m), quad 3 m and fixed-wing 12 m DATA_GAP. Corrected the unsupported 'AIM5 warhead' source text. Decision pending on adopting 3.8 g.
+- 2026-11-14: sourced values made live. `PLATFORMS` now = `configs/platforms.yaml` (BUGS #18 resolved; legacy presets only for parity fixtures). Fixed-wing: a_n_max 10.5 g -> 3.8 g, a_n_down 5 g -> 1.52 g (14 CFR 23.337), omega_max 3.5 -> 1.44, target 4.2 g -> 3.8 g, target speed 25 -> 36.1 m/s (TB2 cruise). Missile target 9 g now effective. Quad unchanged (existing quad results stay valid). Verified from primary files: Dryden sigma_w=0.1 W20 (MathWorks), Crazyflie 500 Hz attitude loop and PID defaults (firmware), mavsim Aerosonde values. `docs/references.md` generated. Fast suite 273 passed.
+- 2026-11-14: all platform values re-sourced (user: every result will be rerun). Quad = measured P4.9 envelope (22 m/s, 14.8/9.4 m/s^2, tau 0.17, 4.4 rad/s), target 14.5 m/s from the Sting/Shahed-136 ratio 1.51, spawn 75-220 m. Fixed-wing target 46.3 m/s (Baykar TB2). Kill radii 1.30 / 7.45 / 4.98 m by the contact rule (EQ-GEO-4 rewritten). Old quad result tables are stale (BUGS #23); fixed-wing interceptor slower than target (BUGS #24). 30-episode APN check: quad 17/30, fixed-wing 2/30, missile 12/30. Fast suite 273 passed.
+- 2026-11-14: remaining-sources pass. F-16 values now cite the USAF ACC fact sheet (9 G, Mach 2 at altitude, 9.8 m; read via Wayback). Shahed-136 185 km/h now cites the IRGC exhibition poster via Janes (no manufacturer datasheet exists; DIA reports give range only). Sting 280 km/h: maker's page is login-walled, so it stays press-reported. Seeker: false source text removed; values are PROJECT_CHOICE with an Echodyne (ITA-hosted) cross-check; P9.1 noise grid extended to 8x. Audit: 0 MISSING; `scripts/trace_liveness.py` marks 320 values LEGACY_UNUSED, leaving 435 tuned values, planned in `docs/tuned_values_plan.md`. Found and fixed BUGS #26 (learner gamma 0.99 vs shaping gamma 0.99791); logged #25 (seeker.yaml not loaded). Fast suite 274 passed.
+- 2026-11-14: second source search. NanoBench reference corrected to Ullah & Baca (2026), arXiv:2603.09908 (40.85 g confirmed; arXiv:2512.14450 was a different 45 g data set); `PH_C_L` and motor tau are not in that paper (BUGS #27). Rotor drag: Faessler et al. (2018) values read from the paper (d_x 0.49-0.54, d_y 0.24-0.39 1/s, 610 g quad; d_z not identified, so kz = 0.7 is a project choice). Weave rate: Chadwick & Zarchan (1995) abstract gives 0.5-1 Hz as the critical range; ours is 0.18-0.32 Hz (cross-check only, values stay PROJECT_CHOICE). Imado & Miwa (1986) added as record only. Searched, nothing usable: Shahed-136 g limit (no public figure); 1-sigma radar noise model; missile seeker lock-on range from an official source (DRDO pages give only the 100 km missile range; the 25 km seeker figure stays secondary). Leads NOT added because the documents could not be opened: Ukrainian handbook VP 3-00(116)120 on mil.ee (reported Shahed speed 140-150 km/h) and the GUR War & Sanctions page (reported 150-180 km/h). The legacy 3-stage files are now in `archive/legacy_3stage/` and are no longer audited, so the audit has no LEGACY_UNUSED rows: 415 tuned values remain (not 435) and the fast suite is 231 tests (the 274 above included legacy tests).
+- 2026-11-15: decisions applied and verified. Fixed-wing target = Orlan-10 (30.6 m/s, kill radius 3.00 m); seeker angular noise 8.727 mrad (EchoShield < 0.5 deg as 1-sigma), P9.1 grid (0, 0.25, 0.5, 1, 2, 4); rotor drag kz 0.5, quad envelope re-measured (27.7 m/s, 15.4 / 9.5 m/s^2, jerk 88.3; target 18.3 m/s, 7.404 m/s^2; spawn 92-277 m). `configs/seeker.yaml` is loaded by the env (BUGS #25 fixed). New: env kwargs `maneuver_shape_scale` and `reward_scale`, `maneuver_shape` sweep, `reward_weights` ablation group, `scripts/check_quad_limits_repeatability.py`, `scripts/sweep_bridge_rate.py` (smoke-tested with 2 episodes; found the 12 rad/s limit cannot bind, BUGS #28, so the grid is 1.5 / 3 / 6 / 12). Docs: `mathematics.md` 5A.1 rewritten to match the seeker code (EQ-SEEK-3/4), 1.6/1.7, 6.1 drag caveat, 6.4 rotor-constant status, 5A.3 wind note, section 11 evaluation protocol; `sim_validation.md` section 1 rewritten (untraceable "Bitcraze measurement" column and "step-response identification" removed); `tuned_values_plan.md` rewritten. Sources: Cheeseman & Bennett R&M 3021 eq. (2) read from the scan; MathWorks Dryden page re-read (W20 15/30/45 kt), wind OU sources relabelled PROJECT_CHOICE. Data: Orlan-10 row T16, Sting row I11. 30-episode APN check: quad 15/30 raw, 25/30 filtered; fixed-wing 8/30, 11/30 (was 2/30); missile 8/30, 5/30 (was 12/30; see BUGS #23). Open: BUGS #27 unverified quadrotor.yaml sources, #29 closed-loop accel RMS. Fast suite 242 passed.

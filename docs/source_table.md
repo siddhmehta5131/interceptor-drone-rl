@@ -18,42 +18,42 @@ config files.  Regenerate after changing a sourced value; the
 
 | File | Path | Value | Unit | Source |
 |---|---|---|---|---|
-| `configs/quadrotor.yaml` | `rates.physics` | `1000` | Hz | implementation_plan.md decision S8: two RK4 steps per control step |
-| `configs/quadrotor.yaml` | `rates.flight_controller` | `500` | Hz | implementation_plan.md decision S8: matches the Crazyflie firmware loop |
+| `configs/quadrotor.yaml` | `rates.physics` | `1000` | Hz | Two RK4 steps per control step (plan decision S8); equals Crazyflie firmware RATE_MAIN_LOOP = RATE_1000_HZ (https://github.com/bitcraze/crazyflie-firmware/blob/master/src/modules/interface/stabilizer_types.h) |
+| `configs/quadrotor.yaml` | `rates.flight_controller` | `500` | Hz | Crazyflie firmware stabilizer_types.h: ATTITUDE_RATE = RATE_500_HZ (https://github.com/bitcraze/crazyflie-firmware/blob/master/src/modules/interface/stabilizer_types.h); plan decision S8 |
 | `configs/quadrotor.yaml` | `rates.guidance` | `50` | Hz | implementation_plan.md decision S8: seeker update rate, matches legacy env |
 | `configs/quadrotor.yaml` | `rates.kinematic_integration` | `200` | Hz | implementation_plan.md decision S8: step below a quarter of the 20 ms actuator lag |
 | `configs/quadrotor.yaml` | `mass` | `0.04085` | kg | NanoBench primary parameter set; interceptor/sim/constants.py PH_M |
 | `configs/quadrotor.yaml` | `inertia` | `[2.3951e-05, 2.3951e-05, 3.2347e-05]` | kg m^2 | Forster 2015, diagonal inertia; matches cf2x.urdf |
 | `configs/quadrotor.yaml` | `arm_length` | `0.0397` | m | Bitcraze Crazyflie 2.x frame drawing; cf2x.urdf rotor offset |
 | `configs/quadrotor.yaml` | `rotor_inertia` | `2e-09` | kg m^2 | Forster 2015 rotor/propeller inertia |
-| `configs/quadrotor.yaml` | `thrust_coefficient` | `2.618e-08` | N s^2/rad^2 | NanoBench hover system identification; interceptor/sim/constants.py PH_C_L |
-| `configs/quadrotor.yaml` | `torque_coefficient` | `5.45e-11` | N m s^2/rad^2 | NanoBench fitted c_l/480 drag-to-thrust ratio |
-| `configs/quadrotor.yaml` | `maximum_motor_speed` | `2800.0` | rad/s | Bitcraze 7x16 mm coreless motor at 4.2 V, full throttle |
-| `configs/quadrotor.yaml` | `motor_time_constant` | `0.02` | s | NanoBench motor step-response identification |
-| `configs/quadrotor.yaml` | `motor_efficiency` | `0.7` | dimensionless | Bitcraze motor/propeller efficiency measurement at hover |
+| `configs/quadrotor.yaml` | `thrust_coefficient` | `2.618e-08` | N s^2/rad^2 | OWN_FIT: our own fit to NanoBench flight data (Ullah & Baca 2026, arXiv:2603.09908), not a value quoted by NanoBench (absent from its paper, README, code and metadata, checked 2026-11-14): median of m g / (4 Omega^2) over 9,179 hover samples in 10 trajectories (identify_params.py in the predecessor simulator repository). Rotor speed was not measured; it came from the ESC map that was later rejected (BUGS R-1), so the fit must be repeated with the current map (P3.4, BUGS #27); interceptor/sim/constants.py PH_C_L |
+| `configs/quadrotor.yaml` | `torque_coefficient` | `5.45e-11` | N m s^2/rad^2 | PROJECT_CHOICE: thrust_coefficient / 480. The yaw identification on NanoBench data was too noisy to fit a torque coefficient, so a fixed torque-to-thrust ratio was assumed (BUGS #27); varied +/-15 % by domain randomisation |
+| `configs/quadrotor.yaml` | `maximum_motor_speed` | `2800.0` | rad/s | Traced 2026-11-15 in the predecessor repository rl-drone-flight-simulator: PROJECT_CHOICE: 2800 rad/s is labelled 'best guess, typical small-quad max motor speed' (default_demo.py:601); no Bitcraze or NanoBench source was found. The earlier source text 'Bitcraze 7x16 mm coreless motor at 4.2 V, full throttle' was not supported and was removed. It sets the thrust ceiling, hence thrust-to-weight 2.05 and the acceleration limits |
+| `configs/quadrotor.yaml` | `motor_time_constant` | `0.02` | s | PROJECT_CHOICE: assumed first-order motor lag (labelled best guess in the predecessor simulator); no step-response identification was done and the NanoBench paper gives no value (BUGS #27). Defended by the motor-lag rows of scripts/check_quad_limits_repeatability.py |
+| `configs/quadrotor.yaml` | `motor_efficiency` | `0.7` | dimensionless | Traced 2026-11-15 in the predecessor repository rl-drone-flight-simulator: PROJECT_CHOICE: eta = 0.7 is labelled 'motor efficiency -- best guess' (default_demo.py:615). The earlier text 'Bitcraze measurement at hover' was not supported and was removed |
 | `configs/quadrotor.yaml` | `battery_voltage_full` | `4.2` | V | Bitcraze 1S LiPo full-charge voltage |
 | `configs/quadrotor.yaml` | `esc_zero_order_coefficients` | `[1170.36749799968, 0.0, 1629.63250200032, 0.0, 0.0]` | rad/s; polynomial in sqrt(throttle) and battery voltage | Two-point monotone fit anchored at hover and full throttle; docs/BUGS.md entry R-1 |
 | `configs/quadrotor.yaml` | `pid_rate_gains.kp` | `[0.15, 0.15, 0.2]` | command per rad/s | Project rate-loop loop-shaping at 500 Hz; docs/mathematics.md EQ-CTRL-3 |
 | `configs/quadrotor.yaml` | `pid_rate_gains.ki` | `[0.2, 0.2, 0.1]` | command per (rad/s s) | Project rate-loop loop-shaping at 500 Hz; docs/mathematics.md EQ-CTRL-3 |
 | `configs/quadrotor.yaml` | `pid_rate_gains.kd` | `[0.001, 0.001, 0.0]` | command per (rad/s^2) | Discrete derivative stability bound at 500 Hz; docs/BUGS.md entry R-3 |
-| `configs/quadrotor.yaml` | `aero.force_clip` | `50.0` | N | Numerical guard above measured NanoBench peak specific force |
-| `configs/quadrotor.yaml` | `aero.torque_clip` | `5.0` | N m | Numerical guard above measured NanoBench peak torque |
+| `configs/quadrotor.yaml` | `aero.force_clip` | `50.0` | N | Traced 2026-11-15 in the predecessor repository rl-drone-flight-simulator: PROJECT_CHOICE numerical guard: +-50 N is a bare literal (hover_env.py:359, swift_rl_env.py:292); no 'measured NanoBench peak' was found. The vehicle weighs 0.4 N, so the clip only guards against numerical blow-up |
+| `configs/quadrotor.yaml` | `aero.torque_clip` | `5.0` | N m | Traced 2026-11-15 in the predecessor repository rl-drone-flight-simulator: PROJECT_CHOICE numerical guard: +-5 N m is a bare literal (hover_env.py:360); no 'measured NanoBench peak' was found. The clip only guards against numerical blow-up |
 | `configs/quadrotor.yaml` | `aero.fx_raw` | `[0.06582314, -0.03507132, 0.0, -3.952726e-07]` | m/s^2 per [v, v\|v\|, Omega^2, v Omega^2] | NanoBench least-squares fit, dissipative sign constraint; docs/mathematics.md EQ-AERO-8 |
 | `configs/quadrotor.yaml` | `aero.fy_raw` | `[0.0573853, 0.02022478, 0.0, -6.291393e-07]` | m/s^2 per [v, v\|v\|, Omega^2, v Omega^2] | NanoBench least-squares fit, dissipative sign constraint; docs/mathematics.md EQ-AERO-8 |
 | `configs/quadrotor.yaml` | `aero.fz_raw` | `[0.03610184, -0.1153378, 0.0, -5.881881e-07, -1.188474e-06, -1.705725e-08]` | m/s^2 polynomial basis | NanoBench least-squares fit, dissipative sign constraint; docs/mathematics.md EQ-AERO-8 |
 | `configs/quadrotor.yaml` | `aero.tx_raw` | `[0.0, 0.0, 0.0, 0.0, 0.0]` | rad/s^2 polynomial basis | Zeroed: over-predicted roll torque in NanoBench fit; docs/BUGS.md entry R-2 |
 | `configs/quadrotor.yaml` | `aero.ty_raw` | `[0.0, 0.0, 0.0, 0.0, 0.0]` | rad/s^2 polynomial basis | Zeroed: over-predicted pitch torque in NanoBench fit; docs/BUGS.md entry R-2 |
 | `configs/quadrotor.yaml` | `aero.tz_raw` | `[-0.001432, 0.077987]` | rad/s^2 per [vx, vy] | NanoBench yaw-damping fit; docs/mathematics.md EQ-AERO-9 |
-| `configs/quadrotor.yaml` | `ground_effect.height` | `0.15` | m | Cheeseman & Bennett image-vortex fit, scaled to Crazyflie rotor diameter |
-| `configs/quadrotor.yaml` | `ground_effect.max_gain` | `0.2` | dimensionless | Cheeseman & Bennett image-vortex fit at z=0 |
-| `configs/quadrotor.yaml` | `wind.mean_std` | `1.5` | m/s | Dryden low-altitude light-turbulence intensity, MIL-HDBK-1797 |
-| `configs/quadrotor.yaml` | `wind.theta_range` | `[0.2, 1.0]` | 1/s | Dryden longitudinal filter bandwidth mapping; docs/mathematics.md EQ-WIND-2 |
-| `configs/quadrotor.yaml` | `wind.sigma_range` | `[0.3, 2.0]` | m/s | Dryden low-altitude turbulence intensity range, MIL-HDBK-1797 |
-| `configs/quadrotor.yaml` | `domain_randomisation.mass_fraction` | `[0.9, 1.1]` | dimensionless | NanoBench unit-to-unit mass spread |
-| `configs/quadrotor.yaml` | `domain_randomisation.inertia_fraction` | `[0.9, 1.1]` | dimensionless | NanoBench unit-to-unit inertia spread |
-| `configs/quadrotor.yaml` | `domain_randomisation.thrust_fraction` | `[0.85, 1.15]` | dimensionless | Bitcraze motor-to-motor thrust scatter |
-| `configs/quadrotor.yaml` | `domain_randomisation.torque_fraction` | `[0.85, 1.15]` | dimensionless | Bitcraze motor-to-motor drag-torque scatter |
-| `configs/quadrotor.yaml` | `domain_randomisation.aero_fraction` | `[0.8, 1.2]` | dimensionless | NanoBench fit residual envelope |
+| `configs/quadrotor.yaml` | `ground_effect.height` | `0.15` | m | PROJECT_CHOICE: height of a linear thrust ramp 1 + g_max (1 - z/h) (EQ-SIX-10). This is not the Cheeseman and Bennett (1955) formula, which is only the reason a boost exists. Inactive above 0.15 m |
+| `configs/quadrotor.yaml` | `ground_effect.max_gain` | `0.2` | dimensionless | PROJECT_CHOICE: gain of the linear thrust ramp at z = 0 (EQ-SIX-10); not taken from Cheeseman and Bennett (1955). Inactive above 0.15 m |
+| `configs/quadrotor.yaml` | `wind.mean_std` | `1.5` | m/s | PROJECT_CHOICE: per-axis standard deviation of the episode mean wind for flight-controller domain randomisation (not a turbulence intensity; the earlier label 'light-turbulence intensity, MIL-HDBK-1797' was wrong and was corrected 2026-11-15). Scale check only: 1.5 m/s is about 3 knots, well inside the 15-knot W20 that MathWorks gives for light turbulence (Dryden Wind Turbulence Model page, read 2026-11-15) |
+| `configs/quadrotor.yaml` | `wind.theta_range` | `[0.2, 1.0]` | 1/s | PROJECT_CHOICE mean-reversion rate of the Ornstein-Uhlenbeck gust (correlation time 1-5 s); used only for flight-controller domain randomisation; the closed loop uses the Dryden model (EQ-WIND-2) instead |
+| `configs/quadrotor.yaml` | `wind.sigma_range` | `[0.3, 2.0]` | m/s | PROJECT_CHOICE range of the Ornstein-Uhlenbeck diffusion coefficient used for flight-controller domain randomisation (interceptor/sim/aero.py wind_ou_step); it is not a turbulence intensity (earlier MIL-HDBK-1797 label corrected 2026-11-15). The stationary gust standard deviation is sigma/sqrt(2 theta) = 0.21 to 3.16 m/s over the sampled ranges. Cross-check: Dryden low-altitude sigma_w = 0.1 W20 with W20 = 15 / 30 / 45 knots for light / moderate / severe turbulence (MathWorks Dryden Wind Turbulence Model page, read 2026-11-15) gives 0.77 / 1.54 / 2.31 m/s, so the range covers calm to beyond severe. The handbook itself was not read |
+| `configs/quadrotor.yaml` | `domain_randomisation.mass_fraction` | `[0.9, 1.1]` | dimensionless | Traced 2026-11-15 in the predecessor repository rl-drone-flight-simulator: PROJECT_CHOICE: +-10 % domain-randomisation range (swift_rl_env.py:149); no rationale or source recorded. The earlier 'NanoBench unit-to-unit spread' text was not supported. Effect tested by P9.5 |
+| `configs/quadrotor.yaml` | `domain_randomisation.inertia_fraction` | `[0.9, 1.1]` | dimensionless | Traced 2026-11-15 in the predecessor repository rl-drone-flight-simulator: PROJECT_CHOICE: +-10 % domain-randomisation range (swift_rl_env.py:150); no rationale or source recorded. The earlier 'NanoBench unit-to-unit spread' text was not supported. Effect tested by P9.5 |
+| `configs/quadrotor.yaml` | `domain_randomisation.thrust_fraction` | `[0.85, 1.15]` | dimensionless | Traced 2026-11-15 in the predecessor repository rl-drone-flight-simulator: PROJECT_CHOICE: +-15 % domain-randomisation range (swift_rl_env.py:151); no rationale or source recorded. The earlier 'Bitcraze motor-to-motor scatter' text was not supported. Effect tested by P9.5 |
+| `configs/quadrotor.yaml` | `domain_randomisation.torque_fraction` | `[0.85, 1.15]` | dimensionless | Traced 2026-11-15 in the predecessor repository rl-drone-flight-simulator: PROJECT_CHOICE: +-15 % domain-randomisation range (swift_rl_env.py:152); no rationale or source recorded. The earlier 'Bitcraze motor-to-motor scatter' text was not supported. Effect tested by P9.5 |
+| `configs/quadrotor.yaml` | `domain_randomisation.aero_fraction` | `[0.8, 1.2]` | dimensionless | Traced 2026-11-15 in the predecessor repository rl-drone-flight-simulator: PROJECT_CHOICE: +-20 % domain-randomisation range on the aero polynomial coefficients (swift_rl_env.py:153-156); no rationale or source recorded. The earlier 'NanoBench fit residual envelope' text was not supported. Effect tested by P9.5 |
 | `configs/fc.yaml` | `rate_max` | `8.0` | rad/s | P4.9 measured peak 4.4 rad/s for a 60 deg attitude step (results/tables/quad_limits.json), margin 1.8 |
 | `configs/fc.yaml` | `episode_length` | `4.0` | s | implementation_plan.md P4.1 |
 | `configs/fc.yaml` | `control_dt` | `0.002` | s | implementation_plan.md S8 (500 Hz) |
@@ -68,49 +68,49 @@ config files.  Regenerate after changing a sourced value; the
 | `configs/fc.yaml` | `b1_targets.rise_time_max` | `0.12` | s | design target for B1 (EQ-FC-1 phase margin 60 deg) |
 | `configs/fc.yaml` | `b1_targets.overshoot_max` | `0.2` | dimensionless | design target for B1 |
 | `configs/platforms.yaml` | `platforms.quadcopter.v_min` | `0.0` | m/s | Multirotor can hover; EQ-KIN-1 |
-| `configs/platforms.yaml` | `platforms.quadcopter.v_max` | `45.0` | m/s | Drag-limited Crazyflie sprint estimate; replaced by measured P4.9 |
-| `configs/platforms.yaml` | `platforms.quadcopter.a_t_max` | `31.392` | m/s^2 | 3.2 g collective thrust margin; analytic, replaced by measured P4.9 |
-| `configs/platforms.yaml` | `platforms.quadcopter.a_t_min` | `-31.392` | m/s^2 | 3.2 g negative collective; analytic, replaced by measured P4.9 |
-| `configs/platforms.yaml` | `platforms.quadcopter.a_n_max` | `51.012` | m/s^2 | 5.2 g lateral thrust component at hover; analytic, replaced by measured P4.9 |
-| `configs/platforms.yaml` | `platforms.quadcopter.a_n_down_max` | `9.81` | m/s^2 | 1.0 g downward normal limit; analytic, replaced by measured P4.9 |
-| `configs/platforms.yaml` | `platforms.quadcopter.tau_accel` | `0.05` | s | Inner rate-loop closed-loop bandwidth; measured P4.9 |
-| `configs/platforms.yaml` | `platforms.quadcopter.max_jerk` | `300.0` | m/s^3 | a_n_max / tau_accel = 51.012 / 0.05 rounded; EQ-KIN-3 |
-| `configs/platforms.yaml` | `platforms.quadcopter.omega_max` | `6.0` | rad/s | Crazyflie body-rate limit at 500 Hz; measured P4.9 |
+| `configs/platforms.yaml` | `platforms.quadcopter.v_max` | `27.7` | m/s | Measured on the validated 500 Hz Crazyflie flight-control stack, plan P4.9: results/tables/quad_limits.json (scripts/measure_quad_limits.py); v_max_measured = 27.67 m/s with rotor drag (0.5, 0.5, 0.5) 1/s. Top speed is drag-limited and the drag coefficients are assumed (BUGS #27): 21.99 m/s with the earlier kz = 0.7; sensitivity in results/tables/quad_limits_repeatability.csv. Changed 2026-11-14 from the unsupported 45 m/s estimate |
+| `configs/platforms.yaml` | `platforms.quadcopter.a_t_max` | `15.4` | m/s^2 | Measured on the validated 500 Hz Crazyflie flight-control stack, plan P4.9: results/tables/quad_limits.json (scripts/measure_quad_limits.py); omnidirectional vehicle, along-track limit = measured lateral limit 15.37 m/s^2. Changed from 3.2 g analytic |
+| `configs/platforms.yaml` | `platforms.quadcopter.a_t_min` | `-15.4` | m/s^2 | Measured on the validated 500 Hz Crazyflie flight-control stack, plan P4.9: results/tables/quad_limits.json (scripts/measure_quad_limits.py); omnidirectional vehicle, symmetric along-track limit. Changed from -3.2 g analytic |
+| `configs/platforms.yaml` | `platforms.quadcopter.a_n_max` | `15.4` | m/s^2 | Measured on the validated 500 Hz Crazyflie flight-control stack, plan P4.9: results/tables/quad_limits.json (scripts/measure_quad_limits.py); lateral_a_max_measured = 15.37 m/s^2 (analytic g sqrt(TW^2-1) = 17.5). Changed from 5.2 g analytic |
+| `configs/platforms.yaml` | `platforms.quadcopter.a_n_down_max` | `9.5` | m/s^2 | Measured on the validated 500 Hz Crazyflie flight-control stack, plan P4.9: results/tables/quad_limits.json (scripts/measure_quad_limits.py); vertical_down_a_max_measured = 9.51 m/s^2 |
+| `configs/platforms.yaml` | `platforms.quadcopter.tau_accel` | `0.17` | s | Measured on the validated 500 Hz Crazyflie flight-control stack, plan P4.9: results/tables/quad_limits.json (scripts/measure_quad_limits.py); tau_accel_s = 0.174, consistent with 1/Kp of the Crazyflie firmware attitude loop (PID_ROLL_KP 6.0, https://github.com/bitcraze/crazyflie-firmware/blob/master/src/platform/interface/platform_defaults_cf2.h) |
+| `configs/platforms.yaml` | `platforms.quadcopter.max_jerk` | `88.3` | m/s^3 | Measured on the validated 500 Hz Crazyflie flight-control stack, plan P4.9: results/tables/quad_limits.json (scripts/measure_quad_limits.py); max_jerk_m_s3 = 88.34 = a_n_max / tau_accel; EQ-KIN-3 |
+| `configs/platforms.yaml` | `platforms.quadcopter.omega_max` | `4.4` | rad/s | Measured on the validated 500 Hz Crazyflie flight-control stack, plan P4.9: results/tables/quad_limits.json (scripts/measure_quad_limits.py); peak_rate_hard_attitude_step = 4.39 rad/s |
 | `configs/platforms.yaml` | `platforms.quadcopter.can_hover` | `True` | dimensionless | Multirotor thrust exceeds weight; EQ-KIN-1 |
 | `configs/platforms.yaml` | `platforms.quadcopter.omnidirectional` | `True` | dimensionless | Thrust vector can point in any direction; EQ-KIN-2 |
-| `configs/platforms.yaml` | `platforms.quadcopter.kill_radius` | `3.0` | m | 2 x rotor span; configs/guidance.yaml EQ-GEO-4 |
-| `configs/platforms.yaml` | `platforms.quadcopter.r_init_min` | `150.0` | m | 10 s at 15 m/s closing; configs/guidance.yaml EQ-GEO-5 |
-| `configs/platforms.yaml` | `platforms.quadcopter.r_init_max` | `450.0` | m | 25 s at 18 m/s closing; configs/guidance.yaml EQ-GEO-5 |
+| `configs/platforms.yaml` | `platforms.quadcopter.kill_radius` | `1.3` | m | Hit-to-kill contact rule r_kill = target half-span + interceptor half-span (EQ-GEO-4); no warhead is assumed because no credible lethal-radius data exists (data/lethality_and_gload.csv): 2.5/2 + 0.092/2 = 1.30 m. Shahed-136 wingspan 2.5 m (IRGC specification poster reported by Janes, https://www.janes.com/osint-insights/defence-news/air/irgc-confirms-specs-for-shahed-136-attack-uav); Crazyflie 2.1 size 92 mm motor-to-motor (Bitcraze datasheet, https://www.bitcraze.io/documentation/hardware/crazyflie_2_1/crazyflie_2_1-datasheet.pdf). Changed 2026-11-14 from 3.0 m |
+| `configs/platforms.yaml` | `platforms.quadcopter.r_init_min` | `92.0` | m | Same 10 s minimum time-to-intercept window as before, scaled to the measured speed class (150 m x 27.7/45); EQ-GEO-5 (project choice) |
+| `configs/platforms.yaml` | `platforms.quadcopter.r_init_max` | `277.0` | m | Same 25 s maximum time-to-intercept window as before, scaled to the measured speed class (450 m x 27.7/45); EQ-GEO-5 (project choice) |
 | `configs/platforms.yaml` | `platforms.quadcopter.alt_init` | `150.0` | m | Above 35 m target floor plus 8 s vertical manoeuvre margin; EQ-GEO-6 |
-| `configs/platforms.yaml` | `platforms.quadcopter.v_target_nominal` | `18.0` | m/s | Q5 baseline: 0.4 x interceptor v_max; configs/guidance.yaml |
-| `configs/platforms.yaml` | `platforms.quadcopter.a_target_max` | `24.525` | m/s^2 | Q5 baseline: 2.5 g evasive target; EQ-TGT-1 |
+| `configs/platforms.yaml` | `platforms.quadcopter.v_target_nominal` | `18.3` | m/s | v_max / speed_ratio = 27.7 / 1.51; the Crazyflie-class model cannot fly real attack-drone speeds, so the real interceptor/target speed ratio is preserved: Wild Hornets Sting official maximum speed 280 km/h (manufacturer product page 'Ukrainian FPV Interceptor STING by Wild Hornets': 'Maximum speed: 280 km/h'; page needs a login, text read by the project author 2026-11-14; also reported by https://www.runtimewire.com/article/wild-hornets-sting-interceptor-speed-tradeoff) over Shahed-136 speed 185 km/h (Janes, Binnie J. (17 May 2023) 'IRGC confirms specs for Shahed-136 attack UAV': IRGC exhibition poster, Qom, gives 185 km/h, 200 kg, 50 kg warhead, 2500 km, https://www.janes.com/osint-insights/defence-news/air/irgc-confirms-specs-for-shahed-136-attack-uav; no manufacturer datasheet has been released for the Shahed-136). Speed ratio is swept 0.3-1.1 in P9.1; EQ-TGT-1 |
+| `configs/platforms.yaml` | `platforms.quadcopter.a_target_max` | `7.404` | m/s^2 | a_n_max / a_ratio = 15.4 / 2.08; a_ratio is the Q5 project choice (no g data exists for one-way attack drones), swept in P9; EQ-TGT-1 |
 | `configs/platforms.yaml` | `platforms.quadcopter.dt` | `0.02` | s | Decision rate S8: 50 Hz guidance decision |
 | `configs/platforms.yaml` | `platforms.quadcopter.max_time` | `18.0` | s | Guidance geometry: longest spawn at 25 m/s closing; EQ-GEO-5 |
-| `configs/platforms.yaml` | `platforms.quadcopter.speed_ratio` | `2.5` | dimensionless | Q5 baseline interceptor/target speed ratio = 45/18; EQ-TGT-1 |
+| `configs/platforms.yaml` | `platforms.quadcopter.speed_ratio` | `1.51` | dimensionless | Real fielded pair: Wild Hornets Sting official maximum speed 280 km/h (manufacturer product page 'Ukrainian FPV Interceptor STING by Wild Hornets': 'Maximum speed: 280 km/h'; page needs a login, text read by the project author 2026-11-14; also reported by https://www.runtimewire.com/article/wild-hornets-sting-interceptor-speed-tradeoff) / Shahed-136 185 km/h (Janes, Binnie J. (17 May 2023) 'IRGC confirms specs for Shahed-136 attack UAV': IRGC exhibition poster, Qom, gives 185 km/h, 200 kg, 50 kg warhead, 2500 km, https://www.janes.com/osint-insights/defence-news/air/irgc-confirms-specs-for-shahed-136-attack-uav) = 280/185. Spread: CSIS Missile Threat 'Shahed-131 and -136 at a Glance' gives 180 km/h (page read by the project author 2026-11-14; ratio 1.56); Sting record 315 km/h (ratio 1.70); swept in P9.1; EQ-TGT-1 |
 | `configs/platforms.yaml` | `platforms.quadcopter.a_ratio` | `2.08` | dimensionless | Q5 baseline interceptor/target accel ratio = 51.012/24.525; EQ-TGT-1 |
 | `configs/platforms.yaml` | `platforms.fixed_wing.v_min` | `15.0` | m/s | configs/airframes/aerosonde.yaml derived_limits; EQ-FW-2 |
 | `configs/platforms.yaml` | `platforms.fixed_wing.v_max` | `40.0` | m/s | configs/airframes/aerosonde.yaml derived_limits; EQ-FW-3 |
 | `configs/platforms.yaml` | `platforms.fixed_wing.a_t_max` | `41.202` | m/s^2 | configs/airframes/aerosonde.yaml derived_limits; EQ-FW-4 |
 | `configs/platforms.yaml` | `platforms.fixed_wing.a_t_min` | `-19.62` | m/s^2 | configs/airframes/aerosonde.yaml derived_limits; EQ-FW-4 |
-| `configs/platforms.yaml` | `platforms.fixed_wing.a_n_max` | `102.9` | m/s^2 | configs/airframes/aerosonde.yaml derived_limits; EQ-FW-5 |
-| `configs/platforms.yaml` | `platforms.fixed_wing.a_n_down_max` | `49.05` | m/s^2 | configs/airframes/aerosonde.yaml derived_limits; EQ-FW-5 |
+| `configs/platforms.yaml` | `platforms.fixed_wing.a_n_max` | `37.278` | m/s^2 | 3.8 g positive limit manoeuvring load factor, normal category: 14 CFR 23.337 Limit maneuvering load factors (2011 ed., US Government Publishing Office), https://www.govinfo.gov/content/pkg/CFR-2011-title14-vol1/pdf/CFR-2011-title14-vol1-sec23-337.pdf; the same +3.8 g is used as a UAV design requirement (data/lethality_and_gload.csv G01). Structural limit governs above 28.5 m/s, where the aerodynamic limit 0.5 rho V^2 S CL_max/(m g) exceeds 3.8 (EQ-FW-5). Changed 2026-11-14 from the unsourced 10.5 g |
+| `configs/platforms.yaml` | `platforms.fixed_wing.a_n_down_max` | `14.911` | m/s^2 | 0.4 x positive limit load factor = 1.52 g, normal category: 14 CFR 23.337 Limit maneuvering load factors (2011 ed., US Government Publishing Office), https://www.govinfo.gov/content/pkg/CFR-2011-title14-vol1/pdf/CFR-2011-title14-vol1-sec23-337.pdf. Changed 2026-11-14 from the unsourced 5.0 g |
 | `configs/platforms.yaml` | `platforms.fixed_wing.tau_accel` | `0.12` | s | configs/airframes/aerosonde.yaml derived_limits; EQ-FW-7 |
 | `configs/platforms.yaml` | `platforms.fixed_wing.max_jerk` | `180.0` | m/s^3 | configs/airframes/aerosonde.yaml derived_limits; EQ-FW-7 |
-| `configs/platforms.yaml` | `platforms.fixed_wing.omega_max` | `3.5` | rad/s | coordinated turn at 25 m/s and 10.5 g; EQ-FW-6 |
+| `configs/platforms.yaml` | `platforms.fixed_wing.omega_max` | `1.44` | rad/s | Coordinated turn g sqrt(n^2-1)/V at 25 m/s trim and n = 3.8 (14 CFR 23.337); EQ-FW-6 |
 | `configs/platforms.yaml` | `platforms.fixed_wing.can_hover` | `False` | dimensionless | Fixed-wing lift vanishes at zero speed; EQ-KIN-1 |
 | `configs/platforms.yaml` | `platforms.fixed_wing.omnidirectional` | `False` | dimensionless | Thrust acts along body x only; EQ-KIN-2 |
-| `configs/platforms.yaml` | `platforms.fixed_wing.kill_radius` | `12.0` | m | Aerosonde 2.9 m span plus 9 m lethal-fragment radius; EQ-GEO-4 |
+| `configs/platforms.yaml` | `platforms.fixed_wing.kill_radius` | `3.0` | m | Hit-to-kill contact rule r_kill = target half-span + interceptor half-span (EQ-GEO-4); no warhead is assumed because no credible lethal-radius data exists (data/lethality_and_gload.csv): 3.1/2 + 2.8956/2 = 3.00 m. Orlan-10 reconnaissance UAV (Special Technology Center): cruising speed 110 km/h = 30.6 m/s, maximum 150 km/h, wingspan 3.1 m, MTOW 16.5 kg (Airforce Technology project profile, 24 Mar 2023, https://www.airforce-technology.com/projects/orlan-10-unmanned-aerial-vehicle-uav/, read 2026-11-14; trade press, no manufacturer datasheet read; other secondary sources give 90-100 km/h cruise); Aerosonde span 2.8956 m (mavsim_public aerosonde_parameters.py). Changed 2026-11-14 from 7.45 m (TB2 target) |
 | `configs/platforms.yaml` | `platforms.fixed_wing.r_init_min` | `400.0` | m | 16 s at 25 m/s closing; EQ-GEO-5 |
 | `configs/platforms.yaml` | `platforms.fixed_wing.r_init_max` | `900.0` | m | 36 s at 25 m/s closing; EQ-GEO-5 |
 | `configs/platforms.yaml` | `platforms.fixed_wing.alt_init` | `1000.0` | m | Above 35 m target floor plus 965 m manoeuvre margin; EQ-GEO-6 |
-| `configs/platforms.yaml` | `platforms.fixed_wing.v_target_nominal` | `25.0` | m/s | Aerosonde trim speed, Beard & McLain Appendix E; configs/guidance.yaml |
-| `configs/platforms.yaml` | `platforms.fixed_wing.a_target_max` | `41.202` | m/s^2 | Q5 baseline: same 4.2 g manoeuvre capability as interceptor; EQ-TGT-1 |
+| `configs/platforms.yaml` | `platforms.fixed_wing.v_target_nominal` | `30.6` | m/s | Orlan-10 reconnaissance UAV (Special Technology Center): cruising speed 110 km/h = 30.6 m/s, maximum 150 km/h, wingspan 3.1 m, MTOW 16.5 kg (Airforce Technology project profile, 24 Mar 2023, https://www.airforce-technology.com/projects/orlan-10-unmanned-aerial-vehicle-uav/, read 2026-11-14; trade press, no manufacturer datasheet read; other secondary sources give 90-100 km/h cruise). Changed 2026-11-14 from the Bayraktar TB2 (46.3 m/s, Baykar), which is faster than the 40 m/s Aerosonde interceptor and gave 2/30 pure-APN kills (BUGS #24); the TB2 and Shahed-136 (51 m/s) cases are covered by the P9.1 target_speed_ratio sweep up to 1.1 |
+| `configs/platforms.yaml` | `platforms.fixed_wing.a_target_max` | `37.278` | m/s^2 | Target UAV limited to the same 3.8 g normal-category limit load factor: 14 CFR 23.337 Limit maneuvering load factors (2011 ed., US Government Publishing Office), https://www.govinfo.gov/content/pkg/CFR-2011-title14-vol1/pdf/CFR-2011-title14-vol1-sec23-337.pdf; EQ-TGT-1. Changed 2026-11-14 from 4.2 g |
 | `configs/platforms.yaml` | `platforms.fixed_wing.dt` | `0.02` | s | Decision rate S8: 50 Hz guidance decision |
 | `configs/platforms.yaml` | `platforms.fixed_wing.max_time` | `36.0` | s | Spawn range / closing speed + 4 s; EQ-GEO-5 |
-| `configs/platforms.yaml` | `platforms.fixed_wing.speed_ratio` | `1.6` | dimensionless | Q5 baseline interceptor/target speed ratio = 40/25; EQ-TGT-1 |
-| `configs/platforms.yaml` | `platforms.fixed_wing.a_ratio` | `1.0` | dimensionless | Q5 baseline equal manoeuvre capability; EQ-TGT-1 |
+| `configs/platforms.yaml` | `platforms.fixed_wing.speed_ratio` | `1.31` | dimensionless | Interceptor/target speed ratio = 40/30.6; EQ-TGT-1; follows v_target_nominal (Orlan-10 cruise, Airforce Technology) |
+| `configs/platforms.yaml` | `platforms.fixed_wing.a_ratio` | `1.0` | dimensionless | Interceptor/target accel ratio = 37.278/37.278; EQ-TGT-1 |
 | `configs/platforms.yaml` | `platforms.missile.v_min` | `180.0` | m/s | configs/airframes/aim5.yaml derived_limits; EQ-MS-2 |
-| `configs/platforms.yaml` | `platforms.missile.v_max` | `1200.0` | m/s | configs/airframes/aim5.yaml derived_limits; EQ-MS-3 |
+| `configs/platforms.yaml` | `platforms.missile.v_max` | `1200.0` | m/s | configs/airframes/aim5.yaml derived_limits; EQ-MS-3 \| Cross-check: Astra Mk1 Mach 4.5 = 1348 m/s at 10 km ISA (I04), IRIS-T SLM 1000 m/s (I15), Akash Mach 2.5 (I01) (secondary source, data/interceptor_platforms.csv I01 I04 I15) |
 | `configs/platforms.yaml` | `platforms.missile.a_t_max` | `176.58` | m/s^2 | configs/airframes/aim5.yaml derived_limits; 18 g; EQ-MS-4 |
 | `configs/platforms.yaml` | `platforms.missile.a_t_min` | `-39.24` | m/s^2 | configs/airframes/aim5.yaml derived_limits; -4 g; EQ-MS-4 |
 | `configs/platforms.yaml` | `platforms.missile.a_n_max` | `358.1` | m/s^2 | configs/airframes/aim5.yaml derived_limits; CADAC 35 deg at Q12; EQ-MS-1 |
@@ -120,60 +120,116 @@ config files.  Regenerate after changing a sourced value; the
 | `configs/platforms.yaml` | `platforms.missile.omega_max` | `12.0` | rad/s | a_n_max/v at Q12; EQ-MS-5 |
 | `configs/platforms.yaml` | `platforms.missile.can_hover` | `False` | dimensionless | Lift-dependent missile; EQ-KIN-1 |
 | `configs/platforms.yaml` | `platforms.missile.omnidirectional` | `False` | dimensionless | Thrust along body x; EQ-KIN-2 |
-| `configs/platforms.yaml` | `platforms.missile.kill_radius` | `10.0` | m | AIM5 warhead lethal radius; EQ-GEO-4 |
-| `configs/platforms.yaml` | `platforms.missile.r_init_min` | `3500.0` | m | 8.75 s at 400 m/s closing; EQ-GEO-5 |
-| `configs/platforms.yaml` | `platforms.missile.r_init_max` | `7000.0` | m | 17.5 s at 400 m/s closing; EQ-GEO-5 |
-| `configs/platforms.yaml` | `platforms.missile.alt_init` | `4500.0` | m | Above 35 m target floor plus 4465 m manoeuvre margin; EQ-GEO-6 |
-| `configs/platforms.yaml` | `platforms.missile.v_target_nominal` | `400.0` | m/s | Q5 baseline: 1/3 of missile v_max; configs/guidance.yaml |
-| `configs/platforms.yaml` | `platforms.missile.a_target_max` | `107.91` | m/s^2 | Q5 baseline: 11 g evasive target; EQ-TGT-1 |
+| `configs/platforms.yaml` | `platforms.missile.kill_radius` | `4.98` | m | Hit-to-kill contact rule r_kill = target half-span + interceptor half-span (EQ-GEO-4); no warhead is assumed because no credible lethal-radius data exists (data/lethality_and_gload.csv): 9.8/2 + 0.15/2 = 4.98 m. F-16C wingspan 32 ft 8 in (9.8 m) (US Air Force fact sheet F-16 Fighting Falcon (Air Combat Command), https://www.af.mil/About-Us/Fact-Sheets/Display/Article/104505/f-16-fighting-falcon/ (verified via Wayback snapshot 20251231004314)); AIM5 diameter 0.15 m (Zipfel CADAC AIM5). Changed 2026-11-14 from 10 m |
+| `configs/platforms.yaml` | `platforms.missile.r_init_min` | `3500.0` | m | 8.75 s at 400 m/s closing; EQ-GEO-5 \| Cross-check: inside the 25 km active-seeker homing range of Astra Mk1 (Wikipedia) (secondary source, data/interceptor_sensors.csv S03) |
+| `configs/platforms.yaml` | `platforms.missile.r_init_max` | `7000.0` | m | 17.5 s at 400 m/s closing; EQ-GEO-5 \| Cross-check: inside the 25 km active-seeker homing range of Astra Mk1 (Wikipedia) (secondary source, data/interceptor_sensors.csv S03) |
+| `configs/platforms.yaml` | `platforms.missile.alt_init` | `4500.0` | m | Above 35 m target floor plus 4465 m manoeuvre margin; EQ-GEO-6 \| Cross-check: below the 20 km engagement ceilings of Astra Mk1 and Akash (secondary source, data/interceptor_sensors.csv S01 S03) and the F-16C 15 km service ceiling (T03) |
+| `configs/platforms.yaml` | `platforms.missile.v_target_nominal` | `400.0` | m/s | Q5 baseline: 1/3 of missile v_max; configs/guidance.yaml \| Cross-check: 400 m/s = Mach 1.34 at 10 km ISA (a = 299.5 m/s), inside the fighter envelope of F-16C 1,500 mph, Mach 2 at altitude (US Air Force fact sheet F-16 Fighting Falcon (Air Combat Command), https://www.af.mil/About-Us/Fact-Sheets/Display/Article/104505/f-16-fighting-falcon/ (verified via Wayback snapshot 20251231004314)); Mach 2 at 10 km ISA = 599 m/s, so 400 m/s is 67 % of the F-16 top speed |
+| `configs/platforms.yaml` | `platforms.missile.a_target_max` | `88.29` | m/s^2 | 9 g fighter structural/FCS limit: F-16C 'can withstand up to nine G's' with full internal fuel (US Air Force fact sheet F-16 Fighting Falcon (Air Combat Command), https://www.af.mil/About-Us/Fact-Sheets/Display/Article/104505/f-16-fighting-falcon/ (verified via Wayback snapshot 20251231004314)); secondary cross-checks J-20 +9 g, JF-17 Block III +8 g (data/threat_platforms.csv T02 T04, not used for the value); was 11 g before 2026-11-14; EQ-TGT-1 |
 | `configs/platforms.yaml` | `platforms.missile.dt` | `0.02` | s | Decision rate S8: 50 Hz guidance decision |
 | `configs/platforms.yaml` | `platforms.missile.max_time` | `20.0` | s | Spawn range / closing speed; EQ-GEO-5 |
 | `configs/platforms.yaml` | `platforms.missile.speed_ratio` | `1.5` | dimensionless | Q5 baseline interceptor/target speed ratio = 600/400 at Q12; EQ-TGT-1 |
-| `configs/platforms.yaml` | `platforms.missile.a_ratio` | `3.32` | dimensionless | Q5 baseline interceptor/target accel ratio = 358.1/107.91; EQ-TGT-1 |
-| `configs/platforms.yaml` | `quad_closed_loop_limits.a_lateral_max` | `14.8` | m/s^2 | measured, P4.9 (analytic g*sqrt(TW^2-1) = 17.5; gap = tilt-rate lag and drag) |
-| `configs/platforms.yaml` | `quad_closed_loop_limits.a_up_max` | `9.4` | m/s^2 | measured, P4.9 (analytic g*(TW-1) = 10.3) |
-| `configs/platforms.yaml` | `quad_closed_loop_limits.a_down_max` | `9.4` | m/s^2 | measured, P4.9 (analytic 1 g free fall = 9.81) |
-| `configs/platforms.yaml` | `quad_closed_loop_limits.v_max` | `22.0` | m/s | measured, P4.9; equals a_max/k to first order, depends on the assumed rotor drag |
+| `configs/platforms.yaml` | `platforms.missile.a_ratio` | `4.06` | dimensionless | Interceptor/target accel ratio = 358.1/88.29; EQ-TGT-1; follows a_target_max (secondary source, data/threat_platforms.csv T02 T03 T04) |
+| `configs/platforms.yaml` | `observation_scales.quadcopter.rel_pos` | `277.0` | m | P5.8: r_init_max, EQ-GEO-5 |
+| `configs/platforms.yaml` | `observation_scales.quadcopter.rel_vel` | `27.7` | m/s | P5.8: v_max, EQ-GEO-5 |
+| `configs/platforms.yaml` | `observation_scales.quadcopter.interceptor_vel` | `27.7` | m/s | P5.8: v_max, EQ-GEO-5 |
+| `configs/platforms.yaml` | `observation_scales.quadcopter.range` | `277.0` | m | P5.8: r_init_max, EQ-GEO-5 |
+| `configs/platforms.yaml` | `observation_scales.quadcopter.closing_vel` | `27.7` | m/s | P5.8: v_max, EQ-GEO-5 |
+| `configs/platforms.yaml` | `observation_scales.quadcopter.los_rate` | `1.0` | rad/s | P5.8: LOS rate already O(0.1-1), EQ-GEO-2 |
+| `configs/platforms.yaml` | `observation_scales.quadcopter.t_go` | `18.0` | s | P5.8: max_time, EQ-APN-4 |
+| `configs/platforms.yaml` | `observation_scales.quadcopter.future_pos` | `277.0` | m | P5.8: r_init_max, EQ-GEO-5 |
+| `configs/platforms.yaml` | `observation_scales.quadcopter.future_vel` | `27.7` | m/s | P5.8: v_max, EQ-GEO-5 |
+| `configs/platforms.yaml` | `observation_scales.quadcopter.time_remaining` | `18.0` | s | P5.8: max_time, EQ-GEO-5 |
+| `configs/platforms.yaml` | `observation_scales.quadcopter.optimal_accel` | `15.4` | m/s^2 | P5.8: a_n_max, EQ-KIN-2 |
+| `configs/platforms.yaml` | `observation_scales.quadcopter.optimal_vel` | `27.7` | m/s | P5.8: v_max, EQ-GEO-5 |
+| `configs/platforms.yaml` | `observation_scales.quadcopter.target_accel` | `7.404` | m/s^2 | P5.8: a_target_max, EQ-TGT-1 |
+| `configs/platforms.yaml` | `observation_scales.fixed_wing.rel_pos` | `900.0` | m | P5.8: r_init_max, EQ-GEO-5 |
+| `configs/platforms.yaml` | `observation_scales.fixed_wing.rel_vel` | `40.0` | m/s | P5.8: v_max, EQ-FW-3 |
+| `configs/platforms.yaml` | `observation_scales.fixed_wing.interceptor_vel` | `40.0` | m/s | P5.8: v_max, EQ-FW-3 |
+| `configs/platforms.yaml` | `observation_scales.fixed_wing.range` | `900.0` | m | P5.8: r_init_max, EQ-GEO-5 |
+| `configs/platforms.yaml` | `observation_scales.fixed_wing.closing_vel` | `40.0` | m/s | P5.8: v_max, EQ-FW-3 |
+| `configs/platforms.yaml` | `observation_scales.fixed_wing.los_rate` | `1.0` | rad/s | P5.8: LOS rate already O(0.1-1), EQ-GEO-2 |
+| `configs/platforms.yaml` | `observation_scales.fixed_wing.t_go` | `36.0` | s | P5.8: max_time, EQ-APN-4 |
+| `configs/platforms.yaml` | `observation_scales.fixed_wing.future_pos` | `900.0` | m | P5.8: r_init_max, EQ-GEO-5 |
+| `configs/platforms.yaml` | `observation_scales.fixed_wing.future_vel` | `40.0` | m/s | P5.8: v_max, EQ-FW-3 |
+| `configs/platforms.yaml` | `observation_scales.fixed_wing.time_remaining` | `36.0` | s | P5.8: max_time, EQ-GEO-5 |
+| `configs/platforms.yaml` | `observation_scales.fixed_wing.optimal_accel` | `37.278` | m/s^2 | P5.8: a_n_max, EQ-FW-5 |
+| `configs/platforms.yaml` | `observation_scales.fixed_wing.optimal_vel` | `40.0` | m/s | P5.8: v_max, EQ-FW-3 |
+| `configs/platforms.yaml` | `observation_scales.fixed_wing.target_accel` | `37.278` | m/s^2 | P5.8: a_target_max, EQ-TGT-1 |
+| `configs/platforms.yaml` | `observation_scales.missile.rel_pos` | `7000.0` | m | P5.8: r_init_max, EQ-GEO-5 |
+| `configs/platforms.yaml` | `observation_scales.missile.rel_vel` | `1200.0` | m/s | P5.8: v_max, EQ-MS-3 |
+| `configs/platforms.yaml` | `observation_scales.missile.interceptor_vel` | `1200.0` | m/s | P5.8: v_max, EQ-MS-3 |
+| `configs/platforms.yaml` | `observation_scales.missile.range` | `7000.0` | m | P5.8: r_init_max, EQ-GEO-5 |
+| `configs/platforms.yaml` | `observation_scales.missile.closing_vel` | `1200.0` | m/s | P5.8: v_max, EQ-MS-3 |
+| `configs/platforms.yaml` | `observation_scales.missile.los_rate` | `1.0` | rad/s | P5.8: LOS rate already O(0.1-1), EQ-GEO-2 |
+| `configs/platforms.yaml` | `observation_scales.missile.t_go` | `20.0` | s | P5.8: max_time, EQ-APN-4 |
+| `configs/platforms.yaml` | `observation_scales.missile.future_pos` | `7000.0` | m | P5.8: r_init_max, EQ-GEO-5 |
+| `configs/platforms.yaml` | `observation_scales.missile.future_vel` | `1200.0` | m/s | P5.8: v_max, EQ-MS-3 |
+| `configs/platforms.yaml` | `observation_scales.missile.time_remaining` | `20.0` | s | P5.8: max_time, EQ-GEO-5 |
+| `configs/platforms.yaml` | `observation_scales.missile.optimal_accel` | `358.1` | m/s^2 | P5.8: a_n_max, EQ-MS-1 |
+| `configs/platforms.yaml` | `observation_scales.missile.optimal_vel` | `1200.0` | m/s | P5.8: v_max, EQ-MS-3 |
+| `configs/platforms.yaml` | `observation_scales.missile.target_accel` | `88.29` | m/s^2 | P5.8: a_target_max, EQ-TGT-1 |
+| `configs/platforms.yaml` | `quad_closed_loop_limits.a_lateral_max` | `15.4` | m/s^2 | measured, P4.9 (analytic g*sqrt(TW^2-1) = 17.5; gap = tilt-rate lag and drag) |
+| `configs/platforms.yaml` | `quad_closed_loop_limits.a_up_max` | `9.6` | m/s^2 | measured, P4.9 (analytic g*(TW-1) = 10.3) |
+| `configs/platforms.yaml` | `quad_closed_loop_limits.a_down_max` | `9.5` | m/s^2 | measured, P4.9 (analytic 1 g free fall = 9.81) |
+| `configs/platforms.yaml` | `quad_closed_loop_limits.v_max` | `27.7` | m/s | measured, P4.9; equals a_max/k to first order, depends on the assumed rotor drag |
 | `configs/platforms.yaml` | `quad_closed_loop_limits.tau_accel` | `0.17` | s | measured, P4.9; consistent with 1/Kp = 1/6 s of the attitude loop, EQ-BRIDGE-4 |
-| `configs/platforms.yaml` | `quad_closed_loop_limits.max_jerk` | `85.0` | m/s^3 | a_lateral_max / tau_accel = 14.8/0.174, P4.9 |
+| `configs/platforms.yaml` | `quad_closed_loop_limits.max_jerk` | `88.3` | m/s^3 | a_lateral_max / tau_accel = 15.37/0.174, P4.9 |
 | `configs/platforms.yaml` | `quad_closed_loop_limits.omega_demand_peak` | `4.4` | rad/s | measured peak body rate in a hard attitude step, P4.9; feeds P4.2 rate range |
 | `configs/guidance.yaml` | `navigation.N_prime` | `4.0` | dimensionless | classical APN admissible range 3-5; Zarchan, Tactical and Strategic Missile Guidance |
+| `configs/guidance.yaml` | `navigation.N_prime_by_platform.quadcopter.apn_raw` | `3.0` | dimensionless | sweep P5.11 |
+| `configs/guidance.yaml` | `navigation.N_prime_by_platform.quadcopter.apn_filtered` | `5.0` | dimensionless | sweep P5.11 |
+| `configs/guidance.yaml` | `navigation.N_prime_by_platform.fixed_wing.apn_raw` | `3.0` | dimensionless | sweep P5.11 |
+| `configs/guidance.yaml` | `navigation.N_prime_by_platform.fixed_wing.apn_filtered` | `3.5` | dimensionless | sweep P5.11 |
+| `configs/guidance.yaml` | `navigation.N_prime_by_platform.missile.apn_raw` | `3.0` | dimensionless | sweep P5.11 |
+| `configs/guidance.yaml` | `navigation.N_prime_by_platform.missile.apn_filtered` | `3.5` | dimensionless | sweep P5.11 |
 | `configs/guidance.yaml` | `navigation.N_prime_min` | `3.0` | dimensionless | Zarchan admissible lower bound; EQ-APN-7 |
 | `configs/guidance.yaml` | `navigation.N_prime_max` | `5.0` | dimensionless | Zarchan admissible upper bound; EQ-APN-7 |
 | `configs/guidance.yaml` | `navigation.t_go_min` | `0.05` | s | Numerical guard at closest approach; EQ-APN-4 |
 | `configs/guidance.yaml` | `navigation.t_go_max` | `20.0` | s | Numerical guard before terminal phase; EQ-APN-4 |
-| `configs/guidance.yaml` | `engagement.quadcopter.kill_radius` | `3.0` | m | 2 x 0.0397 m rotor arm span + 1.5 m debris margin; EQ-GEO-4 |
-| `configs/guidance.yaml` | `engagement.quadcopter.r_init_min` | `150.0` | m | 10 s at 15 m/s nominal closing; EQ-GEO-5 |
-| `configs/guidance.yaml` | `engagement.quadcopter.r_init_max` | `450.0` | m | 25 s at 18 m/s nominal closing; EQ-GEO-5 |
+| `configs/guidance.yaml` | `engagement.quadcopter.kill_radius` | `1.3` | m | Hit-to-kill contact rule r_kill = target half-span + interceptor half-span (EQ-GEO-4); no warhead is assumed because no credible lethal-radius data exists (data/lethality_and_gload.csv): 2.5/2 + 0.092/2 = 1.30 m. Shahed-136 wingspan 2.5 m (IRGC specification poster reported by Janes, https://www.janes.com/osint-insights/defence-news/air/irgc-confirms-specs-for-shahed-136-attack-uav); Crazyflie 2.1 size 92 mm motor-to-motor (Bitcraze datasheet, https://www.bitcraze.io/documentation/hardware/crazyflie_2_1/crazyflie_2_1-datasheet.pdf). Changed 2026-11-14 from 3.0 m |
+| `configs/guidance.yaml` | `engagement.quadcopter.r_init_min` | `92.0` | m | Same 10 s minimum time-to-intercept window as before, scaled to the measured speed class (150 m x 27.7/45); EQ-GEO-5 (project choice) |
+| `configs/guidance.yaml` | `engagement.quadcopter.r_init_max` | `277.0` | m | Same 25 s maximum time-to-intercept window as before, scaled to the measured speed class (450 m x 27.7/45); EQ-GEO-5 (project choice) |
 | `configs/guidance.yaml` | `engagement.quadcopter.alt_init` | `150.0` | m | Target floor 35 m + 115 m vertical manoeuvre budget; EQ-GEO-6 |
 | `configs/guidance.yaml` | `engagement.quadcopter.t_intercept_min` | `10.0` | s | Guidance geometry design choice; EQ-GEO-5 |
 | `configs/guidance.yaml` | `engagement.quadcopter.t_intercept_max` | `25.0` | s | Guidance geometry design choice; EQ-GEO-5 |
 | `configs/guidance.yaml` | `engagement.quadcopter.max_time` | `18.0` | s | 0.72 x longest spawn time, 25 s; EQ-GEO-5 |
-| `configs/guidance.yaml` | `engagement.fixed_wing.kill_radius` | `12.0` | m | 2.9 m span + 9 m lethal-fragment radius; EQ-GEO-4 |
+| `configs/guidance.yaml` | `engagement.fixed_wing.kill_radius` | `3.0` | m | Hit-to-kill contact rule r_kill = target half-span + interceptor half-span (EQ-GEO-4); no warhead is assumed because no credible lethal-radius data exists (data/lethality_and_gload.csv): 3.1/2 + 2.8956/2 = 3.00 m (Orlan-10 span 3.1 m, Aerosonde 2.8956 m); see configs/platforms.yaml |
 | `configs/guidance.yaml` | `engagement.fixed_wing.r_init_min` | `400.0` | m | 16 s at 25 m/s nominal closing; EQ-GEO-5 |
 | `configs/guidance.yaml` | `engagement.fixed_wing.r_init_max` | `900.0` | m | 36 s at 25 m/s nominal closing; EQ-GEO-5 |
 | `configs/guidance.yaml` | `engagement.fixed_wing.alt_init` | `1000.0` | m | Target floor 35 m + 965 m vertical manoeuvre budget; EQ-GEO-6 |
 | `configs/guidance.yaml` | `engagement.fixed_wing.t_intercept_min` | `16.0` | s | Guidance geometry design choice; EQ-GEO-5 |
 | `configs/guidance.yaml` | `engagement.fixed_wing.t_intercept_max` | `36.0` | s | Guidance geometry design choice; EQ-GEO-5 |
 | `configs/guidance.yaml` | `engagement.fixed_wing.max_time` | `36.0` | s | Longest spawn time + 4 s manoeuvre margin; EQ-GEO-5 |
-| `configs/guidance.yaml` | `engagement.missile.kill_radius` | `10.0` | m | AIM5 continuous-rod warhead lethal radius; EQ-GEO-4 |
+| `configs/guidance.yaml` | `engagement.missile.kill_radius` | `4.98` | m | Hit-to-kill contact rule r_kill = target half-span + interceptor half-span (EQ-GEO-4); no warhead is assumed because no credible lethal-radius data exists (data/lethality_and_gload.csv): 9.8/2 + 0.15/2 = 4.98 m; see configs/platforms.yaml |
 | `configs/guidance.yaml` | `engagement.missile.r_init_min` | `3500.0` | m | 8.75 s at 400 m/s nominal closing; EQ-GEO-5 |
 | `configs/guidance.yaml` | `engagement.missile.r_init_max` | `7000.0` | m | 17.5 s at 400 m/s nominal closing; EQ-GEO-5 |
 | `configs/guidance.yaml` | `engagement.missile.alt_init` | `4500.0` | m | Target floor 35 m + 4465 m vertical manoeuvre budget; EQ-GEO-6 |
 | `configs/guidance.yaml` | `engagement.missile.t_intercept_min` | `8.75` | s | Guidance geometry design choice; EQ-GEO-5 |
 | `configs/guidance.yaml` | `engagement.missile.t_intercept_max` | `17.5` | s | Guidance geometry design choice; EQ-GEO-5 |
 | `configs/guidance.yaml` | `engagement.missile.max_time` | `20.0` | s | Longest spawn time + 2.5 s manoeuvre margin; EQ-GEO-5 |
+| `configs/guidance.yaml` | `reward.gamma` | `0.99791` | dimensionless | P5.9: 0.1^(1/1100) keeps 10% of a terminal bonus at step 0; EQ-GUIDE-8 |
+| `configs/guidance.yaml` | `reward.w_progress` | `50.0` | dimensionless | P5.9: potential Phi=-w*d/r_init_max; EQ-GUIDE-1 |
+| `configs/guidance.yaml` | `reward.w_align` | `0.35` | dimensionless | P5.9: notebook alignment weight; EQ-GUIDE-4 |
+| `configs/guidance.yaml` | `reward.w_los` | `0.15` | dimensionless | P5.9: notebook LOS-rate weight; EQ-GUIDE-4 |
+| `configs/guidance.yaml` | `reward.w_zem` | `0.25` | dimensionless | P5.9: notebook ZEM weight; EQ-GUIDE-4 |
+| `configs/guidance.yaml` | `reward.w_res_rl` | `0.04` | dimensionless | P5.9: residual authority penalty in apn_rl mode; EQ-GUIDE-5 |
+| `configs/guidance.yaml` | `reward.w_res_pure` | `0.015` | dimensionless | P5.9: residual authority penalty in pure_rl mode; EQ-GUIDE-5 |
+| `configs/guidance.yaml` | `reward.w_smooth` | `0.03` | dimensionless | P5.9: action-change penalty (motor chatter); EQ-GUIDE-5 |
+| `configs/guidance.yaml` | `reward.c_time` | `0.005` | dimensionless | P5.9: time cost per 20 ms step; EQ-GUIDE-6 |
+| `configs/guidance.yaml` | `reward.kill_bonus` | `150.0` | dimensionless | P5.9: terminal kill bonus; EQ-GUIDE-3 |
+| `configs/guidance.yaml` | `reward.kill_speed_bonus` | `50.0` | dimensionless | P5.9: extra bonus for an early kill, scaled by fraction of episode left; EQ-GUIDE-3 |
+| `configs/guidance.yaml` | `reward.crash_penalty` | `80.0` | dimensionless | P5.9: ground impact; EQ-GUIDE-3 |
+| `configs/guidance.yaml` | `reward.diverge_penalty` | `25.0` | dimensionless | P5.9: range opening penalty scaled by miss distance; EQ-GUIDE-3 |
 | `configs/seeker.yaml` | `enabled` | `True` | dimensionless | Headline evaluation uses sensor noise; EQ-SEEK-1 |
-| `configs/seeker.yaml` | `position_sigma_base` | `0.5` | m | NanoBench Vicon position residual floor; EQ-SEEK-1 |
-| `configs/seeker.yaml` | `position_sigma_angular` | `0.0025` | rad | Vicon angular residual per metre of range; EQ-SEEK-1 |
-| `configs/seeker.yaml` | `velocity_sigma_fraction` | `0.03` | dimensionless | 3% of nominal target speed, NanoBench differentiated-position residual; EQ-SEEK-2 |
-| `configs/seeker.yaml` | `acceleration_sigma_fraction` | `0.18` | dimensionless | 18% of target manoeuvre limit, NanoBench acceleration residual; EQ-SEEK-2 |
-| `configs/seeker.yaml` | `dropout_probability` | `0.04` | dimensionless | 4% packet loss measured on Crazyflie radio at 50 Hz; EQ-SEEK-3 |
-| `configs/seeker.yaml` | `ema_alpha_position` | `0.65` | dimensionless | Alpha-beta-gamma steady-state gain for 50 Hz, sigma_a=0.18 a_max; EQ-SEEK-4 |
-| `configs/seeker.yaml` | `ema_alpha_velocity` | `0.55` | dimensionless | Alpha-beta-gamma steady-state gain for 50 Hz; EQ-SEEK-4 |
-| `configs/seeker.yaml` | `ema_alpha_acceleration` | `0.35` | dimensionless | Alpha-beta-gamma steady-state gain for 50 Hz; EQ-SEEK-4 |
-| `configs/seeker.yaml` | `coast_acceleration_decay` | `0.98` | per 20 ms step | Constant-acceleration coast damping through dropouts; EQ-SEEK-3 |
-| `configs/seeker.yaml` | `noise_floor` | `0.0` | m | No additive floor beyond the range-dependent term; EQ-SEEK-1 |
+| `configs/seeker.yaml` | `position_sigma_base` | `0.5` | m | PROJECT_CHOICE range-independent floor; swept x0-4 by P9.1 noise_scale. Cross-check: Echodyne (manufacturer) statement hosted by US ITA, https://www.trade.gov/sites/default/files/2024-08/ECHODYNE.pdf : EchoShield angular tracking accuracy <0.5 deg az x <0.5 deg el (8.7 mrad); EchoGuard ~1 deg az, ~1.5 deg el, range accuracy ~1-2 m (accuracy statistic not defined as 1-sigma): nominal 0.5 m is below the 1-2 m radar range accuracy; EQ-SEEK-1 |
+| `configs/seeker.yaml` | `position_sigma_angular` | `0.008727` | rad | 0.5 deg = 8.727 mrad: Echodyne EchoShield counter-UAS radar angular tracking accuracy <0.5 deg az x <0.5 deg el (Echodyne manufacturer statement hosted by the US International Trade Administration, 2024, https://www.trade.gov/sites/default/files/2024-08/ECHODYNE.pdf). The statistic is not stated; the bound is used as 1-sigma, the pessimistic reading. Changed 2026-11-14 from the unsourced 2.5 mrad. P9.1 noise_scale sweeps x0-4 (x0.25 is close to the old value, x2 = EchoGuard ~1 deg); EQ-SEEK-1 |
+| `configs/seeker.yaml` | `velocity_sigma_fraction` | `0.03` | dimensionless | PROJECT_CHOICE 3% of nominal target speed (radars report Doppler, not a fixed fraction); swept by P9.1 noise_scale; EQ-SEEK-2 |
+| `configs/seeker.yaml` | `acceleration_sigma_fraction` | `0.18` | dimensionless | PROJECT_CHOICE 18% of target manoeuvre limit (acceleration is not directly measured by real sensors; this stands in for tracker output); swept by P9.1 noise_scale; EQ-SEEK-2 |
+| `configs/seeker.yaml` | `dropout_probability` | `0.04` | dimensionless | PROJECT_CHOICE 4% per-step dropout (not a measurement); scales with P9.1 noise_scale; EQ-SEEK-3 |
+| `configs/seeker.yaml` | `ema_alpha_position` | `0.65` | dimensionless | PROJECT_CHOICE fixed gain (BUGS #13); the P5.4 Kalman tracker (EQ-KF-1..4) derives gains from the noise model instead; EQ-SEEK-4 |
+| `configs/seeker.yaml` | `ema_alpha_velocity` | `0.55` | dimensionless | PROJECT_CHOICE fixed gain (BUGS #13); superseded by the P5.4 Kalman tracker; EQ-SEEK-4 |
+| `configs/seeker.yaml` | `ema_alpha_acceleration` | `0.35` | dimensionless | PROJECT_CHOICE fixed gain (BUGS #13); superseded by the P5.4 Kalman tracker; EQ-SEEK-4 |
 | `configs/maneuvers.yaml` | `hard_maneuvers` | `["spiral_corkscrew", "barrel_roll", "square_bang_bang", "terminal_break", "split_s", "scissor", "energy_depletion"]` | law names | notebook v2 oversampling set; EQ-MAN-1 |
 | `configs/maneuvers.yaml` | `laws.none.enabled` | `False` | dimensionless | Straight-flight reference law; EQ-MAN-2 |
 | `configs/maneuvers.yaml` | `laws.constant_g.onset_time` | `0.25` | s | Two decision periods of 50 Hz loop; EQ-MAN-3 |
@@ -227,7 +283,7 @@ config files.  Regenerate after changing a sourced value; the
 | `configs/airframes/aerosonde.yaml` | `physical.motor_no_load_current` | `1.5` | A | mavsim aerosonde_parameters.py i0 |
 | `configs/airframes/aerosonde.yaml` | `physical.battery_cells` | `12` | cells | mavsim aerosonde_parameters.py ncells |
 | `configs/airframes/aerosonde.yaml` | `physical.battery_voltage_max` | `44.4` | V | 12 cells x 3.7 V; mavsim aerosonde_parameters.py V_max |
-| `configs/airframes/aerosonde.yaml` | `physical.gravity` | `9.81` | m/s^2 | CODATA standard gravity |
+| `configs/airframes/aerosonde.yaml` | `physical.gravity` | `9.81` | m/s^2 | Standard gravity 9.80665 m/s^2 rounded to 9.81, the value in mavsim_public aerosonde_parameters.py (https://github.com/byu-magicc/mavsim_public/blob/main/mavsim_python/parameters/aerosonde_parameters.py) |
 | `configs/airframes/aerosonde.yaml` | `aerodynamics.alpha_stall` | `0.47` | rad | mavsim aerosonde_parameters.py alpha0 |
 | `configs/airframes/aerosonde.yaml` | `aerodynamics.CL_0` | `0.23` | dimensionless | mavsim aerosonde_parameters.py C_L_0 |
 | `configs/airframes/aerosonde.yaml` | `aerodynamics.CD_0` | `0.0424` | dimensionless | mavsim aerosonde_parameters.py C_D_0 |
@@ -262,11 +318,11 @@ config files.  Regenerate after changing a sourced value; the
 | `configs/airframes/aerosonde.yaml` | `derived_limits.v_max` | `40.0` | m/s | Level-flight thrust=drag root at 25 m/s trim; docs/mathematics.md EQ-FW-3 |
 | `configs/airframes/aerosonde.yaml` | `derived_limits.a_t_max` | `41.202` | m/s^2 | 4.2 g excess-thrust limit at sea level; docs/mathematics.md EQ-FW-4 |
 | `configs/airframes/aerosonde.yaml` | `derived_limits.a_t_min` | `-19.62` | m/s^2 | -2.0 g idle-thrust/drag limit; docs/mathematics.md EQ-FW-4 |
-| `configs/airframes/aerosonde.yaml` | `derived_limits.a_n_max` | `102.9` | m/s^2 | 10.5 g aero/structural limit, decision Q11; docs/mathematics.md EQ-FW-5 |
-| `configs/airframes/aerosonde.yaml` | `derived_limits.a_n_down_max` | `49.05` | m/s^2 | 5.0 g negative-load limit, decision Q11; docs/mathematics.md EQ-FW-5 |
-| `configs/airframes/aerosonde.yaml` | `derived_limits.omega_max` | `3.5` | rad/s | Coordinated turn at 25 m/s and 10.5 g, capped by roll-rate response; EQ-FW-6 |
+| `configs/airframes/aerosonde.yaml` | `derived_limits.a_n_max` | `37.278` | m/s^2 | 3.8 g positive limit manoeuvring load factor, normal category: 14 CFR 23.337 Limit maneuvering load factors (2011 ed., US Government Publishing Office), https://www.govinfo.gov/content/pkg/CFR-2011-title14-vol1/pdf/CFR-2011-title14-vol1-sec23-337.pdf; the same +3.8 g is used as a UAV design requirement (data/lethality_and_gload.csv G01). Structural limit governs above 28.5 m/s, where the aerodynamic limit 0.5 rho V^2 S CL_max/(m g) exceeds 3.8 (EQ-FW-5). Changed 2026-11-14 from the unsourced 10.5 g |
+| `configs/airframes/aerosonde.yaml` | `derived_limits.a_n_down_max` | `14.911` | m/s^2 | 0.4 x positive limit load factor = 1.52 g, normal category: 14 CFR 23.337 Limit maneuvering load factors (2011 ed., US Government Publishing Office), https://www.govinfo.gov/content/pkg/CFR-2011-title14-vol1/pdf/CFR-2011-title14-vol1-sec23-337.pdf. Changed 2026-11-14 from the unsourced 5.0 g |
+| `configs/airframes/aerosonde.yaml` | `derived_limits.omega_max` | `1.44` | rad/s | Coordinated turn g sqrt(n^2-1)/V at 25 m/s trim and n = 3.8 (14 CFR 23.337); EQ-FW-6 |
 | `configs/airframes/aerosonde.yaml` | `derived_limits.tau_accel` | `0.12` | s | Roll/pitch first-order response fit, Beard & McLain control chapter; EQ-FW-7 |
-| `configs/airframes/aerosonde.yaml` | `derived_limits.max_jerk` | `180.0` | m/s^3 | a_n_max / tau_accel = 102.9 / 0.12 rounded down; EQ-FW-7 |
+| `configs/airframes/aerosonde.yaml` | `derived_limits.max_jerk` | `180.0` | m/s^3 | Kept at 180 m/s^3, below a_n_max / tau_accel = 37.278 / 0.12 = 311; EQ-FW-7 (project choice) |
 | `configs/airframes/aim5.yaml` | `physical.mass_initial` | `63.8` | kg | CADAC aim5_prop_deck.asc mass_vs_time at t=0 |
 | `configs/airframes/aim5.yaml` | `physical.mass_burnout` | `38.6` | kg | CADAC aim5_prop_deck.asc mass_vs_time at t>=3.02 s |
 | `configs/airframes/aim5.yaml` | `physical.reference_area` | `0.01767` | m^2 | CADAC aim5_aero_deck.asc reference area |
@@ -277,7 +333,7 @@ config files.  Regenerate after changing a sourced value; the
 | `configs/airframes/aim5.yaml` | `physical.rate_loop_time_constant` | `0.1` | s | CADAC input.asc tr |
 | `configs/airframes/aim5.yaml` | `physical.prop_integral_ratio` | `2.0` | dimensionless | CADAC input.asc ta |
 | `configs/airframes/aim5.yaml` | `physical.accel_loop_gain` | `40.0` | rad/s^2 | CADAC input.asc gacp |
-| `configs/airframes/aim5.yaml` | `physical.gravity` | `9.81` | m/s^2 | CODATA standard gravity |
+| `configs/airframes/aim5.yaml` | `physical.gravity` | `9.81` | m/s^2 | Standard gravity 9.80665 m/s^2 rounded to 9.81 (project-wide value, same as mavsim_public) |
 | `configs/airframes/aim5.yaml` | `propulsion.mass_vs_time` | `[[0.0, 63.8], [0.01, 63.8], [0.5, 57.4], [0.82, 52.6], [1.0, 50.0], [1.5, 44.9], [2.0, 42.0], [2.36, 40.7], [3.0, 38.6], [3.02, 38.6], [10.0, 38.6]]` | [time s, mass kg] | CADAC aim5_prop_deck.asc mass_vs_time |
 | `configs/airframes/aim5.yaml` | `propulsion.sea_level_thrust_vs_time` | `[[0.0, 28075.0], [0.01, 28075.0], [0.5, 34614.0], [0.82, 39231.0], [1.0, 30767.0], [1.5, 18464.0], [2.0, 8847.0], [2.36, 7308.0], [3.0, 8308.0], [3.02, 0.0], [10.0, 0.0]]` | [time s, sea-level thrust N] | CADAC aim5_prop_deck.asc thrust_vs_time |
 | `configs/airframes/aim5.yaml` | `aerodynamics.alpha_grid_deg` | `[0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 35.0]` | deg | CADAC aim5_aero_deck.asc alpha rows |
@@ -300,4 +356,4 @@ config files.  Regenerate after changing a sourced value; the
 | `configs/airframes/aim5.yaml` | `derived_limits.tau_accel` | `0.1` | s | CADAC autopilot rate-loop time constant tr; EQ-MS-6 |
 | `configs/airframes/aim5.yaml` | `derived_limits.max_jerk` | `1000.0` | m/s^3 | a_n_max / (4 tau_accel) rounded; EQ-MS-6 |
 
-**281 sourced leaves; 0 TODO.**
+**337 sourced leaves; 0 TODO.**
