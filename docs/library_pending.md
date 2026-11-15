@@ -37,7 +37,7 @@ names the book (row IDs are those of the current `docs/full_value_audit.csv`).
 
 ## L4: dependent rows (17)
 
-* `interceptor/sim/pipeline.py` [CITED_METHOD]: V01110, V01116, V01117, V01118, V01119, V01120, V01121, V01122, V01123, V01124, V01126, V01127, ... (16 rows)
+* `interceptor/sim/pipeline.py` [CITED_METHOD]: V01121, V01127, V01128, V01129, V01130, V01131, V01132, V01133, V01134, V01135, V01137, V01138, ... (16 rows)
 * `simulator` [CITED_METHOD]: D003
 
 ## L5: dependent rows (49)
@@ -63,7 +63,7 @@ names the book (row IDs are those of the current `docs/full_value_audit.csv`).
 * `configs/platforms.yaml` [CITED, CITED_PARTIAL]: V00206, V00207, V00216
 * `guidance` [CITED]: D019
 * `interceptor/guidance/airframes.py` [CITED_METHOD]: V00615, V00616, V00617, V00618, V00619, V00620, V00621, V00622, V00623, V00624, V00625, V00626, ... (20 rows)
-* `interceptor/sim/pipeline.py` [CITED_METHOD]: V01110, V01116, V01117, V01118, V01119, V01120, V01121, V01122, V01123, V01124, V01126, V01127, ... (16 rows)
+* `interceptor/sim/pipeline.py` [CITED_METHOD]: V01121, V01127, V01128, V01129, V01130, V01131, V01132, V01133, V01134, V01135, V01137, V01138, ... (16 rows)
 
 ## L9: dependent rows (144)
 
@@ -72,5 +72,5 @@ names the book (row IDs are those of the current `docs/full_value_audit.csv`).
 
 ## L10: dependent rows (16)
 
-* `interceptor/sim/wind.py` [CITED_METHOD]: V01138, V01139, V01140, V01141, V01143, V01144, V01145, V01146, V01147, V01149, V01150, V01151, ... (15 rows)
+* `interceptor/sim/wind.py` [CITED_METHOD]: V01149, V01150, V01151, V01152, V01154, V01155, V01156, V01157, V01158, V01160, V01161, V01162, ... (15 rows)
 * `simulator` [CITED_PARTIAL]: D008

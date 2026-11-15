@@ -17,9 +17,9 @@ def test_navigation_config_has_sweep_source():
 
 
 def test_resolve_n_prime_per_platform_and_arm():
-    assert resolve_n_prime(PlatformType.QUADCOPTER, "apn_raw") == 3.0
-    assert resolve_n_prime(PlatformType.QUADCOPTER, "apn_filtered") == 5.0
-    assert resolve_n_prime(PlatformType.FIXED_WING, "apn_filtered") == 3.5
-    assert resolve_n_prime(PlatformType.MISSILE, "apn_filtered") == 3.5
+    # Winners of the 2026-11-15 P5.11 sweep (results/tables/nav_sweep_best.json).
+    for platform in PlatformType:
+        for mode in ("apn_raw", "apn_filtered"):
+            assert resolve_n_prime(platform, mode) == 3.0
     # APN + RL keeps the filtered navigation constant.
-    assert resolve_n_prime(PlatformType.MISSILE, "apn_rl") == 3.5
+    assert resolve_n_prime(PlatformType.MISSILE, "apn_rl") == 3.0
