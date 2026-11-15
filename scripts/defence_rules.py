@@ -205,7 +205,7 @@ RULES = [
     ("BOUND", "interceptor/sim/constants", r"GROUND_EFFECT",
      "inactive above 0.15 m; no interception episode flies that low (BUGS #27)"),
     ("REPEATABILITY", "interceptor/sim/constants", r"ROTOR_DRAG",
-     "REPEATABILITY kz = 0 / 0.7 rows of results/tables/quad_limits_repeatability.csv (top speed is drag-limited: 513 / 22.0 m/s vs 27.7); the speed ratio is kept by tying the target to the interceptor and swept by target_speed_ratio"),
+     "REPEATABILITY kz = 0 / 0.7 rows of results/tables/quad_limits_repeatability.csv (top speed is drag-limited: 267 / 19.5 m/s vs 24.0); the speed ratio is kept by tying the target to the interceptor and swept by target_speed_ratio"),
     ("BOUND", "interceptor/sim/constants", r"TILT_CRASH|GROUND_CONTACT",
      "crash classification thresholds (60 deg tilt, 1 m/s ground contact) used only to end flight-controller episodes that have already failed"),
     ("DEFINITION", "interceptor/sim/constants", r"PH_DT\b|PH_CMD|PH_C_SCALE|PH_W_SCALE|PH_CUT_THR|_hover_cmd|brentq|om = PH_BAT|PH_OMEGA_HOVER|PH_R_P|PH_ZETA|PH_SPIN",

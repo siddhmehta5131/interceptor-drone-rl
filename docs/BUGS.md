@@ -352,7 +352,7 @@ with has a primary tier. Still secondary, with the reason recorded per row: IRIS
 figures), Orlan-10 (no manufacturer datasheet online), Shahed-136 (IRGC poster via Janes),
 Akash radar ranges (no LRDE datasheet). No model value changed, so nothing is stale.
 
-### 34. Quad motor constants disagree with Förster (2015) (OPEN, owner decision)
+### 34. Quad motor constants disagree with Förster (2015) (FIXED 2026-11-15, owner decision: adopt Förster)
 Item 5 of the 2026-11-15 sourcing pass read the Förster (2015) Crazyflie 2.0 thesis
 (ETH Research Collection, doi:10.3929/ethz-b-000214143) and compared it with our two unsourced
 motor constants (`docs/crazyflie_forster_comparison.md`): `PH_C_L = 2.618e-8` is 1.44x the
@@ -407,3 +407,28 @@ fixed-wing kill rates will drop; that is the honest result for this airframe pai
 every fixed-wing result (`results/tables/nav_sweep*`, any guidance table or video with the
 fixed-wing platform) and the fixed-wing N' winners in `configs/guidance.yaml`.
 
+**#34 fix (2026-11-15, owner decision: adopt Förster).** `configs/quadrotor.yaml` and
+`interceptor/sim/constants.py` take the Förster (2015) values: thrust coefficient 1.817e-8,
+torque coefficient 1.084e-10, maximum rotor speed 3052.4 rad/s, motor lag 0.0647 s, linear ESC
+map omega = 380.8359 + 2671.548 c (derivation in `docs/crazyflie_forster_comparison.md`, checked
+by `tests/unit/test_forster_constants.py`). The old values survive only as
+`constants.LEGACY_V1` for golden-fixture replay. Re-measured P4.9 envelope
+(`results/tables/quad_limits.json`): thrust-to-weight 2.05 -> 1.69, v_max 27.7 -> 24.0 m/s,
+lateral 15.4 -> 13.3 m/s^2, down 9.5 -> 9.2, tau 0.17 -> 0.28 s, jerk 88.3 -> 47.0 m/s^3, peak
+rate 4.4 -> 4.1 rad/s. Derived quad values follow: target 18.3 -> 15.9 m/s, target accel 7.404
+-> 6.394 m/s^2, spawn 92-277 -> 80-240 m, observation scales. B1 rise-time target 0.12 -> 0.39 s
+(6 tau). **Stale:** every quad result made before this date.
+
+### 37. Hard attitude-step probe demanded an unreachable acceleration (FIXED 2026-11-15)
+Found while re-measuring P4.9 for #34. Step 5 of `scripts/measure_quad_limits.py` commanded a
+3000 m/s^2 lateral acceleration to provoke the peak body rate. At thrust-to-weight 1.69 the bridge
+(`AccelBridge.thrust_vector`) then asks for full thrust, the collective is 1.0, and the
+collective-priority mixer (EQ-SIX-4) scales the roll torque to zero, so the vehicle never tilts
+and the probe reported 0.0 rad/s (at thrust-to-weight 2.05 a 60 deg tilt fitted under full thrust,
+which hid the problem). The probe now steps to `v_hold_frac` (0.9) x the measured lateral limit,
+the same fraction the top-speed hold uses: 4.08 rad/s. **Known limitation, not changed:** any
+acceleration demand at or above the thrust envelope leaves the bridge + mixer with no attitude
+authority. In the closed loop (`interceptor/bridge/closed_loop.py`) the APN command is limited
+to the platform envelope (a_n_max 13.3 m/s^2), but the A3 residual is added on top (up to
+`residual_authority` x a_n_max) and upward demands above the measured 5.9 m/s^2 climb limit can
+still saturate the collective; how often this happens in the closed-loop runs is not measured.

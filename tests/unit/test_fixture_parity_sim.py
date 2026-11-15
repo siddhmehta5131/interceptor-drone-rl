@@ -22,6 +22,33 @@ OPEN_LOOP = ["hover", "climb", "roll_step", "pitch_step", "yaw_step", "mixed"]
 CLOSED_LOOP = ["pid_rate_steps", "pid_mixed"]
 
 
+# The fixtures were recorded from the predecessor simulator with its motor constants.
+# The live constants changed on 2026-11-15 (Forster 2015, BUGS #34), so every test in this
+# file replays the port with constants.LEGACY_V1: it still proves the equations are a
+# verbatim port, independently of the parameter values now in use.
+_L = constants.LEGACY_V1
+_L_OMEGA_HOVER = float(np.sqrt(constants.PH_M * 9.81 / (4.0 * _L["c_l"])))
+_L_C_HOVER = constants.esc_cmd_for_omega(_L_OMEGA_HOVER, bat=_L["bat"])
+
+
+@pytest.fixture(autouse=True)
+def legacy_constants(monkeypatch):
+    from dataclasses import dataclass
+
+    @dataclass
+    class LegacyParams(pipeline.PhysicsParams):
+        c_l: float = _L["c_l"]
+        c_d: float = _L["c_d"]
+
+    monkeypatch.setattr(pipeline, "PhysicsParams", LegacyParams)
+    monkeypatch.setattr(pipeline, "NOM_C_L", _L["c_l"])
+    monkeypatch.setattr(pipeline, "NOM_C_D", _L["c_d"])
+    monkeypatch.setattr(pipeline, "PH_BAT", _L["bat"])
+    monkeypatch.setattr(pipeline, "PH_K_MOT", _L["k_mot"])
+    monkeypatch.setattr(constants, "PH_OMEGA_HOVER", _L_OMEGA_HOVER)
+    monkeypatch.setattr(constants, "PH_C_HOVER", _L_C_HOVER)
+
+
 def _init(p0=(0.0, 0.0, 1.0)):
     return (np.array(p0, dtype=float), np.array([1.0, 0.0, 0.0, 0.0]),
             np.zeros(3), np.zeros(3), np.full(4, constants.PH_OMEGA_HOVER))
@@ -96,16 +123,17 @@ def test_domain_randomisation_draw_order():
         assert np.max(np.abs(got - row)) <= TOL
 
 
-def test_constants_unchanged():
+def test_legacy_constants_match_fixture():
     fx = np.load(FIX / "sim_constants.npz")
-    assert constants.PH_C_HOVER == pytest.approx(float(fx["c_hover"]), abs=TOL)
-    assert constants.PH_OMEGA_HOVER == pytest.approx(float(fx["omega_hover"]), abs=1e-9)
+    assert _L_C_HOVER == pytest.approx(float(fx["c_hover"]), abs=1e-9)
+    assert _L_OMEGA_HOVER == pytest.approx(float(fx["omega_hover"]), abs=1e-9)
     assert constants.PH_M == float(fx["mass"])
     assert np.array_equal(np.asarray(constants.PH_J), fx["J"])
-    assert constants.PH_C_L == float(fx["c_l"])
-    assert constants.PH_C_D == float(fx["c_d"])
-    assert constants.PH_K_MOT == float(fx["k_mot"])
-    assert constants.PH_OMEGA_MAX == float(fx["omega_max"])
-    for name, key in (("PH_BAT", "bat"), ("PH_MIX", "mix"), ("PH_R_P", "r_p"),
+    assert _L["c_l"] == float(fx["c_l"])
+    assert _L["c_d"] == float(fx["c_d"])
+    assert _L["k_mot"] == float(fx["k_mot"])
+    assert _L["omega_max"] == float(fx["omega_max"])
+    assert np.array_equal(_L["bat"], fx["bat"])
+    for name, key in (("PH_MIX", "mix"), ("PH_R_P", "r_p"),
                       ("PH_KP", "kp"), ("PH_KI", "ki"), ("PH_KD", "kd")):
         assert np.array_equal(np.asarray(getattr(constants, name)), fx[key]), name

@@ -33,7 +33,12 @@ def test_todo_count_is_zero_across_all_source_files():
 def test_airframe_and_platform_key_values_are_present():
     quad = load_yaml(ROOT / "configs/quadrotor.yaml")
     assert quad["mass"]["value"] == pytest.approx(0.04085)
-    assert quad["thrust_coefficient"]["value"] == pytest.approx(2.618e-8)
+    from interceptor.sim import constants as c
+    assert quad["thrust_coefficient"]["value"] == pytest.approx(c.PH_C_L)
+    assert quad["torque_coefficient"]["value"] == pytest.approx(c.PH_C_D)
+    assert quad["motor_time_constant"]["value"] == pytest.approx(c.PH_K_MOT)
+    assert quad["maximum_motor_speed"]["value"] == pytest.approx(c.PH_OMEGA_MAX)
+    assert quad["esc_zero_order_coefficients"]["value"] == pytest.approx(list(c.PH_BAT), rel=1e-6)
     platforms = load_yaml(ROOT / "configs/platforms.yaml")["platforms"]
     assert set(platforms) == {"quadcopter", "fixed_wing", "missile"}
     for name, cfg in platforms.items():

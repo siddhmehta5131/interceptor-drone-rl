@@ -26,7 +26,7 @@ __all__ = [
     # fixed constants
     "PH_M", "PH_J", "PH_J_MP", "PH_G_W", "PH_DT",
     "PH_ARM", "PH_R_P", "PH_ZETA", "PH_SPIN_SIGN", "PH_MIX",
-    "PH_C_L", "PH_C_D", "PH_K_MOT", "PH_OMEGA_MAX",
+    "PH_C_L", "PH_C_D", "PH_K_MOT", "PH_OMEGA_MAX", "LEGACY_V1", "esc_omega_ss", "esc_cmd_for_omega",
     "PH_ETA", "PH_BAT",
     "PH_KP", "PH_KI", "PH_KD",
     "PH_CMD_MIN", "PH_CMD_MAX", "PH_C_SCALE", "PH_W_SCALE", "PH_CUT_THR",
@@ -75,34 +75,59 @@ PH_MIX        = np.column_stack([
     PH_SPIN_SIGN,              # yaw   = spin-reaction direction
 ])
 
-PH_C_L        = 2.618e-8    # N/(rad/s)^2   lift coeff  (our fit to NanoBench hover data, BUGS #27)
-PH_C_D        = 5.45e-11    # N*m/(rad/s)^2 drag coeff  (c_l/480 ratio)
-PH_K_MOT      = 0.02        # s             motor first-order lag time constant (assumed, BUGS #27)
-PH_OMEGA_MAX  = 2800.0      # rad/s         maximum motor speed
+# Motor / propeller constants: Forster (2015), System Identification of the Crazyflie 2.0
+# Nano Quadrocopter, ETH Zurich, doi:10.3929/ethz-b-000214143 (read 2026-11-15; BUGS #34).
+# Derivation and comparison: docs/crazyflie_forster_comparison.md; recomputed from the
+# thesis mappings by tests/unit/test_forster_constants.py.
+#   thrust per motor   f(cmd)     = 2.130295e-11 cmd^2 + 1.032633e-6 cmd + 5.484560e-4 N   (eq. 3.3)
+#   rotor speed        omega(cmd) = 0.04076521 cmd + 380.8359 rad/s, cmd in [0, 65535]     (Sec. 3.3.2)
+#   torque / thrust    0.005964552 m                                                       (eq. 3.5)
+#   command -> thrust  H(z) = 7.2345374e-8 / (1 - 0.9695404 z^-1) at 500 Hz                (eq. 3.16)
+FORSTER_THRUST_POLY = (2.130295e-11, 1.032633e-6, 5.484560e-4)
+FORSTER_OMEGA_LIN   = (0.04076521, 380.8359)
+FORSTER_TORQUE_PER_THRUST = 0.005964552
+FORSTER_POLE, FORSTER_TS = 0.9695404, 0.002
+PH_C_L        = 1.817e-8    # N/(rad/s)^2   least squares of f(cmd) = c_l omega(cmd)^2 over cmd 10000..60000 (step 1000)
+PH_C_D        = 1.084e-10   # N*m/(rad/s)^2 = 0.005964552 m x PH_C_L (eq. 3.5 slope)
+PH_K_MOT      = 0.0647      # s             -Ts / ln(pole) of eq. (3.16): command-to-thrust first-order lag
+PH_OMEGA_MAX  = 3052.4      # rad/s         omega(65535) from the Sec. 3.3.2 map
 
-PH_ETA        = 0.7                                            # motor efficiency
-# ESC/battery coeffs -> steady-state speed  Omega_ss(c) = PH_BAT[0] + PH_BAT[1]*U
-# + PH_BAT[2]*sqrt(c) + PH_BAT[3]*c + PH_BAT[4]*U*sqrt(c).
-#
-# BLOCKING FIX (2026-10-06, BUGS.md #13/R-1): the previously shipped fit
-# ``[865.6, 379.9, 1053.4, -1818.9, -291.3]`` was monotonically DECREASING
-# (Omega_ss(0.02)~2400 -> Omega_ss(1.0)~472), i.e. raising the throttle slowed
-# the rotors.  That inverted both control loops at once:
-#   * collective: thrust action up -> thrust down (altitude loop = +feedback)
-#   * attitude:   mixer column sign assumed thrust rises with cmd, so the
-#     rate PID became positive feedback (roll/pitch/yaw diverged in <0.3 s)
-# Every rendered video and every trained checkpoint crashed with
-# ``crashed_flip`` within 12-29 steps as a result.
-#
-# Replacement is the monotone increasing two-term fit  Omega_ss(c) = A + B*sqrt(c)
-# anchored on the two physically known points:
-#   Omega_ss(PH_C_HOVER) = PH_OMEGA_HOVER (1956.211093185006, thrust == weight)
-#   Omega_ss(1.0)        = PH_OMEGA_MAX   (2800.0, full stick)
-# The hover command is re-derived below by root-finding, so it stays at the
-# documented value (0.2325374363535...), and the sensitivity at hover
-# (dOmega/dc ~ +1687 rad/s per unit cmd) keeps the same magnitude the rate PID
-# was tuned against.  Mirrored in ``hover_env.py`` so Stage-1 parity holds.
-PH_BAT        = np.array([1170.36749799968, 0.0, 1629.63250200032, 0.0, 0.0])
+# Values used until 2026-11-15 (own NanoBench fit, assumed lag, two-point ESC fit).  Kept only
+# so the golden fixtures recorded from the predecessor simulator can be replayed
+# (tests/unit/test_fixture_parity_sim.py); nothing else may use them.
+LEGACY_V1 = {
+    "c_l": 2.618e-8, "c_d": 5.45e-11, "k_mot": 0.02, "omega_max": 2800.0,
+    "bat": np.array([1170.36749799968, 0.0, 1629.63250200032, 0.0, 0.0]),
+}
+
+PH_ETA        = 0.7                                            # motor efficiency (unused by the v2 pipeline)
+# ESC map -> steady-state speed  Omega_ss(c) = PH_BAT[0] + PH_BAT[1]*U + PH_BAT[2]*sqrt(c)
+# + PH_BAT[3]*c + PH_BAT[4]*U*sqrt(c), c = normalised command in [0, 1] (EQ-SIX-7).
+# Since 2026-11-15 this is Forster's measured linear map omega = 380.8359 + 0.04076521 cmd
+# with cmd = 65535 c, i.e. Omega_ss(c) = 380.8359 + 2671.548 c (no battery-voltage term:
+# the thesis map was measured on a charged cell).  The thesis says the map is not valid
+# below cmd 1000 (c < 0.015); the simulator cuts the motors below PH_CUT_THR = 0.02.
+# It replaces the two-point sqrt fit of BUGS R-1 (LEGACY_V1["bat"]).
+PH_BAT        = np.array([FORSTER_OMEGA_LIN[1], 0.0, 0.0, FORSTER_OMEGA_LIN[0] * 65535.0, 0.0])
+
+
+def esc_omega_ss(c, u_bat: float = 4.2, bat=None):
+    """Steady-state rotor speed (rad/s) for normalised command ``c`` (no throttle cut)."""
+    b = PH_BAT if bat is None else bat
+    s = np.sqrt(np.clip(c, 0.0, 1.0))
+    return b[0] + b[1] * u_bat + (b[2] + b[4] * u_bat) * s + b[3] * s * s
+
+
+def esc_cmd_for_omega(omega: float, u_bat: float = 4.2, bat=None) -> float:
+    """Inverse of :func:`esc_omega_ss`: command in [0, 1] giving rotor speed ``omega``."""
+    b = PH_BAT if bat is None else bat
+    c0, c1, c2 = b[0] + b[1] * u_bat - float(omega), b[2] + b[4] * u_bat, b[3]
+    if abs(c2) < 1e-12:
+        s = -c0 / c1
+    else:
+        s = (-c1 + np.sqrt(max(c1 * c1 - 4.0 * c2 * c0, 0.0))) / (2.0 * c2)
+    return float(np.clip(s, 0.0, 1.0) ** 2)
+
 
 PH_KP         = np.array([0.150, 0.150, 0.200])   # rate-PID proportional gains
 PH_KI         = np.array([0.200, 0.200, 0.100])   # rate-PID integral gains
@@ -174,24 +199,11 @@ PH_OMEGA_HOVER = float(np.sqrt(PH_M * 9.81 / (4.0 * PH_C_L)))
 
 
 def _hover_cmd(u_bat: float = 4.2) -> float:
-    """Invert ESC polynomial -> collective cmd that produces Omega_hover."""
-    try:
-        from scipy.optimize import brentq
-
-        def _f(c: float) -> float:
-            return (PH_BAT[0] + PH_BAT[1] * u_bat
-                    + PH_BAT[2] * np.sqrt(c) + PH_BAT[3] * c
-                    + PH_BAT[4] * u_bat * np.sqrt(c)) - PH_OMEGA_HOVER
-
-        return float(brentq(_f, 0.02, 1.0))
-    except Exception:  # pragma: no cover - scipy is a hard requirement
-        g = np.linspace(0.02, 1.0, 20_000)
-        om = (PH_BAT[0] + PH_BAT[1] * u_bat + PH_BAT[2] * np.sqrt(g)
-              + PH_BAT[3] * g + PH_BAT[4] * u_bat * np.sqrt(g))
-        return float(g[np.argmin(np.abs(om - PH_OMEGA_HOVER))])
+    """Collective command that produces Omega_hover (inverse of the ESC map)."""
+    return esc_cmd_for_omega(PH_OMEGA_HOVER, u_bat)
 
 
-PH_C_HOVER = _hover_cmd()   # 0.23253743635354834 -- collective command at hover
+PH_C_HOVER = _hover_cmd()   # 0.736 with the Forster map (hover at 2348 rad/s)
 
 # ---------------------------------------------------------------------------
 # Domain-randomization nominal values + default ranges

@@ -887,20 +887,20 @@ Code: `scripts/measure_quad_limits.py`; output: `results/tables/quad_limits.json
 
 Analytic bounds from the thrust-to-weight ratio:
 
-$$a_{lat} = g\sqrt{TW^2 - 1} = 17.5, \qquad a_{up} = g(TW - 1) = 10.3, \qquad a_{down} = g = 9.81\ \ \mathrm{m/s^2}$$
+$$a_{lat} = g\sqrt{TW^2 - 1} = 13.4, \qquad a_{up} = g(TW - 1) = 6.8, \qquad a_{down} = g = 9.81\ \ \mathrm{m/s^2}$$
 
 Measured quantities:
 
 | Quantity | Definition | Value |
 |---|---|---|
 | Specific force | $(\mathbf v_{k+1} - \mathbf v_k)/\Delta t - \mathbf g$, 25-sample moving average | |
-| $\tau_a$ | time for a 4 m/s² lateral step to reach 63.2 % | 0.174 s |
-| $a_{lat,\max}$ | peak lateral acceleration before saturation | 14.8 m/s² |
-| $a_{up,\max}$, $a_{down,\max}$ | peak vertical acceleration at level attitude | 9.4 m/s² |
-| $v_{\max}$ | terminal speed holding $0.9\,a_{lat,\max}$ | 22.0 m/s |
-| $j_{\max}$ | $a_{lat,\max}/\tau_a$ | 85 m/s³ |
-| Turn rate at top speed | $a_{lat,\max}/v_{\max}$ | 0.67 rad/s |
-| Peak body rate | hard attitude step | 4.4 rad/s |
+| $\tau_a$ | time for a 4 m/s² lateral step to reach 63.2 % | 0.284 s |
+| $a_{lat,\max}$ | peak lateral acceleration before saturation | 13.3 m/s² |
+| $a_{up,\max}$, $a_{down,\max}$ | peak vertical acceleration at level attitude | 5.9 / 9.2 m/s² |
+| $v_{\max}$ | terminal speed holding $0.9\,a_{lat,\max}$ | 24.0 m/s |
+| $j_{\max}$ | $a_{lat,\max}/\tau_a$ | 47 m/s³ |
+| Turn rate at top speed | $a_{lat,\max}/v_{\max}$ | 0.56 rad/s |
+| Peak body rate | attitude step to $0.9\,a_{lat,\max}$ | 4.1 rad/s |
 
 ---
 

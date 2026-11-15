@@ -18,37 +18,37 @@ platforms:
       unit: m/s
       source: "Multirotor can hover; EQ-KIN-1"
     v_max:
-      value: 27.7
+      value: 24.0
       unit: m/s
-      source: "Measured on the validated 500 Hz Crazyflie flight-control stack, plan P4.9: results/tables/quad_limits.json (scripts/measure_quad_limits.py); v_max_measured = 27.67 m/s with rotor drag (0.5, 0.5, 0.5) 1/s. Top speed is drag-limited and the drag coefficients are assumed (BUGS #27): 21.99 m/s with the earlier kz = 0.7; sensitivity in results/tables/quad_limits_repeatability.csv. Changed 2026-11-14 from the unsupported 45 m/s estimate"
+      source: "Measured on the validated 500 Hz Crazyflie flight-control stack, plan P4.9: results/tables/quad_limits.json (scripts/measure_quad_limits.py); v_max_measured = 24.03 m/s with rotor drag (0.5, 0.5, 0.5) 1/s and the Förster (2015) motor constants (thrust-to-weight 1.69). Top speed is drag-limited and the drag coefficients are assumed (BUGS #27); sensitivity in results/tables/quad_limits_repeatability.csv. Changed 2026-11-15 for the Förster (2015) motor constants (BUGS #34) from 27.7 m/s (2026-11-14: from the unsupported 45 m/s estimate)"
     a_t_max:
-      value: 15.4
+      value: 13.3
       unit: m/s^2
-      source: "Measured on the validated 500 Hz Crazyflie flight-control stack, plan P4.9: results/tables/quad_limits.json (scripts/measure_quad_limits.py); omnidirectional vehicle, along-track limit = measured lateral limit 15.37 m/s^2. Changed from 3.2 g analytic"
+      source: "Measured on the validated 500 Hz Crazyflie flight-control stack, plan P4.9: results/tables/quad_limits.json (scripts/measure_quad_limits.py); omnidirectional vehicle, along-track limit = measured lateral limit 13.35 m/s^2. Changed 2026-11-15 for the Förster (2015) motor constants (BUGS #34) from 15.4"
     a_t_min:
-      value: -15.4
+      value: -13.3
       unit: m/s^2
-      source: "Measured on the validated 500 Hz Crazyflie flight-control stack, plan P4.9: results/tables/quad_limits.json (scripts/measure_quad_limits.py); omnidirectional vehicle, symmetric along-track limit. Changed from -3.2 g analytic"
+      source: "Measured on the validated 500 Hz Crazyflie flight-control stack, plan P4.9: results/tables/quad_limits.json (scripts/measure_quad_limits.py); omnidirectional vehicle, symmetric along-track limit. Changed 2026-11-15 for the Förster (2015) motor constants (BUGS #34) from -15.4"
     a_n_max:
-      value: 15.4
+      value: 13.3
       unit: m/s^2
-      source: "Measured on the validated 500 Hz Crazyflie flight-control stack, plan P4.9: results/tables/quad_limits.json (scripts/measure_quad_limits.py); lateral_a_max_measured = 15.37 m/s^2 (analytic g sqrt(TW^2-1) = 17.5). Changed from 5.2 g analytic"
+      source: "Measured on the validated 500 Hz Crazyflie flight-control stack, plan P4.9: results/tables/quad_limits.json (scripts/measure_quad_limits.py); lateral_a_max_measured = 13.35 m/s^2 (analytic g sqrt(TW^2-1) = 13.36). Changed 2026-11-15 for the Förster (2015) motor constants (BUGS #34) from 15.4"
     a_n_down_max:
-      value: 9.5
+      value: 9.2
       unit: m/s^2
-      source: "Measured on the validated 500 Hz Crazyflie flight-control stack, plan P4.9: results/tables/quad_limits.json (scripts/measure_quad_limits.py); vertical_down_a_max_measured = 9.51 m/s^2"
+      source: "Measured on the validated 500 Hz Crazyflie flight-control stack, plan P4.9: results/tables/quad_limits.json (scripts/measure_quad_limits.py); vertical_down_a_max_measured = 9.15 m/s^2. Changed 2026-11-15 for the Förster (2015) motor constants (BUGS #34) from 9.5"
     tau_accel:
-      value: 0.17
+      value: 0.28
       unit: s
-      source: "Measured on the validated 500 Hz Crazyflie flight-control stack, plan P4.9: results/tables/quad_limits.json (scripts/measure_quad_limits.py); tau_accel_s = 0.174, consistent with 1/Kp of the Crazyflie firmware attitude loop (PID_ROLL_KP 6.0, https://github.com/bitcraze/crazyflie-firmware/blob/master/src/platform/interface/platform_defaults_cf2.h)"
+      source: "Measured on the validated 500 Hz Crazyflie flight-control stack, plan P4.9: results/tables/quad_limits.json (scripts/measure_quad_limits.py); tau_accel_s = 0.284: the 1/Kp = 0.167 s of the Crazyflie firmware attitude loop (PID_ROLL_KP 6.0, https://github.com/bitcraze/crazyflie-firmware/blob/master/src/platform/interface/platform_defaults_cf2.h) plus the Förster (2015) 64.7 ms command-to-thrust lag and the rate loop. Changed 2026-11-15 for the Förster (2015) motor constants (BUGS #34) from 0.17"
     max_jerk:
-      value: 88.3
+      value: 47.0
       unit: m/s^3
-      source: "Measured on the validated 500 Hz Crazyflie flight-control stack, plan P4.9: results/tables/quad_limits.json (scripts/measure_quad_limits.py); max_jerk_m_s3 = 88.34 = a_n_max / tau_accel; EQ-KIN-3"
+      source: "Measured on the validated 500 Hz Crazyflie flight-control stack, plan P4.9: results/tables/quad_limits.json (scripts/measure_quad_limits.py); max_jerk_m_s3 = 47.01 = a_n_max / tau_accel = 13.35/0.284; EQ-KIN-3. Changed 2026-11-15 for the Förster (2015) motor constants (BUGS #34) from 88.3"
     omega_max:
-      value: 4.4
+      value: 4.1
       unit: rad/s
-      source: "Measured on the validated 500 Hz Crazyflie flight-control stack, plan P4.9: results/tables/quad_limits.json (scripts/measure_quad_limits.py); peak_rate_hard_attitude_step = 4.39 rad/s"
+      source: "Measured on the validated 500 Hz Crazyflie flight-control stack, plan P4.9: results/tables/quad_limits.json (scripts/measure_quad_limits.py); peak_rate_hard_attitude_step = 4.08 rad/s (step to 0.9 x the lateral limit; BUGS #37). Changed 2026-11-15 for the Förster (2015) motor constants (BUGS #34) from 4.4"
     can_hover:
       value: true
       unit: dimensionless
@@ -62,25 +62,25 @@ platforms:
       unit: m
       source: "Hit-to-kill contact rule r_kill = target half-span + interceptor half-span (EQ-GEO-4); no warhead is assumed because no credible lethal-radius data exists (data/lethality_and_gload.csv): 2.5/2 + 0.092/2 = 1.30 m. Shahed-136 wingspan 2.5 m (IRGC specification poster reported by Janes, https://www.janes.com/osint-insights/defence-news/air/irgc-confirms-specs-for-shahed-136-attack-uav); Crazyflie 2.1 size 92 mm motor-to-motor (Bitcraze datasheet, https://www.bitcraze.io/documentation/hardware/crazyflie_2_1/crazyflie_2_1-datasheet.pdf). Changed 2026-11-14 from 3.0 m"
     r_init_min:
-      value: 92.0
+      value: 80.0
       unit: m
-      source: "Same 10 s minimum time-to-intercept window as before, scaled to the measured speed class (150 m x 27.7/45); EQ-GEO-5 (project choice)"
+      source: "Same 10 s minimum time-to-intercept window as before, scaled to the measured speed class (150 m x 24.0/45); EQ-GEO-5 (project choice). Changed 2026-11-15 for the Förster (2015) motor constants (BUGS #34) from 92 m"
     r_init_max:
-      value: 277.0
+      value: 240.0
       unit: m
-      source: "Same 25 s maximum time-to-intercept window as before, scaled to the measured speed class (450 m x 27.7/45); EQ-GEO-5 (project choice)"
+      source: "Same 25 s maximum time-to-intercept window as before, scaled to the measured speed class (450 m x 24.0/45); EQ-GEO-5 (project choice). Changed 2026-11-15 for the Förster (2015) motor constants (BUGS #34) from 277 m"
     alt_init:
       value: 150.0
       unit: m
       source: "Above 35 m target floor plus 8 s vertical manoeuvre margin; EQ-GEO-6"
     v_target_nominal:
-      value: 18.3
+      value: 15.9
       unit: m/s
-      source: "v_max / speed_ratio = 27.7 / 1.51; the Crazyflie-class model cannot fly real attack-drone speeds, so the real interceptor/target speed ratio is preserved: Wild Hornets Sting official maximum speed 280 km/h (manufacturer product page 'Ukrainian FPV Interceptor STING by Wild Hornets': 'Maximum speed: 280 km/h'; page needs a login, text read by the project author 2026-11-14; also reported by https://www.runtimewire.com/article/wild-hornets-sting-interceptor-speed-tradeoff) over Shahed-136 speed 185 km/h (Janes, Binnie J. (17 May 2023) 'IRGC confirms specs for Shahed-136 attack UAV': IRGC exhibition poster, Qom, gives 185 km/h, 200 kg, 50 kg warhead, 2500 km, https://www.janes.com/osint-insights/defence-news/air/irgc-confirms-specs-for-shahed-136-attack-uav; no manufacturer datasheet has been released for the Shahed-136). Speed ratio is swept 0.3-1.1 in P9.1; EQ-TGT-1"
+      source: "v_max / speed_ratio = 24.0 / 1.51 (Changed 2026-11-15 for the Förster (2015) motor constants (BUGS #34) from 18.3); the Crazyflie-class model cannot fly real attack-drone speeds, so the real interceptor/target speed ratio is preserved: Wild Hornets Sting official maximum speed 280 km/h (manufacturer product page 'Ukrainian FPV Interceptor STING by Wild Hornets': 'Maximum speed: 280 km/h'; page needs a login, text read by the project author 2026-11-14; also reported by https://www.runtimewire.com/article/wild-hornets-sting-interceptor-speed-tradeoff) over Shahed-136 speed 185 km/h (Janes, Binnie J. (17 May 2023) 'IRGC confirms specs for Shahed-136 attack UAV': IRGC exhibition poster, Qom, gives 185 km/h, 200 kg, 50 kg warhead, 2500 km, https://www.janes.com/osint-insights/defence-news/air/irgc-confirms-specs-for-shahed-136-attack-uav; no manufacturer datasheet has been released for the Shahed-136). Speed ratio is swept 0.3-1.1 in P9.1; EQ-TGT-1"
     a_target_max:
-      value: 7.404
+      value: 6.394
       unit: m/s^2
-      source: "a_n_max / a_ratio = 15.4 / 2.08; a_ratio is the Q5 project choice (no g data exists for one-way attack drones), swept in P9; EQ-TGT-1"
+      source: "a_n_max / a_ratio = 13.3 / 2.08 (Changed 2026-11-15 for the Förster (2015) motor constants (BUGS #34) from 7.404); a_ratio is the Q5 project choice (no g data exists for one-way attack drones), swept in P9; EQ-TGT-1"
     dt:
       value: 0.02
       unit: s
@@ -280,19 +280,19 @@ platforms:
 # interceptor/guidance/observation.py::load_observation_scales.
 observation_scales:
   quadcopter:
-    rel_pos: {value: 277.0, unit: m, source: "P5.8: r_init_max, EQ-GEO-5"}
-    rel_vel: {value: 27.7, unit: m/s, source: "P5.8: v_max, EQ-GEO-5"}
-    interceptor_vel: {value: 27.7, unit: m/s, source: "P5.8: v_max, EQ-GEO-5"}
-    range: {value: 277.0, unit: m, source: "P5.8: r_init_max, EQ-GEO-5"}
-    closing_vel: {value: 27.7, unit: m/s, source: "P5.8: v_max, EQ-GEO-5"}
+    rel_pos: {value: 240.0, unit: m, source: "P5.8: r_init_max, EQ-GEO-5"}
+    rel_vel: {value: 24.0, unit: m/s, source: "P5.8: v_max, EQ-GEO-5"}
+    interceptor_vel: {value: 24.0, unit: m/s, source: "P5.8: v_max, EQ-GEO-5"}
+    range: {value: 240.0, unit: m, source: "P5.8: r_init_max, EQ-GEO-5"}
+    closing_vel: {value: 24.0, unit: m/s, source: "P5.8: v_max, EQ-GEO-5"}
     los_rate: {value: 1.0, unit: rad/s, source: "P5.8: LOS rate already O(0.1-1), EQ-GEO-2"}
     t_go: {value: 18.0, unit: s, source: "P5.8: max_time, EQ-APN-4"}
-    future_pos: {value: 277.0, unit: m, source: "P5.8: r_init_max, EQ-GEO-5"}
-    future_vel: {value: 27.7, unit: m/s, source: "P5.8: v_max, EQ-GEO-5"}
+    future_pos: {value: 240.0, unit: m, source: "P5.8: r_init_max, EQ-GEO-5"}
+    future_vel: {value: 24.0, unit: m/s, source: "P5.8: v_max, EQ-GEO-5"}
     time_remaining: {value: 18.0, unit: s, source: "P5.8: max_time, EQ-GEO-5"}
-    optimal_accel: {value: 15.4, unit: m/s^2, source: "P5.8: a_n_max, EQ-KIN-2"}
-    optimal_vel: {value: 27.7, unit: m/s, source: "P5.8: v_max, EQ-GEO-5"}
-    target_accel: {value: 7.404, unit: m/s^2, source: "P5.8: a_target_max, EQ-TGT-1"}
+    optimal_accel: {value: 13.3, unit: m/s^2, source: "P5.8: a_n_max, EQ-KIN-2"}
+    optimal_vel: {value: 24.0, unit: m/s, source: "P5.8: v_max, EQ-GEO-5"}
+    target_accel: {value: 6.394, unit: m/s^2, source: "P5.8: a_target_max, EQ-TGT-1"}
   fixed_wing:
     rel_pos: {value: 900.0, unit: m, source: "P5.8: r_init_max, EQ-GEO-5"}
     rel_vel: {value: 32.4, unit: m/s, source: "P5.8: v_max, EQ-FW-3"}
@@ -327,30 +327,30 @@ observation_scales:
 # Regenerate: python scripts/measure_quad_limits.py -> results/tables/quad_limits.json
 quad_closed_loop_limits:
   a_lateral_max:
-    value: 15.4
+    value: 13.3
     unit: m/s^2
-    source: "measured, P4.9 (analytic g*sqrt(TW^2-1) = 17.5; gap = tilt-rate lag and drag)"
+    source: "measured, P4.9 (analytic g*sqrt(TW^2-1) = 13.36 at TW 1.69). Changed 2026-11-15 for the Förster (2015) motor constants (BUGS #34) from 15.4"
   a_up_max:
-    value: 9.6
+    value: 5.9
     unit: m/s^2
-    source: "measured, P4.9 (analytic g*(TW-1) = 10.3)"
+    source: "measured, P4.9 (analytic g*(TW-1) = 6.77). Changed 2026-11-15 for the Förster (2015) motor constants (BUGS #34) from 9.6"
   a_down_max:
-    value: 9.5
+    value: 9.2
     unit: m/s^2
-    source: "measured, P4.9 (analytic 1 g free fall = 9.81)"
+    source: "measured, P4.9 (analytic 1 g free fall = 9.81). Changed 2026-11-15 for the Förster (2015) motor constants (BUGS #34) from 9.5"
   v_max:
-    value: 27.7
+    value: 24.0
     unit: m/s
-    source: "measured, P4.9; equals a_max/k to first order, depends on the assumed rotor drag"
+    source: "measured, P4.9 (Changed 2026-11-15 for the Förster (2015) motor constants (BUGS #34) from 27.7); equals a_max/k to first order, depends on the assumed rotor drag"
   tau_accel:
-    value: 0.17
+    value: 0.28
     unit: s
-    source: "measured, P4.9; consistent with 1/Kp = 1/6 s of the attitude loop, EQ-BRIDGE-4"
+    source: "measured, P4.9; 1/Kp = 1/6 s of the attitude loop (EQ-BRIDGE-4) plus the 64.7 ms Förster motor lag. Changed 2026-11-15 for the Förster (2015) motor constants (BUGS #34) from 0.17"
   max_jerk:
-    value: 88.3
+    value: 47.0
     unit: m/s^3
-    source: "a_lateral_max / tau_accel = 15.37/0.174, P4.9"
+    source: "a_lateral_max / tau_accel = 13.35/0.284, P4.9. Changed 2026-11-15 for the Förster (2015) motor constants (BUGS #34) from 88.3"
   omega_demand_peak:
-    value: 4.4
+    value: 4.1
     unit: rad/s
-    source: "measured peak body rate in a hard attitude step, P4.9; feeds P4.2 rate range"
+    source: "measured peak body rate in a hard attitude step to 0.9 x the lateral limit, P4.9 (BUGS #37; Changed 2026-11-15 for the Förster (2015) motor constants (BUGS #34) from 4.4); feeds P4.2 rate range"

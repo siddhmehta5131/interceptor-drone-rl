@@ -96,9 +96,13 @@ def measure(*, a_step=4.0, smooth_w=25, lat_T=1.2, lat_step=1.0, v_hold_T=40.0,
     out["v_max_measured"] = float(sp[-500:].mean())
     out["v_max_settled"] = bool(abs(sp[-500:].mean() - sp[-2500:-2000].mean()) < 0.1)
 
-    # 5. Body-rate range demanded: peak roll rate in a hard 90 deg attitude step.
+    # 5. Body-rate range demanded: peak roll rate in the hardest unsaturated attitude step.
+    #    The step demands v_hold_frac x the measured lateral limit.  An unreachable demand
+    #    (the former 3000 m/s^2) pins the collective at full thrust, and the collective-priority
+    #    mixer (EQ-SIX-4) then leaves no roll torque, so the vehicle never tilts (BUGS #37).
     bridge = AccelBridge(rate_limit=40.0)
-    rec = run(lambda t: np.array([0, 3000.0 if t > 0.1 else 0, 0]), 1.0, bridge=bridge)
+    a_att = v_hold_frac * out["lateral_a_max_measured"]
+    rec = run(lambda t: np.array([0, a_att if t > 0.1 else 0, 0]), 1.0, bridge=bridge)
     out["peak_rate_hard_attitude_step"] = float(np.abs(rec["omega"]).max())
 
     # 6. Jerk limit and turn-rate limit derived from the measurements.

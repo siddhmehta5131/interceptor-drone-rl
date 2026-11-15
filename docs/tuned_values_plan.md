@@ -38,13 +38,13 @@ experiment's definition.
 
 | Case | v_max (m/s) | lateral a (m/s²) | Largest change vs baseline |
 |---|---|---|---|
-| baseline (kz = 0.5) | 27.7 | 15.4 | - |
-| procedure settings A | 26.2 | 15.4 | 5.1 % |
-| procedure settings B | 29.2 | 15.4 | 5.4 % |
-| motor lag ×0.5 | 27.3 | 15.1 | 4.1 % |
-| motor lag ×2 | 28.9 | 16.0 | 5.9 % |
-| kz = 0.7 (previous value) | 22.0 | 14.8 | 20.5 % |
-| kz = 0 | 513 | 17.1 | unbounded |
+| baseline (kz = 0.5, Förster motor constants) | 24.0 | 13.3 | - |
+| procedure settings A | 22.8 | 13.4 | 4.9 % |
+| procedure settings B | 24.7 | 13.0 | 2.8 % |
+| motor lag ×0.5 | 22.8 | 12.7 | 12.4 % (peak body rate) |
+| motor lag ×2 | 22.6 | 14.0 | 13.4 % (peak body rate) |
+| kz = 0.7 | 19.5 | 12.8 | 19.0 % |
+| kz = 0 | 267 | 15.2 | unbounded |
 
 The top speed is drag-limited and the rotor drag is an assumption (Faessler et
 al. 2018 identify `d_x`, `d_y` on a 610 g vehicle and no `d_z`). The absolute

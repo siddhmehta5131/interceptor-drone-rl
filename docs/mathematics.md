@@ -188,12 +188,13 @@ a_{T,\max}=\rho_a a_{M,n,\max},
 
 with `rho_v = 0.66 (quad), 0.765 (fixed wing), 0.33 (missile)` and
 `rho_a = 0.48, 1.0, 0.25`. The quad envelope is the closed-loop Crazyflie
-measurement of P4.9 (27.7 m/s, 15.4 m/s^2, 9.5 m/s^2 downward, jerk 88.3 m/s^3;
-section 6.1 states how far these depend on the assumed rotor drag); its target
+measurement of P4.9 with the Förster (2015) motor constants (24.0 m/s,
+13.3 m/s^2, 9.2 m/s^2 downward, tau 0.28 s, jerk 47.0 m/s^3, thrust-to-weight
+1.69; section 6.1 states how far these depend on the assumed rotor drag); its target
 keeps the real speed ratio of a fielded pair, Sting 280 km/h (manufacturer
 product page) over Shahed-136 185 km/h (IRGC poster via Janes) = 1.51, giving
-18.3 m/s and, with the acceleration ratio 2.08, 7.404 m/s^2. Spawn range is
-92-277 m (the 10-25 s window of `EQ-GEO-5`).
+15.9 m/s and, with the acceleration ratio 2.08, 6.394 m/s^2. Spawn range is
+80-240 m (the 10-25 s window of `EQ-GEO-5`).
 The fixed-wing target flies the Orlan-10 cruise speed, 110 km/h = 30.6 m/s
 (Airforce Technology profile, 24 Mar 2023; trade press, no manufacturer
 datasheet read), so the 32.4 m/s Aerosonde (EQ-FW-3) has a speed ratio of only
@@ -747,11 +748,13 @@ different vertical coefficient.
 study (`scripts/check_quad_limits_repeatability.py`,
 `results/tables/quad_limits_repeatability.csv`) re-measures the P4.9 envelope
 under changed settings. Largest change of any limit against the baseline
-(27.7 m/s, 15.4 m/s^2): measurement-procedure settings A 5.1 %, B 5.4 % (top speed
-moves with the hold fraction, slightly over the 5 % target); motor lag x0.5
-4.1 %, x2 5.9 %; `k_z = 0.7` gives 22.0 m/s (20.5 %); `k_z = 0` gives 513 m/s,
-that is, no bound. The acceleration limits, set by thrust-to-weight, move by at
-most 11 % across the drag cases; the top speed is only as good as the drag
+(24.0 m/s, 13.3 m/s^2, Förster motor constants): measurement-procedure settings
+A 4.9 %, B 2.8 %; motor lag x0.5 12.4 %, x2 13.4 % (both driven by the peak body
+rate of the attitude step; the acceleration limits move by at most 5 %); `k_z = 0.7`
+gives 19.5 m/s (19.0 %); `k_z = 0` gives 267 m/s, that is, no bound (its attitude
+step demands more than full thrust and reports 0 rad/s, BUGS #37). The
+acceleration limits, set by thrust-to-weight, move by at most 14 % across the drag
+cases; the top speed is only as good as the drag
 value. For that reason the guidance study keeps the interceptor/target speed
 ratio, not the absolute speed, tied to real vehicles (section 1.7), and P9.1
 sweeps that ratio. The polynomial remains selectable
@@ -934,7 +937,8 @@ k_p=\frac{w_c}{K},\qquad k_i=k_p\,w_i,\qquad w_c=\frac1{3\tau}.
 \tag{EQ-FC-1}
 \]
 
-Targets (verified by `tests/unit/test_fc.py`): rise time below 0.12 s,
+Targets (verified by `tests/unit/test_fc.py`): rise time below `6 tau` = 0.39 s
+(measured 0.24 s with the Förster motor lag `tau` = 0.0647 s),
 overshoot below 20 %, on roll/pitch.
 
 ### 8.2 Reward

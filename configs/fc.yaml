@@ -45,9 +45,9 @@ w_sat:
   source: "EQ-FC-2 design weight; planned sensitivity run P9.3"
 b1_targets:
   rise_time_max:
-    value: 0.12
+    value: 0.39
     unit: s
-    source: "design target for B1 (EQ-FC-1 phase margin 60 deg)"
+    source: "design target for B1: 6 x motor time constant (6 x 0.0647 s); EQ-FC-1 sets the crossover at 1/(3 tau), phase margin about 60 deg, so the rise time scales with tau (measured 0.24 s). Was 0.12 s = 6 x 0.02 s before the motor constant changed (BUGS #34)"
   overshoot_max:
     value: 0.20
     unit: dimensionless

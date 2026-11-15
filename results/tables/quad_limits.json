@@ -1,16 +1,16 @@
 {
-  "thrust_to_weight": 2.048729533099515,
-  "analytic_lateral_a_max": 17.541236558083938,
-  "analytic_vertical_up_a_max": 10.288036719706243,
+  "thrust_to_weight": 1.6897877965509174,
+  "analytic_lateral_a_max": 13.362440062586268,
+  "analytic_vertical_up_a_max": 6.7668182841645,
   "analytic_vertical_down_a_max": 9.81,
-  "tau_accel_s": 0.17400000000000002,
-  "accel_step_final": 3.6732797171428877,
-  "lateral_a_max_measured": 15.37107132146109,
-  "vertical_up_a_max_measured": 9.593246824828556,
-  "vertical_down_a_max_measured": 9.510003122788094,
-  "v_max_measured": 27.66792829833691,
+  "tau_accel_s": 0.28400000000000003,
+  "accel_step_final": 2.76550950149671,
+  "lateral_a_max_measured": 13.349579049794729,
+  "vertical_up_a_max_measured": 5.897686453041713,
+  "vertical_down_a_max_measured": 9.152401348566238,
+  "v_max_measured": 24.029242217911452,
   "v_max_settled": true,
-  "peak_rate_hard_attitude_step": 4.392459127747948,
-  "max_jerk_m_s3": 88.33949035322465,
-  "omega_max_turn": 0.5555555571677923
+  "peak_rate_hard_attitude_step": 4.077678516629382,
+  "max_jerk_m_s3": 47.005560034488475,
+  "omega_max_turn": 0.5555555572136986
 }

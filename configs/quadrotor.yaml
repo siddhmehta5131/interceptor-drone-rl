@@ -45,33 +45,33 @@ rotor_inertia:
   unit: kg m^2
   source: "Forster 2015 rotor/propeller inertia"
 thrust_coefficient:
-  value: 2.618e-8
+  value: 1.817e-8
   unit: N s^2/rad^2
-  source: "OWN_FIT: our own fit to NanoBench flight data (Ullah & Baca 2026, arXiv:2603.09908), not a value quoted by NanoBench (absent from its paper, README, code and metadata, checked 2026-11-14): median of m g / (4 Omega^2) over 9,179 hover samples in 10 trajectories (identify_params.py in the predecessor simulator repository). Rotor speed was not measured; it came from the ESC map that was later rejected (BUGS R-1), so the fit must be repeated with the current map (P3.4, BUGS #27); interceptor/sim/constants.py PH_C_L"
+  source: "DERIVED from Forster (2015), System Identification of the Crazyflie 2.0 Nano Quadrocopter, ETH Zurich, doi:10.3929/ethz-b-000214143 (PDF read 2026-11-15): least squares of f = c_l omega^2 between the measured thrust map eq. (3.3) and rotor-speed map Sec. 3.3.2 over commands 10000-60000; a single coefficient reproduces the measured thrust within 4 % from hover to full command and overestimates it by up to 14 % at low throttle. Measured on a 28 g Crazyflie 2.0; assumed to carry over to the 40.85 g Crazyflie 2.1 (same motor and propeller class, not verified). Changed 2026-11-15 (BUGS #34); derivation in docs/crazyflie_forster_comparison.md, checked by tests/unit/test_forster_constants.py from our own NanoBench fit 2.618e-8"
 torque_coefficient:
-  value: 5.45e-11
+  value: 1.084e-10
   unit: N m s^2/rad^2
-  source: "PROJECT_CHOICE: thrust_coefficient / 480. The yaw identification on NanoBench data was too noisy to fit a torque coefficient, so a fixed torque-to-thrust ratio was assumed (BUGS #27); varied +/-15 % by domain randomisation"
+  source: "DERIVED from Forster (2015), System Identification of the Crazyflie 2.0 Nano Quadrocopter, ETH Zurich, doi:10.3929/ethz-b-000214143 (PDF read 2026-11-15): torque / thrust slope 0.005964552 m of eq. (3.5) times thrust_coefficient. Changed 2026-11-15 (BUGS #34); derivation in docs/crazyflie_forster_comparison.md, checked by tests/unit/test_forster_constants.py from the assumed c_l / 480"
 maximum_motor_speed:
-  value: 2800.0
+  value: 3052.4
   unit: rad/s
-  source: "Traced 2026-11-15 in the predecessor repository rl-drone-flight-simulator: PROJECT_CHOICE: 2800 rad/s is labelled 'best guess, typical small-quad max motor speed' (default_demo.py:601); no Bitcraze or NanoBench source was found. The earlier source text 'Bitcraze 7x16 mm coreless motor at 4.2 V, full throttle' was not supported and was removed. It sets the thrust ceiling, hence thrust-to-weight 2.05 and the acceleration limits"
+  source: "Forster (2015), System Identification of the Crazyflie 2.0 Nano Quadrocopter, ETH Zurich, doi:10.3929/ethz-b-000214143 (PDF read 2026-11-15), Sec. 3.3.2 rotor-speed map omega = 0.04076521 cmd + 380.8359 at the maximum command 65535. Changed 2026-11-15 (BUGS #34); derivation in docs/crazyflie_forster_comparison.md, checked by tests/unit/test_forster_constants.py from the unsourced 2800 rad/s"
 motor_time_constant:
-  value: 0.02
+  value: 0.0647
   unit: s
-  source: "PROJECT_CHOICE: assumed first-order motor lag (labelled best guess in the predecessor simulator); no step-response identification was done and the NanoBench paper gives no value (BUGS #27). Defended by the motor-lag rows of scripts/check_quad_limits_repeatability.py"
+  source: "DERIVED from Forster (2015), System Identification of the Crazyflie 2.0 Nano Quadrocopter, ETH Zurich, doi:10.3929/ethz-b-000214143 (PDF read 2026-11-15): continuous time constant -Ts / ln(0.9695404) of the identified command-to-thrust transfer function eq. (3.16), Ts = 0.002 s (500 Hz, Sec. 3.4.2); the first series, eq. (3.15), gives 0.078 s. It includes the whole command-to-thrust path, so it is an upper bound on the motor lag. Tested by the motor-lag x0.5 / x2 rows of scripts/check_quad_limits_repeatability.py. Changed 2026-11-15 (BUGS #34); derivation in docs/crazyflie_forster_comparison.md, checked by tests/unit/test_forster_constants.py from the assumed 0.02 s"
 motor_efficiency:
   value: 0.7
   unit: dimensionless
-  source: "Traced 2026-11-15 in the predecessor repository rl-drone-flight-simulator: PROJECT_CHOICE: eta = 0.7 is labelled 'motor efficiency -- best guess' (default_demo.py:615). The earlier text 'Bitcraze measurement at hover' was not supported and was removed"
+  source: "Traced 2026-11-15 in the predecessor repository rl-drone-flight-simulator: PROJECT_CHOICE (not used by any v2 code path): eta = 0.7 is labelled 'motor efficiency -- best guess' (default_demo.py:615). The earlier text 'Bitcraze measurement at hover' was not supported and was removed"
 battery_voltage_full:
   value: 4.2
   unit: V
   source: "Bitcraze 1S LiPo full-charge voltage"
 esc_zero_order_coefficients:
-  value: [1170.36749799968, 0.0, 1629.63250200032, 0.0, 0.0]
-  unit: "rad/s; polynomial in sqrt(throttle) and battery voltage"
-  source: "Two-point monotone fit anchored at hover and full throttle; docs/BUGS.md entry R-1"
+  value: [380.8359, 0.0, 0.0, 2671.548, 0.0]
+  unit: "rad/s; [1, U, sqrt(c), c, U sqrt(c)] coefficients, c = normalised command"
+  source: "Forster (2015), System Identification of the Crazyflie 2.0 Nano Quadrocopter, ETH Zurich, doi:10.3929/ethz-b-000214143 (PDF read 2026-11-15), Sec. 3.3.2: omega = 380.8359 + 0.04076521 cmd with cmd = 65535 c, i.e. 380.8359 + 2671.548 c (linear in the command, no battery term). Changed 2026-11-15 (BUGS #34); derivation in docs/crazyflie_forster_comparison.md, checked by tests/unit/test_forster_constants.py from the two-point sqrt fit of BUGS R-1"
 pid_rate_gains:
   kp:
     value: [0.150, 0.150, 0.200]

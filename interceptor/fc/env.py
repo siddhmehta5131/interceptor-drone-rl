@@ -18,7 +18,7 @@ from gymnasium import spaces
 from ..common.seeding import make_rng
 from ..common.sources import load_yaml
 from ..sim import pipeline
-from ..sim.constants import PH_BAT, PH_C_HOVER, PH_M, PH_OMEGA_HOVER
+from ..sim.constants import PH_C_HOVER, PH_M, PH_OMEGA_HOVER, esc_omega_ss
 from ..sim.quaternion import quat_mult
 from ..sim.wind import DrydenWind
 from . import setpoints
@@ -136,7 +136,7 @@ class FlightControllerEnv(gym.Env):
         e = sp[:3] - om
         # relative thrust error: actual total thrust vs thrust for the commanded collective
         f_actual = float(np.sum(self.params.c_l * np.maximum(self.state[4], 0.0) ** 2))
-        f_cmd_c = 4.0 * self.params.c_l * (PH_BAT[0] + PH_BAT[2] * np.sqrt(max(sp[3], 0.0))) ** 2
+        f_cmd_c = 4.0 * self.params.c_l * float(esc_omega_ss(sp[3])) ** 2
         thrust_err = (f_actual - f_cmd_c) / (PH_M * 9.81)
         sat = float(np.mean((cmd <= 1e-9) | (cmd >= 1 - 1e-9)))
         rew = reward_terms(e, self.rate_max, thrust_err, a - self.prev_a, sat, self.cfg)

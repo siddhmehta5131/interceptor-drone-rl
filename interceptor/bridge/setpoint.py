@@ -14,12 +14,12 @@ import numpy as np
 
 from ..fc.attitude import attitude_to_rate, quat_from_thrust_yaw
 from ..fc.thrust import collective_for_thrust
-from ..sim.constants import PH_C_L, PH_G_W, PH_M, PH_BAT
+from ..sim.constants import PH_C_L, PH_G_W, PH_M, esc_omega_ss
 
 
 def max_thrust(c_l: float = PH_C_L) -> float:
     """Total thrust at full command (N)."""
-    return 4.0 * c_l * (PH_BAT[0] + PH_BAT[2]) ** 2
+    return 4.0 * c_l * float(esc_omega_ss(1.0)) ** 2
 
 
 @dataclass

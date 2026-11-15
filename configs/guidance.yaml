@@ -48,13 +48,13 @@ engagement:
       unit: m
       source: "Hit-to-kill contact rule r_kill = target half-span + interceptor half-span (EQ-GEO-4); no warhead is assumed because no credible lethal-radius data exists (data/lethality_and_gload.csv): 2.5/2 + 0.092/2 = 1.30 m. Shahed-136 wingspan 2.5 m (IRGC specification poster reported by Janes, https://www.janes.com/osint-insights/defence-news/air/irgc-confirms-specs-for-shahed-136-attack-uav); Crazyflie 2.1 size 92 mm motor-to-motor (Bitcraze datasheet, https://www.bitcraze.io/documentation/hardware/crazyflie_2_1/crazyflie_2_1-datasheet.pdf). Changed 2026-11-14 from 3.0 m"
     r_init_min:
-      value: 92.0
+      value: 80.0
       unit: m
-      source: "Same 10 s minimum time-to-intercept window as before, scaled to the measured speed class (150 m x 27.7/45); EQ-GEO-5 (project choice)"
+      source: "Same 10 s minimum time-to-intercept window as before, scaled to the measured speed class (150 m x 24.0/45); EQ-GEO-5 (project choice). Changed 2026-11-15 for the Förster (2015) motor constants (BUGS #34) from 92 m"
     r_init_max:
-      value: 277.0
+      value: 240.0
       unit: m
-      source: "Same 25 s maximum time-to-intercept window as before, scaled to the measured speed class (450 m x 27.7/45); EQ-GEO-5 (project choice)"
+      source: "Same 25 s maximum time-to-intercept window as before, scaled to the measured speed class (450 m x 24.0/45); EQ-GEO-5 (project choice). Changed 2026-11-15 for the Förster (2015) motor constants (BUGS #34) from 277 m"
     alt_init:
       value: 150.0
       unit: m
