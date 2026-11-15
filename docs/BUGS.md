@@ -352,3 +352,13 @@ with has a primary tier. Still secondary, with the reason recorded per row: IRIS
 figures), Orlan-10 (no manufacturer datasheet online), Shahed-136 (IRGC poster via Janes),
 Akash radar ranges (no LRDE datasheet). No model value changed, so nothing is stale.
 
+### 34. Quad motor constants disagree with Förster (2015) (OPEN, owner decision)
+Item 5 of the 2026-11-15 sourcing pass read the Förster (2015) Crazyflie 2.0 thesis
+(ETH Research Collection, doi:10.3929/ethz-b-000214143) and compared it with our two unsourced
+motor constants (`docs/crazyflie_forster_comparison.md`): `PH_C_L = 2.618e-8` is 1.44x the
+1.82e-8 implied by the thesis mappings (thrust-to-weight 2.05 vs 1.59 at 40.85 g); the assumed
+torque ratio `c_d / c_l = 1/480` is about a third of the measured 0.006 m; the assumed motor lag
+0.02 s is 3-4x faster than the identified command-to-thrust pole (65-78 ms, an upper bound
+because it includes the command path and load cell). Values unchanged (platform values). If
+changed: every quad result, P4.9 limits and FC training are stale.
+

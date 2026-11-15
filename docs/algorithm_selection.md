@@ -124,9 +124,10 @@ y = r + \gamma(1-d)\min_{i=1,2} Q_{\phi_i'}\left(s',\,
 \qquad \epsilon\sim\mathcal N(0,\sigma^2),
 $$
 
-with target policy smoothing $\sigma=0.2$, $c=0.5$.  Taking the minimum
+with target policy smoothing $\sigma=0.2$, $c=0.5$ (Fujimoto et al. 2018, Algorithm 1 and
+eq. 15, Sec. 5.3; the outer clip to the action bounds is SB3's implementation).  Taking the minimum
 counteracts the positive bias of the max in Q-learning; smoothing prevents the
-critic from exploiting narrow peaks in the target policy.
+critic from exploiting narrow peaks in the value estimate (Sec. 5.3).
 
 ### 3.3 Delayed updates
 
@@ -172,15 +173,17 @@ y = r + \gamma(1-d)\left(\min_{i=1,2}Q_{\phi_i'}(s',a') - \alpha\log\pi_\theta(a
 \quad a'\sim\pi_\theta(\cdot\mid s'),
 $$
 
-and the actor by
+(the form without a separate value network is Haarnoja et al. 2018b, arXiv:1812.05905,
+Sec. 4.2 eqs. 5-7, with the two-critic minimum of Sec. 6; the 2018a paper also trains a value
+network $V_\psi$, Sec. 4.2), and the actor by
 
 $$
 L_\pi(\theta)=\mathbb{E}_{s\sim\mathcal D,\,a\sim\pi_\theta}
 \left[\alpha\log\pi_\theta(a\mid s) - Q_\phi(s,a)\right].
 $$
 
-The temperature $\alpha$ is tuned automatically against a target entropy
-(`ent_coef="auto"`).  SAC is off-policy and sample-efficient; the entropy term
+The temperature $\alpha$ is tuned automatically against the target entropy
+$-\dim\mathcal A$ (Haarnoja et al. 2018b, Sec. 5 and App. D Table 1; `ent_coef="auto"`).  SAC is off-policy and sample-efficient; the entropy term
 encourages exploration and action smoothness.  It has two critics, a stochastic
 actor and a replay buffer, so it is the most expensive per environment step.
 
