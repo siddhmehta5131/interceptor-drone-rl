@@ -61,7 +61,7 @@ __all__ = [
     "PhysicsParams",
     "sample_physics_params",
     "pid",
-    "mixer",
+    "mixer", "mixer_capped",
     "esc",
     "prop_ft",
     "aggregate",
@@ -191,6 +191,26 @@ def mixer(u: np.ndarray, c_cmd: float) -> np.ndarray:
     if vmax > 1.0 and abs(denom) > 1e-9:
         u = u * ((1.0 - c_cmd) / denom)
         raw = c_cmd + PH_MIX @ u
+    return np.clip(raw, 0.0, 1.0)
+
+
+def mixer_capped(u: np.ndarray, c_cmd: float) -> np.ndarray:
+    """Motor mixer with the Crazyflie firmware thrust cap (attitude priority).
+
+    Port of ``powerDistributionCap`` in crazyflie-firmware
+    ``src/modules/src/power_distribution_quadrotor.c`` (lines 160-189, master, read
+    2026-11-16): if the highest motor command exceeds the maximum, the excess is
+    subtracted from all four motors, so the torque demand is kept and collective
+    thrust is given up; the lower bound is then applied per motor
+    (``capMinThrust``, idle thrust 0 here).  Identical to :func:`mixer` whenever no
+    motor saturates.  :func:`mixer` does the opposite (keeps the collective, scales
+    the torque to zero at full collective), which leaves no attitude authority when
+    the demanded thrust reaches the maximum (BUGS #37).
+    """
+    raw = c_cmd + PH_MIX @ u
+    excess = float(np.max(raw)) - 1.0
+    if excess > 0.0:
+        raw = raw - excess
     return np.clip(raw, 0.0, 1.0)
 
 

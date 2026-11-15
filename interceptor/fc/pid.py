@@ -71,7 +71,7 @@ class RatePID:
         d = -self.kd * (omega_meas - prev) / self.dt
         self.prev = omega_meas.copy()
         u_unsat = self.kp * e + self.integ + d
-        cmd = pipeline.mixer(u_unsat, collective)
+        cmd = pipeline.mixer_capped(u_unsat, collective)
         saturated = np.any(cmd <= 0.0) or np.any(cmd >= 1.0)
         if not saturated:  # conditional-integration anti-windup
             self.integ = np.clip(self.integ + self.ki * e * self.dt,

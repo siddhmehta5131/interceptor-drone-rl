@@ -432,3 +432,40 @@ authority. In the closed loop (`interceptor/bridge/closed_loop.py`) the APN comm
 to the platform envelope (a_n_max 13.3 m/s^2), but the A3 residual is added on top (up to
 `residual_authority` x a_n_max) and upward demands above the measured 5.9 m/s^2 climb limit can
 still saturate the collective; how often this happens in the closed-loop runs is not measured.
+
+**#37 follow-up (2026-11-16): the limitation is removed with the firmware thrust cap.** The
+closed-loop quad run of 2026-11-15 (A2 11 %, A3 17 % against 78.6 % kinematic) was dominated by
+this deadlock: whenever the guidance demand reached the thrust envelope the collective was 1.0,
+the mixer returned four equal commands and the vehicle could not turn; in 8 diagnostic episodes
+it ended up to 390 m below the target while the command asked for a climb. The real vehicle does
+not behave like this: `powerDistributionCap` in crazyflie-firmware
+`src/modules/src/power_distribution_quadrotor.c` (lines 160-189, master, read 2026-11-16) subtracts
+the excess of the highest motor command from all four motors, which keeps the torque and gives up
+collective thrust. `interceptor/sim/pipeline.py::mixer_capped` ports that rule and is used by B1
+(`fc/pid.py`) and B2 (`fc/firmware_pid.py`); `pipeline.mixer` is kept only for golden-fixture
+replay. The two are identical whenever no motor saturates (`tests/unit/test_mixer_capped.py`).
+Re-measured P4.9 with the cap: lateral 13.35 -> 13.45 m/s^2, v_max 24.03 -> 24.21 m/s, peak rate
+4.08 -> 4.10 rad/s (all < 1 %, inside the 2.8-4.9 % procedure repeatability). The configured
+envelope (13.3 m/s^2, 24.0 m/s) is kept: 13.45 is a transient peak that trades altitude, and the
+sustained level-flight bound g sqrt(TW^2 - 1) = 13.36 m/s^2 still rounds to 13.3. **Stale:**
+`closed_loop.csv`, `sweep_bridge_rate.csv`, the B1/B2 rows of `fc_evaluation.csv` where a motor
+saturates, and the closed-loop / FC videos made before this date.
+
+### 38. Residual arm A3 trained with exploration std 1 (found 2026-11-16)
+`training/algos.py` built every PPO policy with the SB3 default `log_std_init = 0` (std 1,
+SB3 `policies.py`). For A3 the action is a residual scaled by `residual_authority x a_n_max`, so
+training added N(0, 1) x 0.35 x a_n_max (4.7 / 13 / 125 m/s^2 for quad / fixed wing / missile) to
+the APN command at every step. The policy mean starts at zero (SB3 action-net gain 0.01), but the
+behaviour policy did not start at the APN baseline, contrary to the stated design ("near-zero
+action initialisation", notebook 04). Evidence (validation seeds 20000+, 64 episodes, evasive
+set, `results/tables/explore_std_sweep.csv`): the std-1 fixed-wing policy learned a constant
+saturated residual (mean action [-0.9, -0.4, 0.7]) and scores 0/64 where the zero-residual
+command scores 18/64. `build_model(log_std_init=...)` and the run key `log_std_init` now set the
+initial std; `scripts/sweep_explore_std.py` compares 1.0 / 0.3 / 0.1 at 300k steps with a
+selection rule fixed before the runs (highest validation kill rate pooled over the swept
+platforms, then median miss): quad 50 / 47 / 47, fixed wing 0 / 12 / 13 of 64, pooled 50 / 59 /
+60, so sigma0 = 0.1 is used for A3 on every platform. It is a PROJECT_CHOICE defended by that
+sweep. At 300k steps no residual beats the zero-residual command (quad 46/64, fixed wing 18/64):
+the fix removes the harm, it does not by itself add a gain. A4 (pure RL) keeps the SB3 default,
+because it has no baseline to stay near.
+

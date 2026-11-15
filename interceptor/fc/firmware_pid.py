@@ -63,4 +63,4 @@ class FirmwarePID:
         self.prev_e = e.copy()
         self.d += self.alpha * (raw_d - self.d)
         counts, self.integ = firmware_rate_pid(e, self.integ, self.d, dt=self.dt)
-        return pipeline.mixer(counts_to_mixer(counts), collective)
+        return pipeline.mixer_capped(counts_to_mixer(counts), collective)

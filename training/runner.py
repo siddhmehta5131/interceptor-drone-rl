@@ -246,7 +246,8 @@ def train(run_id: str, config: dict, *, run_root: Optional[Path] = None) -> dict
             config={"network": cfg["network"],
                     "algorithms": {str(cfg["algo"]).lower(): hp}},
             device=cfg["device"], asymmetric=bool(cfg["asymmetric"]),
-            actor_obs_dim=cfg["actor_obs_dim"])
+            actor_obs_dim=cfg["actor_obs_dim"],
+            log_std_init=cfg.get("log_std_init"))
         start = 0
 
     remaining = max(0, int(cfg["total_steps"]) - start)

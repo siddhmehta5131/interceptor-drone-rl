@@ -65,8 +65,14 @@ def build_model(
     device: str = "cpu",
     asymmetric: bool = False,
     actor_obs_dim: Optional[int] = None,
+    log_std_init: Optional[float] = None,
 ):
     """Build one SB3 model with the shared network and configured hyperparameters.
+
+    ``log_std_init`` (PPO only) sets the initial log standard deviation of the
+    Gaussian policy; ``None`` keeps the SB3 default 0.0 (std 1, SB3 policies.py
+    ``ActorCriticPolicy``).  The residual arm A3 passes a small value so that the
+    behaviour policy, not only its mean, starts at the APN baseline (BUGS #38).
 
     ``asymmetric=True`` selects the privileged-critic PPO policy (P7.3); the
     actor sees the first ``actor_obs_dim`` columns, the critic all of them.
@@ -89,15 +95,19 @@ def build_model(
         from interceptor.training.asymmetric_policy import AsymmetricActorCriticPolicy
         kwargs = _policy_kwargs(net, activation)
         kwargs["actor_obs_dim"] = int(actor_obs_dim)
+        if log_std_init is not None:
+            kwargs["log_std_init"] = float(log_std_init)
         return PPO(
             AsymmetricActorCriticPolicy, env, seed=seed, device=device, verbose=0,
             tensorboard_log=tensorboard_log, policy_kwargs=kwargs, **hp)
 
     if key == "ppo":
+        kwargs = _policy_kwargs(net, activation)
+        if log_std_init is not None:
+            kwargs["log_std_init"] = float(log_std_init)
         return PPO(
             "MlpPolicy", env, seed=seed, device=device, verbose=0,
-            tensorboard_log=tensorboard_log,
-            policy_kwargs=_policy_kwargs(net, activation), **hp)
+            tensorboard_log=tensorboard_log, policy_kwargs=kwargs, **hp)
     if key == "sac":
         return SAC(
             "MlpPolicy", env, seed=seed, device=device, verbose=0,
