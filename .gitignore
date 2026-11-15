@@ -62,3 +62,6 @@ results/**/*.zip
 
 # Drone meshes: licence not recorded, kept local only (plan F21 / P10.5)
 models/*.obj
+
+# Training runs (checkpoints live on Google Drive in Colab)
+runs/
