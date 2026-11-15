@@ -163,7 +163,7 @@ platforms:
     v_target_nominal:
       value: 30.6
       unit: m/s
-      source: "Orlan-10 reconnaissance UAV (Special Technology Center): cruising speed 110 km/h = 30.6 m/s, maximum 150 km/h, wingspan 3.1 m, MTOW 16.5 kg (Airforce Technology project profile, 24 Mar 2023, https://www.airforce-technology.com/projects/orlan-10-unmanned-aerial-vehicle-uav/, read 2026-11-14; trade press, no manufacturer datasheet read; other secondary sources give 90-100 km/h cruise). Changed 2026-11-14 from the Bayraktar TB2 (46.3 m/s, Baykar), which is faster than the 40 m/s Aerosonde interceptor and gave 2/30 pure-APN kills (BUGS #24); the TB2 and Shahed-136 (51 m/s) cases are covered by the P9.1 target_speed_ratio sweep up to 1.1"
+      source: "Orlan-10 reconnaissance UAV (Special Technology Center): cruising speed 110 km/h = 30.6 m/s, maximum 150 km/h, wingspan 3.1 m, MTOW 16.5 kg (Airforce Technology project profile, 24 Mar 2023, https://www.airforce-technology.com/projects/orlan-10-unmanned-aerial-vehicle-uav/, read 2026-11-14; trade press, no manufacturer datasheet read; other secondary sources give 90-100 km/h cruise; secondary source, data/threat_platforms.csv T16). Changed 2026-11-14 from the Bayraktar TB2 (46.3 m/s, Baykar), which is faster than the 40 m/s Aerosonde interceptor and gave 2/30 pure-APN kills (BUGS #24); the TB2 and Shahed-136 (51 m/s) cases are covered by the P9.1 target_speed_ratio sweep up to 1.1"
     a_target_max:
       value: 37.278
       unit: m/s^2
@@ -194,7 +194,7 @@ platforms:
     v_max:
       value: 1200.0
       unit: m/s
-      source: "configs/airframes/aim5.yaml derived_limits; EQ-MS-3 | Cross-check: Astra Mk1 Mach 4.5 = 1348 m/s at 10 km ISA (I04), IRIS-T SLM 1000 m/s (I15), Akash Mach 2.5 (I01) (secondary source, data/interceptor_platforms.csv I01 I04 I15)"
+      source: "configs/airframes/aim5.yaml derived_limits; EQ-MS-3 | Cross-check: Astra Mk1 max speed Mach 4.5 = 1348 m/s at 10 km ISA and Akash Mach 1.8-2.5 (Bharat Dynamics manufacturer PDF, read 2026-11-15; data source, data/interceptor_platforms.csv I01 I04); IRIS-T SLM 1000 m/s is Wikipedia only (I15: Diehl publishes no missile speed)"
     a_t_max:
       value: 176.58
       unit: m/s^2
@@ -238,15 +238,15 @@ platforms:
     r_init_min:
       value: 3500.0
       unit: m
-      source: "8.75 s at 400 m/s closing; EQ-GEO-5 | Cross-check: inside the 25 km active-seeker homing range of Astra Mk1 (Wikipedia) (secondary source, data/interceptor_sensors.csv S03)"
+      source: "8.75 s at 400 m/s closing; EQ-GEO-5 | Cross-check: inside the 13 km terminal active-radar-homing range of Astra Mk1 (Bharat Dynamics manufacturer PDF, read 2026-11-15; data source, data/interceptor_sensors.csv S03)"
     r_init_max:
       value: 7000.0
       unit: m
-      source: "17.5 s at 400 m/s closing; EQ-GEO-5 | Cross-check: inside the 25 km active-seeker homing range of Astra Mk1 (Wikipedia) (secondary source, data/interceptor_sensors.csv S03)"
+      source: "17.5 s at 400 m/s closing; EQ-GEO-5 | Cross-check: inside the 13 km terminal active-radar-homing range of Astra Mk1 (Bharat Dynamics manufacturer PDF, read 2026-11-15; data source, data/interceptor_sensors.csv S03)"
     alt_init:
       value: 4500.0
       unit: m
-      source: "Above 35 m target floor plus 4465 m manoeuvre margin; EQ-GEO-6 | Cross-check: below the 20 km engagement ceilings of Astra Mk1 and Akash (secondary source, data/interceptor_sensors.csv S01 S03) and the F-16C 15 km service ceiling (T03)"
+      source: "Above 35 m target floor plus 4465 m manoeuvre margin; EQ-GEO-6 | Cross-check: below the 20 km ceilings of Astra Mk1 and Akash (Bharat Dynamics manufacturer PDF, read 2026-11-15; data source, data/interceptor_sensors.csv S03; data source, data/interceptor_platforms.csv I01) and the F-16C service ceiling above 50,000 ft (US Air Force fact sheet; data source, data/threat_platforms.csv T03)"
     v_target_nominal:
       value: 400.0
       unit: m/s
@@ -270,7 +270,7 @@ platforms:
     a_ratio:
       value: 4.06
       unit: dimensionless
-      source: "Interceptor/target accel ratio = 358.1/88.29; EQ-TGT-1; follows a_target_max (secondary source, data/threat_platforms.csv T02 T03 T04)"
+      source: "Interceptor/target accel ratio = 358.1/88.29; EQ-TGT-1; follows a_target_max = 9 g from the US Air Force F-16 fact sheet (data source, data/threat_platforms.csv T03); the JF-17 +8 g and J-20 +9 g figures (T02, T04, Wikipedia; no primary reachable or published) only corroborate it"
 
 # P5.8: per-platform observation normalisation (fix F18).  Divisors keep the
 # actor frame, history and future blocks O(1) on every vehicle.  Lengths use

@@ -341,3 +341,14 @@ fixed-wing interceptor (32.4 m/s) is only 1.06x faster than the Orlan-10 target 
 every fixed-wing result and the `platforms.yaml` observation scales (40 m/s) become stale.
 Also fixed: `docs/equations_reference.md` still showed n_max = 10.5 and j = 858 m/s^3.
 
+### 33. Secondary-only data rows: primary sources searched (2026-11-15)
+Item 4 of the sourcing pass. Upgraded to the Bharat Dynamics manufacturer PDF
+(bdl-india.in Detailsofbusiness.pdf): Akash (I01; speed Mach 1.8-2.5, range 3-25 km, ceiling
+20 km) and Astra Mk1 (I04, S03; Mach 4.5, ceiling 20 km). Correction: the Astra active-radar
+homing range is **13 km** (BDL), not the 25 km taken from Wikipedia; the missile `r_init_max`
+cross-check (7 km) still holds. The audit now sets CITED when every data row a value is tagged
+with has a primary tier. Still secondary, with the reason recorded per row: IRIS-T SLM speed
+(Diehl's brochure gives no speed), JF-17 (pac.org.pk refused connections), J-20 (no published
+figures), Orlan-10 (no manufacturer datasheet online), Shahed-136 (IRGC poster via Janes),
+Akash radar ranges (no LRDE datasheet). No model value changed, so nothing is stale.
+

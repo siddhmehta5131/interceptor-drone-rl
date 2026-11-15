@@ -86,17 +86,22 @@ INTERNAL = re.compile(r"EQ-[A-Z]+|decision [SQ]\d|\b[SQF]\d{1,2}\b|\bP\d+\.\d+|B
 
 def _data_rows():
     out = {}
+    DATA_TIER.clear()
     for name in ("threat_platforms", "interceptor_platforms", "interceptor_sensors", "lethality_and_gload"):
         f = ROOT / "data" / f"{name}.csv"
         if f.exists():
             for r in csv.DictReader(f.open(encoding="utf8")):
                 label = r.get("name") or r.get("interceptor") or r.get("item")
                 out[r["id"]] = f"{label}: {r['source_url']} [{r['source_tier']}]"
+                DATA_TIER[r["id"]] = r["source_tier"]
     return out
 
 
+DATA_TIER: dict = {}
 DATA_ROWS = _data_rows()
-DATA_TAG = re.compile(r"secondary source, data/\w+\.csv ((?:[TISLG]\d\d ?)+)")
+# "(secondary source, data/x.csv T01 T02)" or "(data source, data/x.csv I01)": the status follows
+# the source_tier column of the tagged rows (CITED only if every tagged row is primary).
+DATA_TAG = re.compile(r"(?:secondary|data) source, data/\w+\.csv ((?:[TISLG]\d\d ?)+)")
 
 
 def classify(src: str):
@@ -109,7 +114,12 @@ def classify(src: str):
     ids = [i for grp in DATA_TAG.findall(src) for i in grp.split()]
     if ids:
         ref = " | ".join(DATA_ROWS.get(i, i) for i in dict.fromkeys(ids))
-        return ("DATA_DISAGREES" if "DATA DISAGREES" in src else "DATA_GAP" if "DATA GAP" in src else "CITED_SECONDARY"), ref
+        if "DATA DISAGREES" in src:
+            return "DATA_DISAGREES", ref
+        if "DATA GAP" in src:
+            return "DATA_GAP", ref
+        primary = all(DATA_TIER.get(i, "").startswith("primary") for i in ids)
+        return ("CITED" if primary else "CITED_SECONDARY"), ref
     refs = [full for rx, full in REFS if rx.search(src)]
     if refs:
         hard = re.search(r"14 CFR 23\.337|stabilizer_types\.h|Standard gravity", src)
