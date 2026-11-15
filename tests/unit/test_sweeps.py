@@ -22,6 +22,38 @@ def test_limits_for_scales_target():
     assert sweeps.limits_for(q, "noise_scale", 3) is lim
 
 
+@pytest.mark.parametrize("platform", list(PlatformType))
+def test_limits_for_scales_interceptor_response(platform):
+    """Sweeps that defend the project-choice response limits (tuned_values_plan family C/G)."""
+    lim = PLATFORMS[platform]
+    lag = sweeps.limits_for(platform, "interceptor_lag_scale", 2.0)
+    assert lag.tau_accel == pytest.approx(2.0 * lim.tau_accel) and lag.max_jerk == lim.max_jerk
+    ax = sweeps.limits_for(platform, "axial_limit_scale", 0.06)
+    assert ax.a_t_max == pytest.approx(0.06 * lim.a_t_max)
+    assert ax.a_t_min == pytest.approx(0.06 * lim.a_t_min) and ax.a_n_max == lim.a_n_max
+    assert sweeps.limits_for(platform, "jerk_limit_scale", 0.5).max_jerk == pytest.approx(0.5 * lim.max_jerk)
+    for name in ("interceptor_lag_scale", "axial_limit_scale", "jerk_limit_scale"):
+        assert 1.0 in sweeps.SWEEPS[name][1]  # nominal point is in every grid
+
+
+def test_seeker_gain_scale_caps_at_one():
+    from interceptor.guidance.seeker import load_sensor_noise_config
+    base = load_sensor_noise_config()
+    cfg = sweeps.noise_config_for("seeker_gain_scale", 1.5)
+    assert cfg.ema_alpha_pos == pytest.approx(min(1.0, 1.5 * base.ema_alpha_pos))
+    assert cfg.ema_alpha_acc == pytest.approx(1.5 * base.ema_alpha_acc)
+    assert max(cfg.ema_alpha_pos, cfg.ema_alpha_vel, cfg.ema_alpha_acc) <= 1.0
+    assert sweeps.noise_config_for("noise_scale", 2.0) is None
+
+
+def test_new_response_sweeps_run():
+    for name in ("interceptor_lag_scale", "axial_limit_scale", "jerk_limit_scale", "seeker_gain_scale"):
+        rows = sweeps.run_sweep(name, PlatformType.FIXED_WING, "apn_filtered",
+                                values=[sweeps.SWEEPS[name][1][0]],
+                                behaviors=list(ManeuverType)[:1], episodes=1)
+        assert rows[0]["episodes"] == 1
+
+
 def test_residual_components_pythagoras():
     pos, tgt = np.zeros((3, 3)), np.tile([10.0, 0, 0], (3, 1))
     rl = np.array([[1.0, 2, 0], [0, 0, 3], [4, 0, 0]])

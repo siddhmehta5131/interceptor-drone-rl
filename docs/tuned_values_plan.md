@@ -53,7 +53,37 @@ keeps the interceptor/target speed ratio tied to real vehicles and sweeps it.
 
 ## Still to run (all in Colab)
 
-1. `sweep_robustness.py` (noise, speed ratio, accel ratio, manoeuvre shape) on the new envelope.
+1. `sweep_robustness.py` (noise, speed ratio, accel ratio, manoeuvre shape, interceptor lag, axial limit, jerk limit, seeker gains) on the new envelope.
 2. `sweep_bridge_rate.py` at full episode count.
 3. Reward-weight group (training).
 4. `sweep_nav.py` rerun: `N′` was chosen on the old envelope.
+
+## Defence of every project choice (item 6, 2026-11-15)
+
+Every one of the 475 PROJECT_CHOICE rows (values and decisions) now carries a
+`defence_category` and a `defence` text in `docs/full_value_audit.csv`, assigned by
+`scripts/defence_rules.py`; `scripts/build_full_value_audit.py` exits with an error if any
+PROJECT_CHOICE row has none. The text names the exact sweep grid, ablation group or
+repeatability case, or states the non-sweep argument.
+
+| Category | Rows | Meaning |
+|---|---|---|
+| SWEEP | 48 | an evaluation sweep varies it (`interceptor/eval/sweeps.py` SWEEPS, `sweep_nav.py`, `sweep_bridge_rate.py`) |
+| ABLATION | 15 | a training group in `configs/ablations.yaml` varies it |
+| REPEATABILITY | 31 | `scripts/check_quad_limits_repeatability.py` varies it |
+| PENDING | 14 | disagrees with a source (BUGS #32, #34); owner decision, plus the sweep that tests it meanwhile |
+| PROTOCOL | 25 | evaluation protocol: episode counts (Wilson half-width), disjoint seeds, budgets |
+| DEFINITION | 176 | defines the experiment (scenario, test signal, grid, interface, convention); stated, not tuned |
+| BOUND | 14 | a physical / logical bound shows no result depends on the exact value |
+| NUMERICAL | 20 | numerical guard or resolution far from the signal scale |
+| UNUSED | 97 | not executed by any v2 entry point (notebook-v2 manoeuvre library, OU wind) |
+| PRESENTATION | 35 | plot, file output or worker count |
+
+New evaluation-only sweeps added for this (run automatically by `scripts/sweep_robustness.py`,
+notebook 05): `interceptor_lag_scale` (tau_accel x0.5 / 1 / 2), `axial_limit_scale` (a_t_max, a_t_min
+x0.06 / 0.25 / 0.5 / 1; 0.06 is the fixed-wing value of the book propulsion model, BUGS #32),
+`jerk_limit_scale` (x0.5 / 1 / 2) and `seeker_gain_scale` (alpha-beta-gamma gains x0.5 / 1 / 1.5,
+capped at 1). Not swept and stated as such: the domain-randomisation widths (the on/off ablation
+exists), the FC observation layout (tested end to end against B1 / B2), the TD3 learning rate
+(authors' code value). Open owner decisions: BUGS #32 (fixed-wing limits), #34 (quad motor
+constants vs Forster 2015), #35 (which N' the RL arms use).

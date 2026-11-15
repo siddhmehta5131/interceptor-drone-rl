@@ -31,12 +31,12 @@ dropout_probability:
 ema_alpha_position:
   value: 0.65
   unit: dimensionless
-  source: "PROJECT_CHOICE fixed gain (BUGS #13); the P5.4 Kalman tracker (EQ-KF-1..4) derives gains from the noise model instead; EQ-SEEK-4"
+  source: "PROJECT_CHOICE fixed gain (BUGS #13). The env uses this alpha-beta-gamma filter (seeker.py default filter_type abg); the P5.4 Kalman tracker (EQ-KF-1..4) exists but is not selected by any v2 entry point. Tested by the seeker_gain_scale sweep (interceptor/eval/sweeps.py, x0.5 / 1 / 1.5); EQ-SEEK-4"
 ema_alpha_velocity:
   value: 0.55
   unit: dimensionless
-  source: "PROJECT_CHOICE fixed gain (BUGS #13); superseded by the P5.4 Kalman tracker; EQ-SEEK-4"
+  source: "PROJECT_CHOICE fixed gain (BUGS #13). The env uses this alpha-beta-gamma filter (seeker.py default filter_type abg); the P5.4 Kalman tracker (EQ-KF-1..4) exists but is not selected by any v2 entry point. Tested by the seeker_gain_scale sweep (interceptor/eval/sweeps.py, x0.5 / 1 / 1.5); EQ-SEEK-4"
 ema_alpha_acceleration:
   value: 0.35
   unit: dimensionless
-  source: "PROJECT_CHOICE fixed gain (BUGS #13); superseded by the P5.4 Kalman tracker; EQ-SEEK-4"
+  source: "PROJECT_CHOICE fixed gain (BUGS #13). The env uses this alpha-beta-gamma filter (seeker.py default filter_type abg); the P5.4 Kalman tracker (EQ-KF-1..4) exists but is not selected by any v2 entry point. Tested by the seeker_gain_scale sweep (interceptor/eval/sweeps.py, x0.5 / 1 / 1.5); EQ-SEEK-4"

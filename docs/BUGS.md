@@ -362,3 +362,26 @@ torque ratio `c_d / c_l = 1/480` is about a third of the measured 0.006 m; the a
 because it includes the command path and load cell). Values unchanged (platform values). If
 changed: every quad result, P4.9 limits and FC training are stale.
 
+### 35. Swept N' is not used by training, the arm comparison or the robustness sweeps (OPEN, owner decision)
+Found while assigning defences (item 6, 2026-11-15). `scripts/evaluate_guidance.py`,
+`evaluate_closed_loop.py`, `collect_guidance_distributions.py` and `sweep_bridge_rate.py` take
+N' from `guidance.config.resolve_n_prime` (the P5.11 winner per platform and arm: quad A2 5.0,
+fixed-wing 3.5, missile 3.5). `training/runner.py`, `scripts/evaluate_guidance_arms.py` (the
+A1-A4 headline comparison) and `interceptor/eval/sweeps.py` never pass `N_nav`, so they run at
+the env default 4.0 (= `guidance.yaml navigation.N_prime`). The A2 arm is therefore evaluated
+at a different N' in the classical table than in the arm comparison, and A3 trains at 4.0.
+Not changed: which N' the RL arms use is a modelling decision. All guidance results are stale
+anyway (2026-11-14 value changes), so the fix can go in before the Colab rerun.
+Also corrected: `configs/seeker.yaml` said the EMA gains were "superseded by the P5.4 Kalman
+tracker"; the env uses the alpha-beta-gamma filter, and the Kalman tracker is never selected.
+
+### 36. Every PROJECT_CHOICE value now names its test (item 6, 2026-11-15)
+`scripts/defence_rules.py` assigns each project choice a category (SWEEP, ABLATION,
+REPEATABILITY, PROTOCOL, DEFINITION, BOUND, NUMERICAL, UNUSED, PRESENTATION, PENDING) and the
+sweep / group / argument that defends it; the audit has `defence_category` and `defence` columns
+and fails if a PROJECT_CHOICE row has none. New evaluation-only sweeps in
+`interceptor/eval/sweeps.py` (run by `sweep_robustness.py`, notebook 05): `interceptor_lag_scale`,
+`axial_limit_scale` (reaches the BUGS #32 model value), `jerk_limit_scale`, `seeker_gain_scale`.
+Found on the way: 97 rows sit in code no v2 entry point executes (the notebook-v2 manoeuvre
+library in `maneuvers.py`, used only for fixture parity, and the unused OU wind model).
+

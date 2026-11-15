@@ -16,8 +16,9 @@ from ..guidance.env import UnifiedInterceptEnv
 from ..guidance.maneuvers import ManeuverType, PlatformType
 from ..guidance.platform import PLATFORMS
 from .stats import KillRate, median_iqr
+from ..guidance.seeker import load_sensor_noise_config
 
-__all__ = ["SWEEPS", "limits_for", "run_episode", "run_sweep", "kill_rate_vs_radius",
+__all__ = ["SWEEPS", "limits_for", "noise_config_for", "run_episode", "run_sweep", "kill_rate_vs_radius",
            "residual_components"]
 
 #: sweep name -> (axis label, default grid)
@@ -28,6 +29,16 @@ SWEEPS = {
     "target_speed_ratio": ("target v_nominal / interceptor v_max", (0.3, 0.5, 0.7, 0.9, 1.1)),
     # every manoeuvre shape constant (rates, switch times, mixing fractions, gains, angles) scaled together
     "maneuver_shape": ("manoeuvre shape scale (x nominal)", (0.5, 1.0, 1.5)),
+    # Interceptor response limits that are project choices (docs/tuned_values_plan.md):
+    # tau_accel (first-order acceleration lag), a_t_max / a_t_min (axial envelope) and
+    # max_jerk, each scaled with the other limits nominal.  The axial grid reaches 0.06,
+    # the fixed-wing value the book propulsion model gives (2.5 / 41.2 m/s^2, BUGS #32).
+    "interceptor_lag_scale": ("interceptor tau_accel (x nominal)", (0.5, 1.0, 2.0)),
+    "axial_limit_scale": ("interceptor a_t_max, a_t_min (x nominal)", (0.06, 0.25, 0.5, 1.0)),
+    "jerk_limit_scale": ("interceptor max_jerk (x nominal)", (0.5, 1.0, 2.0)),
+    # The three alpha-beta-gamma seeker gains (configs/seeker.yaml ema_alpha_*, PROJECT_CHOICE)
+    # scaled together, each capped at 1.0 (1.0 = raw measurement, no smoothing).
+    "seeker_gain_scale": ("seeker filter gains (x nominal, capped at 1)", (0.5, 1.0, 1.5)),
 }
 
 
@@ -38,16 +49,33 @@ def limits_for(platform: PlatformType, sweep: str, value: float):
         return replace(lim, a_target_max=float(value) * lim.a_n_max)
     if sweep == "target_speed_ratio":
         return replace(lim, v_target_nominal=float(value) * lim.v_max)
+    if sweep == "interceptor_lag_scale":
+        return replace(lim, tau_accel=float(value) * lim.tau_accel)
+    if sweep == "axial_limit_scale":
+        return replace(lim, a_t_max=float(value) * lim.a_t_max, a_t_min=float(value) * lim.a_t_min)
+    if sweep == "jerk_limit_scale":
+        return replace(lim, max_jerk=float(value) * lim.max_jerk)
     return lim
+
+
+def noise_config_for(sweep: str, value: float):
+    """Seeker config with the swept filter gains (``None`` = the env loads configs/seeker.yaml)."""
+    if sweep != "seeker_gain_scale":
+        return None
+    cfg = load_sensor_noise_config()
+    v = float(value)
+    return replace(cfg, ema_alpha_pos=min(1.0, v * cfg.ema_alpha_pos),
+                   ema_alpha_vel=min(1.0, v * cfg.ema_alpha_vel),
+                   ema_alpha_acc=min(1.0, v * cfg.ema_alpha_acc))
 
 
 def run_episode(platform: PlatformType, mode: str, behavior: Optional[ManeuverType], seed: int,
                 *, limits=None, noise_scale: float = 1.0, shape_scale: float = 1.0,
-                policy=None) -> Dict[str, float]:
+                noise_config=None, policy=None) -> Dict[str, float]:
     """One episode; ``policy`` is an SB3 model for RL arms, ``None`` otherwise."""
     kwargs = {"fixed_maneuver": behavior} if behavior is not None else {}
     env = UnifiedInterceptEnv(platform=platform, mode=mode, limits=limits,
-                              noise_scale=noise_scale, seed=seed,
+                              noise_scale=noise_scale, seed=seed, noise_config=noise_config,
                               maneuver_shape_scale=shape_scale, **kwargs)
     obs, _ = env.reset(seed=seed)
     done = False
@@ -76,6 +104,7 @@ def run_sweep(sweep: str, platform: PlatformType, mode: str, *,
                                 limits=limits_for(platform, sweep, value),
                                 noise_scale=float(value) if sweep == "noise_scale" else 1.0,
                                 shape_scale=float(value) if sweep == "maneuver_shape" else 1.0,
+                                noise_config=noise_config_for(sweep, value),
                                 policy=policy)
                 kills.append(r["killed"])
                 misses.append(r["miss"])
