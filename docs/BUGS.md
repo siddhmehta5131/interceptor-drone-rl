@@ -362,7 +362,7 @@ torque ratio `c_d / c_l = 1/480` is about a third of the measured 0.006 m; the a
 because it includes the command path and load cell). Values unchanged (platform values). If
 changed: every quad result, P4.9 limits and FC training are stale.
 
-### 35. Swept N' is not used by training, the arm comparison or the robustness sweeps (OPEN, owner decision)
+### 35. Swept N' is not used by training, the arm comparison or the robustness sweeps (FIXED 2026-11-15)
 Found while assigning defences (item 6, 2026-11-15). `scripts/evaluate_guidance.py`,
 `evaluate_closed_loop.py`, `collect_guidance_distributions.py` and `sweep_bridge_rate.py` take
 N' from `guidance.config.resolve_n_prime` (the P5.11 winner per platform and arm: quad A2 5.0,
@@ -384,4 +384,13 @@ and fails if a PROJECT_CHOICE row has none. New evaluation-only sweeps in
 `axial_limit_scale` (reaches the BUGS #32 model value), `jerk_limit_scale`, `seeker_gain_scale`.
 Found on the way: 97 rows sit in code no v2 entry point executes (the notebook-v2 manoeuvre
 library in `maneuvers.py`, used only for fixture parity, and the unused OU wind model).
+
+**#35 fix (2026-11-15, owner: "easiest to defend").** One rule: `UnifiedInterceptEnv(N_nav=None)`
+now takes the P5.11 winner for its platform and arm (`resolve_n_prime`; the RL arms use the
+filtered-APN value because their navigation term is the same), and `run_closed_loop` uses the
+env's value. Training, the A1-A4 comparison, the classical tables and every sweep therefore use
+the same N', selected on seeds 5000+ that are disjoint from training and evaluation seeds. An
+explicit `N_nav` still wins (`sweep_nav.py`; the notebook-replay fixtures pin 4.0). The stored
+winners are stale and must come from the Colab rerun of `sweep_nav.py` BEFORE training.
+Test: `test_env_takes_n_prime_from_sweep_table`.
 

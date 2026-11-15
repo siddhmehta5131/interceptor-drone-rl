@@ -60,7 +60,8 @@ def test_notebook_environment_replay(platform, mode, seed):
         noise_scale=float(fx["noise_scale"]),
         fixed_maneuver=ManeuverType(str(fx["maneuver"])), seed=seed,
         legacy_reward=True, limits=InterceptorLimits.from_preset(platform),
-        noise_config=SensorNoiseConfig())  # notebook-v2 noise, not configs/seeker.yaml
+        noise_config=SensorNoiseConfig(),  # notebook-v2 noise, not configs/seeker.yaml
+        N_nav=4.0)  # notebook-v2 navigation constant, not the P5.11 sweep value
     obs, _ = env.reset()
     obs_hist, rewards, vout = [obs.copy()], [], []
     done = False

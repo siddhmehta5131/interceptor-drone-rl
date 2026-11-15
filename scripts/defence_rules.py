@@ -143,7 +143,7 @@ RULES = [
     ("SWEEP", "interceptor/guidance/env", r"noise_scale=\)|maneuver_shape_scale",
      "nominal point of the noise_scale / maneuver_shape sweeps (interceptor/eval/sweeps.py)"),
     ("SWEEP", "interceptor/guidance/env", r"N_nav=\)",
-     "SWEEP scripts/sweep_nav.py (P5.11); NOTE BUGS #35: training, evaluate_guidance_arms and the robustness sweeps use this default 4.0, not the per-platform sweep winner"),
+     "SWEEP scripts/sweep_nav.py (P5.11): the default None takes the per-platform, per-arm sweep winner from configs/guidance.yaml (resolve_n_prime), the same in training, every evaluation and every sweep (BUGS #35 fixed)"),
     ("DEFINITION", "interceptor/guidance/env", r"mode=\)|target_set=\)|polynomial_order|legacy_reward",
      "default arm / target set / polynomial order selection; every arm and target set is evaluated explicitly (scripts/evaluate_guidance*.py)"),
     ("DEFINITION", "interceptor/guidance/env", r"weights",

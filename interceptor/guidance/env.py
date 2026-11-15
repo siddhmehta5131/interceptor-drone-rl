@@ -37,6 +37,7 @@ from .kinematics import (
     compute_optimal_intercept_oracle, heading_rate_from_acceleration,
 )
 from .maneuvers import ManeuverType, PlatformType
+from .config import resolve_n_prime
 from .observation import AsymmetricObsBuilder, ObservationScales
 from .reward import GuidanceReward, notebook_reward
 from .platform import InterceptorLimits, PLATFORMS
@@ -68,7 +69,7 @@ class UnifiedInterceptEnv(_Base):
         noise_scale: float = 1.0,
         fixed_maneuver: Optional[ManeuverType] = None,
         polynomial_order: int = 1,
-        N_nav: float = 4.0,
+        N_nav: Optional[float] = None,
         seed: Optional[int] = None,
         obs_scales: Optional[ObservationScales] = None,
         reward_fn: Optional[GuidanceReward] = None,
@@ -98,7 +99,10 @@ class UnifiedInterceptEnv(_Base):
         self.noise_scale = float(noise_scale)
         self.fixed_maneuver = fixed_maneuver
         self.polynomial_order = int(polynomial_order)
-        self.N_nav = float(N_nav)
+        # N' = None takes the P5.11 sweep winner for this platform and arm from
+        # configs/guidance.yaml (resolve_n_prime), so training, every evaluation and
+        # every sweep use the same value unless one is passed explicitly (BUGS #35).
+        self.N_nav = float(N_nav) if N_nav is not None else resolve_n_prime(platform, mode)
         self.dt = float(self.limits.dt)
         self.max_steps = int(self.limits.max_time / self.dt)
         self.kill_radius = float(self.limits.kill_radius)

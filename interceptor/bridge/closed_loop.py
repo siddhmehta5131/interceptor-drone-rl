@@ -111,7 +111,7 @@ def run_closed_loop(
     inner_policy: Any = None,
     target_set: str = "evasive",
     fixed_maneuver: Optional[ManeuverType] = None,
-    N_nav: float = 4.0,
+    N_nav: Optional[float] = None,
     limits: Optional[InterceptorLimits] = None,
     wind: bool = True,
     max_time: Optional[float] = None,
@@ -175,13 +175,13 @@ def run_closed_loop(
                 env.sensor.raw_pos, env.sensor.raw_vel, env.sensor.raw_acc,
                 p, v, r_min_clamp=2.0)
             a_cmd = compute_3d_apn_command(
-                kin, env.sensor.raw_acc, v, env.limits, N_nav,
+                kin, env.sensor.raw_acc, v, env.limits, env.N_nav,
                 include_axial_boost=False)
         else:
             kin = compute_engagement_kinematics(
                 est_p, est_v, est_a, p, v, r_min_clamp=15.0)
             a_cmd = compute_3d_apn_command(
-                kin, est_a, v, env.limits, N_nav, include_axial_boost=True)
+                kin, est_a, v, env.limits, env.N_nav, include_axial_boost=True)
             if mode == "apn_rl":
                 obs_full = obs_builder.build(
                     p_M=p, v_M=v, est_p_T=est_p, est_v_T=est_v, est_a_T=est_a,

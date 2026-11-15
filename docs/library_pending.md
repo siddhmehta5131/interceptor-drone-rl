@@ -23,38 +23,38 @@ names the book (row IDs are those of the current `docs/full_value_audit.csv`).
 
 * `configs/guidance.yaml` [PROJECT_CHOICE]: V00110
 * `guidance` [CITED_METHOD, PROJECT_CHOICE]: D010, D011
-* `interceptor/guidance/maneuvers.py` [PROJECT_CHOICE]: V00700, V00701, V00702, V00703, V00704, V00705, V00706, V00707, V00708, V00709, V00710, V00711, ... (110 rows)
+* `interceptor/guidance/maneuvers.py` [PROJECT_CHOICE]: V00698, V00699, V00700, V00701, V00702, V00703, V00704, V00705, V00706, V00707, V00708, V00709, ... (110 rows)
 
 ## L2: dependent rows (144)
 
 * `guidance` [PROJECT_CHOICE]: D017
-* `interceptor/guidance/maneuvers.py` [PROJECT_CHOICE]: V00700, V00701, V00702, V00703, V00704, V00705, V00706, V00707, V00708, V00709, V00710, V00711, ... (110 rows)
-* `interceptor/guidance/targets.py` [PROJECT_CHOICE]: V00988, V00989, V00991, V00992, V00996, V00998, V00999, V01000, V01001, V01002, V01003, V01004, ... (33 rows)
+* `interceptor/guidance/maneuvers.py` [PROJECT_CHOICE]: V00698, V00699, V00700, V00701, V00702, V00703, V00704, V00705, V00706, V00707, V00708, V00709, ... (110 rows)
+* `interceptor/guidance/targets.py` [PROJECT_CHOICE]: V00986, V00987, V00989, V00990, V00994, V00996, V00997, V00998, V00999, V01000, V01001, V01002, ... (33 rows)
 
 ## L3: dependent rows (110)
 
-* `interceptor/guidance/maneuvers.py` [PROJECT_CHOICE]: V00700, V00701, V00702, V00703, V00704, V00705, V00706, V00707, V00708, V00709, V00710, V00711, ... (110 rows)
+* `interceptor/guidance/maneuvers.py` [PROJECT_CHOICE]: V00698, V00699, V00700, V00701, V00702, V00703, V00704, V00705, V00706, V00707, V00708, V00709, ... (110 rows)
 
 ## L4: dependent rows (17)
 
-* `interceptor/sim/pipeline.py` [CITED_METHOD]: V01100, V01106, V01107, V01108, V01109, V01110, V01111, V01112, V01113, V01114, V01116, V01117, ... (16 rows)
+* `interceptor/sim/pipeline.py` [CITED_METHOD]: V01098, V01104, V01105, V01106, V01107, V01108, V01109, V01110, V01111, V01112, V01114, V01115, ... (16 rows)
 * `simulator` [CITED_METHOD]: D003
 
 ## L5: dependent rows (37)
 
 * `configs/airframes/aim5.yaml` [CITED]: V00057, V00058, V00059, V00060, V00061, V00062, V00063, V00064, V00065, V00066, V00068, V00069, ... (19 rows)
 * `configs/platforms.yaml` [CITED, CITED_PARTIAL]: V00226, V00228, V00229, V00230, V00231, V00232, V00233, V00237
-* `interceptor/guidance/airframes.py` [CITED_METHOD, MATH_OR_DIMENSION, NUMERICAL_GUARD]: V00615, V00616, V00617, V00618, V00619, V00620, V00621, V00622, V00623, V00624
+* `interceptor/guidance/airframes.py` [CITED_METHOD, MATH_OR_DIMENSION, NUMERICAL_GUARD]: V00614, V00615, V00616, V00617, V00618, V00619, V00620, V00621, V00622, V00623
 
 ## L6: dependent rows (28)
 
 * `guidance` [CITED_METHOD]: D012
-* `interceptor/guidance/seeker.py` [CITED_METHOD]: V00959, V00960, V00961, V00962, V00963, V00964, V00965, V00966, V00967, V00968, V00970, V00971, ... (21 rows)
-* `interceptor/guidance/tracker.py` [CITED_METHOD, MATH_OR_DIMENSION]: V01036, V01037, V01038, V01039, V01040, V01041
+* `interceptor/guidance/seeker.py` [CITED_METHOD]: V00957, V00958, V00959, V00960, V00961, V00962, V00963, V00964, V00965, V00966, V00968, V00969, ... (21 rows)
+* `interceptor/guidance/tracker.py` [CITED_METHOD, MATH_OR_DIMENSION]: V01034, V01035, V01036, V01037, V01038, V01039
 
 ## L7: dependent rows (7)
 
-* `interceptor/fc/metrics.py` [CITED_METHOD]: V00555, V00556, V00557, V00558, V00559, V00563, V00564
+* `interceptor/fc/metrics.py` [CITED_METHOD]: V00554, V00555, V00556, V00557, V00558, V00562, V00563
 
 ## L8: dependent rows (77)
 
@@ -62,15 +62,15 @@ names the book (row IDs are those of the current `docs/full_value_audit.csv`).
 * `configs/airframes/aim5.yaml` [CITED]: V00067
 * `configs/platforms.yaml` [CITED_PARTIAL]: V00216
 * `guidance` [CITED]: D019
-* `interceptor/guidance/airframes.py` [CITED_METHOD]: V00616, V00617, V00618, V00619, V00620, V00621, V00622, V00623
-* `interceptor/sim/pipeline.py` [CITED_METHOD]: V01100, V01106, V01107, V01108, V01109, V01110, V01111, V01112, V01113, V01114, V01116, V01117, ... (16 rows)
+* `interceptor/guidance/airframes.py` [CITED_METHOD]: V00615, V00616, V00617, V00618, V00619, V00620, V00621, V00622
+* `interceptor/sim/pipeline.py` [CITED_METHOD]: V01098, V01104, V01105, V01106, V01107, V01108, V01109, V01110, V01111, V01112, V01114, V01115, ... (16 rows)
 
 ## L9: dependent rows (144)
 
-* `interceptor/guidance/maneuvers.py` [PROJECT_CHOICE]: V00700, V00701, V00702, V00703, V00704, V00705, V00706, V00707, V00708, V00709, V00710, V00711, ... (110 rows)
-* `interceptor/guidance/targets.py` [PROJECT_CHOICE]: V00988, V00989, V00991, V00992, V00993, V00996, V00998, V00999, V01000, V01001, V01002, V01003, ... (34 rows)
+* `interceptor/guidance/maneuvers.py` [PROJECT_CHOICE]: V00698, V00699, V00700, V00701, V00702, V00703, V00704, V00705, V00706, V00707, V00708, V00709, ... (110 rows)
+* `interceptor/guidance/targets.py` [PROJECT_CHOICE]: V00986, V00987, V00989, V00990, V00991, V00994, V00996, V00997, V00998, V00999, V01000, V01001, ... (34 rows)
 
 ## L10: dependent rows (16)
 
-* `interceptor/sim/wind.py` [CITED_METHOD]: V01128, V01129, V01130, V01131, V01133, V01134, V01135, V01136, V01137, V01139, V01140, V01141, ... (15 rows)
+* `interceptor/sim/wind.py` [CITED_METHOD]: V01126, V01127, V01128, V01129, V01131, V01132, V01133, V01134, V01135, V01137, V01138, V01139, ... (15 rows)
 * `simulator` [CITED_PARTIAL]: D008

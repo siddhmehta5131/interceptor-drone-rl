@@ -89,3 +89,13 @@ def test_env_residual_authority_and_gamma():
     e = UnifiedInterceptEnv(mode="apn_rl", residual_authority=0.5, gamma=0.99, seed=0)
     assert e.residual_authority == 0.5 and e.reward_fn.gamma == 0.99
     assert UnifiedInterceptEnv(seed=0).residual_authority == 0.35
+
+
+def test_env_takes_n_prime_from_sweep_table():
+    """BUGS #35: with no N_nav the env uses the P5.11 winner; explicit values win."""
+    from interceptor.guidance.config import resolve_n_prime
+    for platform in PlatformType:
+        for mode in ("apn_raw", "apn_filtered", "apn_rl"):
+            env = UnifiedInterceptEnv(platform=platform, mode=mode, seed=0)
+            assert env.N_nav == resolve_n_prime(platform, mode)
+    assert UnifiedInterceptEnv(platform=PlatformType.QUADCOPTER, N_nav=3.0, seed=0).N_nav == 3.0
