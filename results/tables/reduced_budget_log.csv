@@ -1,0 +1,8 @@
+run_id,status,num_timesteps,seconds
+p7_fc_asym_s0,ok,200480,177
+p7_quadcopter_a3_s0,ok,301128,764
+p7_quadcopter_a4_s0,ok,301056,1304
+p7_fixed_wing_a3_s0,ok,301056,1355
+p7_fixed_wing_a4_s0,ok,301056,1313
+p7_missile_a3_s0,ok,301056,1371
+p7_missile_a4_s0,ok,301056,1324

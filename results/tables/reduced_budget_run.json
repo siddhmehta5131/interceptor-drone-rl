@@ -1,0 +1,15 @@
+{
+  "budgets": {
+    "algorithm_selection_steps": 30000,
+    "fc_train_steps": 200000,
+    "guidance_train_steps": 300000,
+    "ablation_guidance_steps": 100000,
+    "ablation_fc_steps": 100000
+  },
+  "seeds": [
+    0,
+    1,
+    2
+  ],
+  "note": "Local laptop run at reduced budgets (results due 2026-11-15); full budgets are in configs/training.yaml and the Colab notebooks."
+}
