@@ -211,7 +211,9 @@ $$V_{stall} = \sqrt{\frac{2mg}{\rho S\,C_{L,\max}}}$$
 
 Maximum level speed is the root of (EQ-FW-3):
 
-$$T(V) = D(V) \quad\Rightarrow\quad v_{\max} = 40\ \mathrm{m/s}$$
+$$T(V) = D(V)$$
+
+With the book propulsion model (Beard & McLain eqs. 4.17-4.22) and the mavsim parameters the root is 32.4 m/s; the configured $v_{\max} = 40$ m/s is a v1-notebook value (BUGS #32, decision pending).
 
 Axial acceleration envelope (EQ-FW-4):
 
@@ -219,13 +221,13 @@ $$a_{t,\max} = \frac{T_{\max}(V) - D(V)}{m}, \qquad a_{t,\min} = \frac{T_{idle}(
 
 Load factor (EQ-FW-5, `aerosonde_load_factor`):
 
-$$n = \frac{L}{mg} = \frac{\rho V^2 S\,C_L}{2mg}, \qquad \lvert n\rvert \le n_{\max} = 10.5, \qquad a_{n,\max} = n_{\max}\,g$$
+$$n = \frac{L}{mg} = \frac{\rho V^2 S\,C_L}{2mg}, \qquad -0.4\,n_{\max} \le n \le n_{\max} = 3.8\ \text{(14 CFR 23.337, normal category)}, \qquad a_{n,\max} = n_{\max}\,g$$
 
 Coordinated-turn rate (EQ-FW-6, `aerosonde_turn_rate`):
 
 $$\omega = \frac{g\sqrt{\max(n^2 - 1,\ 0)}}{V}$$
 
-Lag and jerk (EQ-FW-7): $\tau_a = \tau_{roll} \approx 0.12$ s; $j_{\max} = a_{n,\max}/\tau_a = 858$ m/s³ analytically, capped at 180 m/s³ by the actuator-rate budget.
+Lag and jerk (EQ-FW-7): $\tau_a = 0.12$ s (project choice, v1-notebook value; BUGS #32); $a_{n,\max}/\tau_a = 37.278/0.12 = 311$ m/s³, and the configured $j_{\max} = 180$ m/s³ is a project choice below it.
 
 ### A7. Missile limits (AIM5)
 

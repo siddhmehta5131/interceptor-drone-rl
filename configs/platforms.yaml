@@ -103,19 +103,19 @@ platforms:
     v_min:
       value: 15.0
       unit: m/s
-      source: "configs/airframes/aerosonde.yaml derived_limits; EQ-FW-2"
+      source: "configs/airframes/aerosonde.yaml derived_limits.v_min: EQ-FW-2 with CL_max = 1.45 (PROJECT_CHOICE, BUGS #32)"
     v_max:
       value: 40.0
       unit: m/s
-      source: "configs/airframes/aerosonde.yaml derived_limits; EQ-FW-3"
+      source: "PROJECT_CHOICE, v1 notebook value; the book propulsion model gives 32.4 m/s (configs/airframes/aerosonde.yaml derived_limits.v_max, BUGS #32)"
     a_t_max:
       value: 41.202
       unit: m/s^2
-      source: "configs/airframes/aerosonde.yaml derived_limits; EQ-FW-4"
+      source: "PROJECT_CHOICE, v1 notebook value; EQ-FW-4 with the book propulsion model gives 0.25 g at 25 m/s (configs/airframes/aerosonde.yaml derived_limits.a_t_max, BUGS #32)"
     a_t_min:
       value: -19.62
       unit: m/s^2
-      source: "configs/airframes/aerosonde.yaml derived_limits; EQ-FW-4"
+      source: "PROJECT_CHOICE, v1 notebook value; EQ-FW-4 with the book propulsion model gives -0.31 g at 25 m/s (configs/airframes/aerosonde.yaml derived_limits.a_t_min, BUGS #32)"
     a_n_max:
       value: 37.278
       unit: m/s^2
@@ -127,11 +127,11 @@ platforms:
     tau_accel:
       value: 0.12
       unit: s
-      source: "configs/airframes/aerosonde.yaml derived_limits; EQ-FW-7"
+      source: "PROJECT_CHOICE, v1 notebook value; not found in the companion textbook (configs/airframes/aerosonde.yaml derived_limits.tau_accel, BUGS #32); EQ-FW-7"
     max_jerk:
       value: 180.0
       unit: m/s^3
-      source: "configs/airframes/aerosonde.yaml derived_limits; EQ-FW-7"
+      source: "PROJECT_CHOICE: kept below a_n_max / tau_accel = 37.278 / 0.12 = 311 m/s^3 (configs/airframes/aerosonde.yaml derived_limits.max_jerk); EQ-FW-7"
     omega_max:
       value: 1.44
       unit: rad/s

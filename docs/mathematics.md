@@ -303,14 +303,22 @@ T(V)=D(V)
 \tag{EQ-FW-3}
 \]
 
-at sea level, which gives `v_max = 40 m/s` for the Aerosonde configuration.
-Excess thrust gives the axial acceleration envelope
+at sea level. With the book propulsion model (Beard & McLain uavbook draft
+2025-10-02, eqs. 4.17-4.22: operating speed from the motor/propeller torque
+balance, `V_in = V_max delta_t`) and the mavsim Aerosonde parameters, the
+full-throttle root with `C_D = C_Dp + C_L^2/(pi e AR)` is **32.4 m/s**. The
+configured `v_max = 40 m/s` is a v1-notebook value, not this root (BUGS #32,
+decision pending). Excess thrust gives the axial acceleration envelope
 
 \[
 a_{t,\max}=\frac{T_{\max}(V)-D(V)}{m},\qquad
 a_{t,\min}=\frac{T_{\rm idle}(V)-D(V)}{m}.
 \tag{EQ-FW-4}
 \]
+
+With the same model these give `+2.5 m/s^2` and `-3.0 m/s^2` at 25 m/s (static
+thrust 84.6 N, so at most `+7.7 m/s^2`); the configured `+4.2 g / -2 g` are
+v1-notebook values (BUGS #32).
 
 The load factor and negative-load limits are
 
@@ -336,8 +344,10 @@ The acceleration lag is the roll/pitch first-order response,
 \tag{EQ-FW-7}
 \]
 
-and the jerk limit is `a_n,max / tau_a = 858 m/s^3` analytically, capped at
-180 m/s^3 by the actuator-rate budget. The values are evaluated at sea level
+where 0.12 s is a v1-notebook value: no such roll/pitch constant was found in
+Beard & McLain (BUGS #32), so it is a project choice. With `a_n,max = 3.8 g` the
+bound `a_n,max / tau_a = 311 m/s^3` sits above the configured jerk limit of
+180 m/s^3, which is a project choice. The values are evaluated at sea level
 and the 25 m/s trim condition; the derivation is reproduced by
 `interceptor/guidance/airframes.py` and the source table points at
 `configs/airframes/aerosonde.yaml`.

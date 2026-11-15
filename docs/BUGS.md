@@ -317,3 +317,27 @@ sigma = 0.1 x half the action range (= 0.1 for our [-1, 1] actions). Test:
 exists (P6.4 not yet run; `results/` holds no algorithm-selection tables), so nothing has to be
 re-run; `results/tables/training_throughput.json` TD3 steps/s may shift slightly (noise sampling
 is cheap) but it is a laptop benchmark only.
+
+### 32. Fixed-wing interceptor limits do not follow from the cited model (OPEN, owner decision)
+Item 3 of the 2026-11-15 sourcing pass compared every Aerosonde value with mavsim_public
+(`docs/aerosonde_mavsim_check.md`): the 53 airframe numbers are correct. The derived limits are
+not. With the book propulsion model (Beard & McLain uavbook draft 2025-10-02, eqs. 4.17-4.22)
+and the mavsim parameters, full throttle at sea level gives:
+
+| limit | configured | model | source text before this fix |
+|---|---|---|---|
+| `v_max` | 40 m/s | 32.4 m/s (T = D root) | "thrust = drag root" |
+| `a_t_max` | 41.2 m/s^2 (4.2 g) | 2.5 m/s^2 at 25 m/s; <= 7.7 m/s^2 static | "excess thrust" |
+| `a_t_min` | -19.6 m/s^2 (-2 g) | -3.0 m/s^2 at 25 m/s | "idle thrust / drag" |
+| `tau_accel` | 0.12 s | not in the book | "Beard & McLain control chapter fit" |
+
+The 40 m/s is hard-coded in the v1 notebook (`archive/path_planning_updated_project/
+apn_rl_interceptor_path_planning.ipynb`, `v_max=40.0`); nothing derived it. `v_min = 15 m/s`
+uses CL_max = 1.45, a project choice (the book lift curve peaks at 2.42, giving 11.3 m/s).
+The audit had labelled the `platforms.yaml` copies CITED because its Beard regex matched the word
+"aerosonde" in a file path; fixed. Values are **unchanged** and relabelled PROJECT_CHOICE
+because they are platform values (owner decision). If they are changed to the model values, the
+fixed-wing interceptor (32.4 m/s) is only 1.06x faster than the Orlan-10 target (30.6 m/s), and
+every fixed-wing result and the `platforms.yaml` observation scales (40 m/s) become stale.
+Also fixed: `docs/equations_reference.md` still showed n_max = 10.5 and j = 858 m/s^3.
+

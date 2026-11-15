@@ -53,7 +53,7 @@ REFS = [
     (r"NanoBench", "Ullah, S. I., Baca, J. (2026). NanoBench: A Multi-Task Benchmark Dataset for Nano-Quadrotor System Identification, Control, and State Estimation. arXiv:2603.09908 (flying mass 40.85 g confirmed; other coefficients not found in the paper, BUGS #27)."),
     (r"Bitcraze|Crazyflie firmware|platform_defaults", "Bitcraze AB. Crazyflie 2.x datasheet and crazyflie-firmware (platform_defaults_cf2.h), github.com/bitcraze/crazyflie-firmware."),
     (r"cf2x\.urdf|gym-pybullet|Panerati", "Panerati, J. et al. (2021). Learning to Fly - a Gym Environment with PyBullet Physics for RL of Multi-agent Quadcopter Control. IROS. (cf2x.urdf)"),
-    (r"Beard|McLain|mavsim|Aerosonde", "Beard, R. W., McLain, T. W. (2012). Small Unmanned Aircraft: Theory and Practice. Princeton Univ. Press; mavsim_public aerosonde_parameters.py."),
+    (r"Beard|McLain|mavsim", "Beard, R. W., McLain, T. W. (2012). Small Unmanned Aircraft: Theory and Practice. Princeton Univ. Press; mavsim_public aerosonde_parameters.py."),
     (r"Zipfel|CADAC|AIM5", "Zipfel, P. H. (2014). Modeling and Simulation of Aerospace Vehicle Dynamics, 3rd ed. AIAA; CADAC++ AIM5 example."),
     (r"MIL-HDBK|MIL-F|Dryden", "MIL-HDBK-1797 (1997) / MIL-F-8785C (1980). Flying Qualities of Piloted Aircraft (Dryden turbulence model). US DoD."),
     (r"14 CFR 23\.337", "14 CFR 23.337 Limit maneuvering load factors (2011 ed.), https://www.govinfo.gov/content/pkg/CFR-2011-title14-vol1/pdf/CFR-2011-title14-vol1-sec23-337.pdf"),
