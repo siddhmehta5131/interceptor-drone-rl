@@ -196,7 +196,9 @@ product page) over Shahed-136 185 km/h (IRGC poster via Janes) = 1.51, giving
 92-277 m (the 10-25 s window of `EQ-GEO-5`).
 The fixed-wing target flies the Orlan-10 cruise speed, 110 km/h = 30.6 m/s
 (Airforce Technology profile, 24 Mar 2023; trade press, no manufacturer
-datasheet read), so the 40 m/s Aerosonde has a speed ratio of 1.31. The earlier
+datasheet read), so the 32.4 m/s Aerosonde (EQ-FW-3) has a speed ratio of only
+1.06, and a target drawn at the top of its 0.75-1.15 speed band (35.2 m/s) is
+faster than the interceptor. The earlier
 choice, the Bayraktar TB2 at 46.3 m/s, was faster than the interceptor and is now
 covered by the P9.1 speed-ratio sweep instead. The missile-class target limit is the 9 g fighter
 limit (F-16C, J-20; JF-17 Block III is 8 g; `data/threat_platforms.csv` T02-T04,
@@ -306,9 +308,10 @@ T(V)=D(V)
 at sea level. With the book propulsion model (Beard & McLain uavbook draft
 2025-10-02, eqs. 4.17-4.22: operating speed from the motor/propeller torque
 balance, `V_in = V_max delta_t`) and the mavsim Aerosonde parameters, the
-full-throttle root with `C_D = C_Dp + C_L^2/(pi e AR)` is **32.4 m/s**. The
-configured `v_max = 40 m/s` is a v1-notebook value, not this root (BUGS #32,
-decision pending). Excess thrust gives the axial acceleration envelope
+full-throttle root with `C_D = C_Dp + C_L^2/(pi e AR)` is 32.43 m/s, so
+`v_max = 32.4 m/s` (`airframes.py::aerosonde_max_level_speed`; until 2026-11-15
+the config held a v1-notebook 40 m/s, BUGS #32). Excess thrust gives the axial
+acceleration envelope
 
 \[
 a_{t,\max}=\frac{T_{\max}(V)-D(V)}{m},\qquad
@@ -316,9 +319,13 @@ a_{t,\min}=\frac{T_{\rm idle}(V)-D(V)}{m}.
 \tag{EQ-FW-4}
 \]
 
-With the same model these give `+2.5 m/s^2` and `-3.0 m/s^2` at 25 m/s (static
-thrust 84.6 N, so at most `+7.7 m/s^2`); the configured `+4.2 g / -2 g` are
-v1-notebook values (BUGS #32).
+Evaluated at the 25 m/s trim speed with the same model
+(`airframes.py::aerosonde_axial_acceleration`): `a_t,max = +2.47 m/s^2` (full
+throttle) and `a_t,min = -3.02 m/s^2` (zero throttle, windmilling propeller).
+Both depend on speed (`+4.9 m/s^2` at 15 m/s, zero at `v_max`; static thrust
+84.6 N); the kinematic model uses the constants, and the `axial_limit_scale`
+sweep tests that simplification. Until 2026-11-15 the config held v1-notebook
+values of `+4.2 g / -2 g` (BUGS #32).
 
 The load factor and negative-load limits are
 

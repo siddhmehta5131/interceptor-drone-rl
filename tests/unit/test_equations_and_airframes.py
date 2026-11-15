@@ -53,3 +53,20 @@ def test_aerosonde_limit_formulas_are_physical():
     assert 0.0 < n < 2.0
     omega = aerosonde_turn_rate(25.0, 3.8)  # 14 CFR 23.337 normal category
     assert omega == pytest.approx(cfg["derived_limits"]["omega_max"]["value"], rel=0.02)
+
+
+def test_fixed_wing_limits_follow_from_propulsion_model():
+    """BUGS #32: v_max, a_t_max, a_t_min are the Beard & McLain model values (EQ-FW-3/4)."""
+    from interceptor.guidance.airframes import (
+        aerosonde_axial_acceleration, aerosonde_max_level_speed, aerosonde_thrust)
+    from interceptor.guidance.maneuvers import PlatformType
+    from interceptor.guidance.platform import PLATFORMS
+    cfg = load_airframe(ROOT / "configs/airframes/aerosonde.yaml")
+    lim = PLATFORMS[PlatformType.FIXED_WING]
+    assert aerosonde_thrust(0.0, 1.0, cfg) == pytest.approx(84.57, abs=0.01)  # static thrust
+    assert lim.v_max == pytest.approx(aerosonde_max_level_speed(cfg), abs=0.05)
+    assert lim.a_t_max == pytest.approx(aerosonde_axial_acceleration(25.0, 1.0, cfg), abs=0.005)
+    assert lim.a_t_min == pytest.approx(aerosonde_axial_acceleration(25.0, 0.0, cfg), abs=0.005)
+    assert aerosonde_axial_acceleration(lim.v_max, 1.0, cfg) == pytest.approx(0.0, abs=0.02)
+    for key in ("v_max", "a_t_max", "a_t_min"):
+        assert cfg["derived_limits"][key]["value"] == getattr(lim, key)

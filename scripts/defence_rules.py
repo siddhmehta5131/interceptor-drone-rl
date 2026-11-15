@@ -37,10 +37,9 @@ LEGACY_MAN = ("not executed by v2: v2 uses only the ManeuverType / PlatformType 
               "notebook-v2 manoeuvre library (EvasiveTargetGenerator, presets, PN interceptor) is used only by "
               "scripts/make_fixtures.py for the fixture-parity tests (checked by reference search and "
               "results/tables/liveness.json, 2026-11-15); the live target model is guidance/targets.py")
-FW32 = ("owner decision open (BUGS #32: the book propulsion model gives 32.4 m/s, 0.25 g, -0.31 g). Tested "
-        "meanwhile by sweeps.py axial_limit_scale (x0.06 = the model a_t values), interceptor_lag_scale "
-        "(x0.5 / 1 / 2), jerk_limit_scale (x0.5 / 1 / 2) and target_speed_ratio (0.3-1.1; the model case "
-        "30.6 / 32.4 = 0.94 lies inside the grid)")
+FW32 = ("no source (v1-notebook value; BUGS #32: v_max, a_t_max, a_t_min now come from the book propulsion "
+        "model, this one does not). Tested by sweeps.py interceptor_lag_scale (tau_accel x0.5 / 1 / 2) and "
+        "jerk_limit_scale (max_jerk x0.5 / 1 / 2)")
 
 # (category, path prefix, regex on "name = value" or None, text); first match wins
 RULES = [
@@ -48,8 +47,8 @@ RULES = [
     ("PRESENTATION", "", r"savefig|\.grid\(|set\(ylim|subplots|\.bar\(|DictWriter|json\.dumps|fieldnames|"
                          r"i % 10 == 0|'--workers'", "plot, file output or worker count; each episode's seed is fixed by its job index, so results are identical for any value"),
     # --- open owner decisions ---------------------------------------------------------
-    ("PENDING", "configs/airframes/aerosonde", r"v_max|a_t_max|a_t_min|tau_accel", FW32),
-    ("PENDING", "configs/platforms", r"fixed_wing\.(v_max|a_t_max|a_t_min|tau_accel|max_jerk)", FW32),
+    ("SWEEP", "configs/airframes/aerosonde", r"tau_accel|max_jerk", FW32),
+    ("SWEEP", "configs/platforms", r"fixed_wing\.(tau_accel|max_jerk)", FW32),
     ("PENDING", "configs/quadrotor", r"torque_coefficient",
      "owner decision open (BUGS #34: Forster 2015 eq. 3.5 gives ~3x the yaw torque per newton); affects yaw authority only; varied +-15 % by the c_d_frac domain randomisation, ablated by configs/ablations.yaml fc_randomisation"),
     ("PENDING", "configs/quadrotor", r"motor_time_constant",
@@ -86,7 +85,7 @@ RULES = [
      "SWEEP noise_scale (interceptor/eval/sweeps.py, x0, 0.25, 0.5, 1, 2, 4): seeker.py _sigmas multiplies this term and the dropout probability by noise_scale"),
     ("SWEEP", "configs/seeker", r"ema_alpha",
      "SWEEP seeker_gain_scale (interceptor/eval/sweeps.py, x0.5 / 1 / 1.5, capped at 1): the env uses this alpha-beta-gamma filter (seeker.py default filter_type 'abg'); the P5.4 Kalman tracker is not wired into the env (BUGS #13)"),
-    ("PENDING", "configs/airframes/aerosonde", None, FW32),
+    ("SWEEP", "configs/airframes/aerosonde", None, FW32),
     # --- modelling decisions (docs/decision_register.csv) --------------------------------
     ("SWEEP", "guidance", r"Navigation constant", "SWEEP scripts/sweep_nav.py N_GRID 3-5 (P5.11), per platform and arm"),
     ("SWEEP", "guidance", r"Seeker noise", "SWEEP noise_scale x0-4 and seeker_gain_scale x0.5-1.5 (interceptor/eval/sweeps.py)"),

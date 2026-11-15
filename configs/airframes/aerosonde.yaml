@@ -207,17 +207,17 @@ derived_limits:
     unit: m/s
     source: "DERIVED (EQ-FW-2): V_stall = sqrt(2 m g / (rho S CL_max)) with m, rho, S from mavsim (L32, L41, L37) and CL_max = 1.45, a PROJECT_CHOICE: mavsim has no CL_max and the book blended lift curve eq. (4.9)-(4.10) peaks at 2.42 (alpha 23.6 deg, no viscous stall), which would give 11.3 m/s. 1.45 gives 14.6 m/s, rounded up to 15 (conservative lower speed bound; BUGS #32)"
   v_max:
-    value: 40.0
+    value: 32.4
     unit: m/s
-    source: "PROJECT_CHOICE (v1 notebook value, archive/path_planning_updated_project): NOT the thrust = drag root claimed before. The book propulsion model (uavbook eqs. 4.17-4.22) with the mavsim parameters gives 32.4 m/s at full throttle (BUGS #32); kept at 40 pending the owner decision"
+    source: "DERIVED (EQ-FW-3): full-throttle root of T(V) = D(V) at sea level, 32.43 m/s rounded; thrust from the Beard & McLain propulsion model (uavbook draft 2025-10-02 eqs. 4.17-4.22) with the mavsim_public Aerosonde parameters, drag C_D = C_Dp + C_L^2/(pi e AR); computed by interceptor/guidance/airframes.py::aerosonde_max_level_speed, checked by tests/unit/test_equations_and_airframes.py. Changed 2026-11-15 from the v1-notebook 40 m/s (BUGS #32)"
   a_t_max:
-    value: 41.202
+    value: 2.47
     unit: m/s^2
-    source: "PROJECT_CHOICE (v1 notebook value): NOT an excess-thrust result of EQ-FW-4. The book propulsion model with the mavsim parameters gives (T - D)/m = 2.5 m/s^2 (0.25 g) at 25 m/s and at most 7.7 m/s^2 (static thrust 84.6 N) (BUGS #32); kept pending the owner decision"
+    source: "DERIVED (EQ-FW-4): (T_max - D)/m at the 25 m/s trim speed (mavsim u0), full throttle, same model as v_max; interceptor/guidance/airframes.py::aerosonde_axial_acceleration(25, 1). Speed dependent (4.9 m/s^2 at 15 m/s, 0 at v_max); the constant is tested by the axial_limit_scale sweep. Changed 2026-11-15 from the v1-notebook 4.2 g (BUGS #32)"
   a_t_min:
-    value: -19.62
+    value: -3.02
     unit: m/s^2
-    source: "PROJECT_CHOICE (v1 notebook value): NOT an idle-thrust result of EQ-FW-4. The book model gives (T_idle - D)/m = -3.0 m/s^2 (-0.31 g) at 25 m/s (BUGS #32); kept pending the owner decision"
+    source: "DERIVED (EQ-FW-4): (T_idle - D)/m at 25 m/s with zero throttle (windmilling propeller), same model as v_max; interceptor/guidance/airframes.py::aerosonde_axial_acceleration(25, 0). Changed 2026-11-15 from the v1-notebook -2 g (BUGS #32)"
   a_n_max:
     value: 37.278
     unit: m/s^2

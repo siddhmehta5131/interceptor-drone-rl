@@ -12,10 +12,10 @@ names the book (row IDs are those of the current `docs/full_value_audit.csv`).
 | L2 | Shaw, R. L. (1985). Fighter Combat: Tactics and Maneuvering. Naval Institute Press | That each of the 16 evasive laws (docs/mathematics.md section 5; guidance/targets.py) matches the manoeuvre Shaw describes under that name (weave, barrel roll, split-S, scissors, notch, crank, break, energy depletion, ...). Shaw gives qualitative descriptions; the numbers are ours. | Names only; every shape constant is PROJECT_CHOICE tested by the maneuver_shape sweep, amplitudes by target_accel_ratio. | 144 (53 in live code) |
 | L3 | Imado, F., Miwa, S. (1986). Fighter evasive maneuvers against proportional navigation missile. J. Aircraft 23(11):825-830 (AIAA, paywalled; library copy) | Which manoeuvres are most effective against PN and at what time-to-go they should start (supports the terminal-break / barrel-roll timing constants and the choice of 16 laws). | Bibliographic record only; cited only by the notebook-v2 library in maneuvers.py, which v2 does not execute (defence UNUSED). | 110 (19 in live code) |
 | L4 | Hairer, E., Norsett, S. P., Wanner, G. (1993). Solving Ordinary Differential Equations I, 2nd ed., Springer, ch. II | Classical RK4 tableau (c = 0, 1/2, 1/2, 1; b = 1/6, 1/3, 1/3, 1/6) and global order 4, as implemented in interceptor/sim/pipeline.py rk4(). | Order measured directly: tests/unit/test_sim_timestep.py::test_fourth_order_convergence (log-log slope 3.7-4.5). | 17 (17 in live code) |
-| L5 | Zipfel, P. H. (2014). Modeling and Simulation of Aerospace Vehicle Dynamics, 3rd ed., AIAA (book and its AIM5 chapter) | (a) The trimmed normal-force limit C_N,max = C_D sin(alpha_max) + C_L cos(alpha_max) and n_max = C_N,max q S / (m g) (EQ-MS-1). (b) The autopilot rate-loop time constant tr used as tau_accel (EQ-MS-6). (c) Thrust nozzle-exit pressure correction T = deck + (p_SL - p) a_e (EQ-MS-2). | All AIM5 numbers come from the public CADAC++ AIM5 files (github SwaggyTyrion/CADAC f5405b8, compared in docs/aim5_cadac_check.md); only the theory needs the book. | 37 (37 in live code) |
+| L5 | Zipfel, P. H. (2014). Modeling and Simulation of Aerospace Vehicle Dynamics, 3rd ed., AIAA (book and its AIM5 chapter) | (a) The trimmed normal-force limit C_N,max = C_D sin(alpha_max) + C_L cos(alpha_max) and n_max = C_N,max q S / (m g) (EQ-MS-1). (b) The autopilot rate-loop time constant tr used as tau_accel (EQ-MS-6). (c) Thrust nozzle-exit pressure correction T = deck + (p_SL - p) a_e (EQ-MS-2). | All AIM5 numbers come from the public CADAC++ AIM5 files (github SwaggyTyrion/CADAC f5405b8, compared in docs/aim5_cadac_check.md); only the theory needs the book. | 49 (49 in live code) |
 | L6 | Bar-Shalom, Y., Li, X. R., Kirubarajan, T. (2001). Estimation with Applications to Tracking and Navigation, Wiley, sec. 6.2.3 (and Kalman 1960) | White-noise-jerk constant-acceleration model: F and Q = q_j [dt^5/20, dt^4/8, dt^3/6; dt^4/8, dt^3/3, dt^2/2; dt^3/6, dt^2/2, dt] (EQ-KF-1/2) and the Joseph-form update (EQ-KF-5) in guidance/tracker.py; also the fixed-gain alpha-beta-gamma filter form that the live seeker uses (guidance/seeker.py, EQ-SEEK-4). | Tracker is not selected by any v2 entry point (BUGS #35 note); the live filter is the fixed-gain alpha-beta-gamma, tested by the seeker_gain_scale sweep. | 28 (28 in live code) |
 | L7 | Ogata, K. (2010). Modern Control Engineering, 5th ed., Prentice Hall, ch. 5 (transient-response specifications) | Definitions in interceptor/fc/metrics.py: 10-90 % rise time, peak overshoot as a fraction of the step, settling time with a 5 % band. | Standard definitions; the band (5 %) and percentages are explicit in the code. | 7 (7 in live code) |
-| L8 | Beard, R. W., McLain, T. W. (2012). Small Unmanned Aircraft: Theory and Practice, Princeton Univ. Press (print edition) | Appendix E table numbers and page numbers in the print edition, and whether the print Table E.2 has C_Y_beta = -0.83 and C_n_p = -0.069 like the 2025 draft (the code uses -0.98 and +0.069). | Values verified against mavsim_public (commit 10363e0) and the authors' 2025-10-02 draft (docs/aerosonde_mavsim_check.md); only the print page numbers are unchecked. | 77 (77 in live code) |
+| L8 | Beard, R. W., McLain, T. W. (2012). Small Unmanned Aircraft: Theory and Practice, Princeton Univ. Press (print edition) | Appendix E table numbers and page numbers in the print edition, and whether the print Table E.2 has C_Y_beta = -0.83 and C_n_p = -0.069 like the 2025 draft (the code uses -0.98 and +0.069). | Values verified against mavsim_public (commit 10363e0) and the authors' 2025-10-02 draft (docs/aerosonde_mavsim_check.md); only the print page numbers are unchecked. | 91 (91 in live code) |
 | L9 | Chadwick, W. R., Zarchan, P. (1995). Interception of spiraling ballistic missiles. Proc. ACC, doi:10.1109/ACC.1995.532784 (IEEE, paywalled body) | The body of the paper: the 0.5-1 Hz critical weave frequency band quoted from the abstract, and the guidance time constant it assumes. | Abstract only; used as a cross-check on the weave rates (1.1-2.0 rad/s) which the maneuver_shape sweep varies. | 144 (53 in live code) |
 | L10 | MIL-F-8785C (1980), Figures 10 and 11 (legible copy: DTIC AFWAL-TR-81-3109 user guide, or a library scan) | Exponents of the low-altitude Dryden forms: L_u = L_v = h / (0.177 + 0.000823 h)^1.2 and sigma_u / sigma_w = 1 / (0.177 + 0.000823 h)^0.4 (EQ-WIND-2); illegible in the public EverySpec OCR (sigma_w = 0.1 u20 was read, Sec. 3.7.3.4 p. 53). | Exponents taken from the MathWorks Dryden block documentation, which states it implements MIL-F-8785C. | 16 (16 in live code) |
 
@@ -23,54 +23,54 @@ names the book (row IDs are those of the current `docs/full_value_audit.csv`).
 
 * `configs/guidance.yaml` [PROJECT_CHOICE]: V00110
 * `guidance` [CITED_METHOD, PROJECT_CHOICE]: D010, D011
-* `interceptor/guidance/maneuvers.py` [PROJECT_CHOICE]: V00698, V00699, V00700, V00701, V00702, V00703, V00704, V00705, V00706, V00707, V00708, V00709, ... (110 rows)
+* `interceptor/guidance/maneuvers.py` [PROJECT_CHOICE]: V00710, V00711, V00712, V00713, V00714, V00715, V00716, V00717, V00718, V00719, V00720, V00721, ... (110 rows)
 
 ## L2: dependent rows (144)
 
 * `guidance` [PROJECT_CHOICE]: D017
-* `interceptor/guidance/maneuvers.py` [PROJECT_CHOICE]: V00698, V00699, V00700, V00701, V00702, V00703, V00704, V00705, V00706, V00707, V00708, V00709, ... (110 rows)
-* `interceptor/guidance/targets.py` [PROJECT_CHOICE]: V00986, V00987, V00989, V00990, V00994, V00996, V00997, V00998, V00999, V01000, V01001, V01002, ... (33 rows)
+* `interceptor/guidance/maneuvers.py` [PROJECT_CHOICE]: V00710, V00711, V00712, V00713, V00714, V00715, V00716, V00717, V00718, V00719, V00720, V00721, ... (110 rows)
+* `interceptor/guidance/targets.py` [PROJECT_CHOICE]: V00998, V00999, V01001, V01002, V01006, V01008, V01009, V01010, V01011, V01012, V01013, V01014, ... (33 rows)
 
 ## L3: dependent rows (110)
 
-* `interceptor/guidance/maneuvers.py` [PROJECT_CHOICE]: V00698, V00699, V00700, V00701, V00702, V00703, V00704, V00705, V00706, V00707, V00708, V00709, ... (110 rows)
+* `interceptor/guidance/maneuvers.py` [PROJECT_CHOICE]: V00710, V00711, V00712, V00713, V00714, V00715, V00716, V00717, V00718, V00719, V00720, V00721, ... (110 rows)
 
 ## L4: dependent rows (17)
 
-* `interceptor/sim/pipeline.py` [CITED_METHOD]: V01098, V01104, V01105, V01106, V01107, V01108, V01109, V01110, V01111, V01112, V01114, V01115, ... (16 rows)
+* `interceptor/sim/pipeline.py` [CITED_METHOD]: V01110, V01116, V01117, V01118, V01119, V01120, V01121, V01122, V01123, V01124, V01126, V01127, ... (16 rows)
 * `simulator` [CITED_METHOD]: D003
 
-## L5: dependent rows (37)
+## L5: dependent rows (49)
 
 * `configs/airframes/aim5.yaml` [CITED]: V00057, V00058, V00059, V00060, V00061, V00062, V00063, V00064, V00065, V00066, V00068, V00069, ... (19 rows)
 * `configs/platforms.yaml` [CITED, CITED_PARTIAL]: V00226, V00228, V00229, V00230, V00231, V00232, V00233, V00237
-* `interceptor/guidance/airframes.py` [CITED_METHOD, MATH_OR_DIMENSION, NUMERICAL_GUARD]: V00614, V00615, V00616, V00617, V00618, V00619, V00620, V00621, V00622, V00623
+* `interceptor/guidance/airframes.py` [CITED_METHOD, MATH_OR_DIMENSION, NUMERICAL_GUARD]: V00614, V00615, V00616, V00617, V00618, V00619, V00620, V00621, V00622, V00623, V00624, V00625, ... (22 rows)
 
 ## L6: dependent rows (28)
 
 * `guidance` [CITED_METHOD]: D012
-* `interceptor/guidance/seeker.py` [CITED_METHOD]: V00957, V00958, V00959, V00960, V00961, V00962, V00963, V00964, V00965, V00966, V00968, V00969, ... (21 rows)
-* `interceptor/guidance/tracker.py` [CITED_METHOD, MATH_OR_DIMENSION]: V01034, V01035, V01036, V01037, V01038, V01039
+* `interceptor/guidance/seeker.py` [CITED_METHOD]: V00969, V00970, V00971, V00972, V00973, V00974, V00975, V00976, V00977, V00978, V00980, V00981, ... (21 rows)
+* `interceptor/guidance/tracker.py` [CITED_METHOD, MATH_OR_DIMENSION]: V01046, V01047, V01048, V01049, V01050, V01051
 
 ## L7: dependent rows (7)
 
 * `interceptor/fc/metrics.py` [CITED_METHOD]: V00554, V00555, V00556, V00557, V00558, V00562, V00563
 
-## L8: dependent rows (77)
+## L8: dependent rows (91)
 
-* `configs/airframes/aerosonde.yaml` [CITED, CITED_PARTIAL, PROJECT_CHOICE]: V00001, V00002, V00003, V00004, V00005, V00006, V00007, V00008, V00009, V00010, V00011, V00012, ... (50 rows)
+* `configs/airframes/aerosonde.yaml` [CITED, CITED_PARTIAL]: V00001, V00002, V00003, V00004, V00005, V00006, V00007, V00008, V00009, V00010, V00011, V00012, ... (50 rows)
 * `configs/airframes/aim5.yaml` [CITED]: V00067
-* `configs/platforms.yaml` [CITED_PARTIAL]: V00216
+* `configs/platforms.yaml` [CITED, CITED_PARTIAL]: V00206, V00207, V00216
 * `guidance` [CITED]: D019
-* `interceptor/guidance/airframes.py` [CITED_METHOD]: V00615, V00616, V00617, V00618, V00619, V00620, V00621, V00622
-* `interceptor/sim/pipeline.py` [CITED_METHOD]: V01098, V01104, V01105, V01106, V01107, V01108, V01109, V01110, V01111, V01112, V01114, V01115, ... (16 rows)
+* `interceptor/guidance/airframes.py` [CITED_METHOD]: V00615, V00616, V00617, V00618, V00619, V00620, V00621, V00622, V00623, V00624, V00625, V00626, ... (20 rows)
+* `interceptor/sim/pipeline.py` [CITED_METHOD]: V01110, V01116, V01117, V01118, V01119, V01120, V01121, V01122, V01123, V01124, V01126, V01127, ... (16 rows)
 
 ## L9: dependent rows (144)
 
-* `interceptor/guidance/maneuvers.py` [PROJECT_CHOICE]: V00698, V00699, V00700, V00701, V00702, V00703, V00704, V00705, V00706, V00707, V00708, V00709, ... (110 rows)
-* `interceptor/guidance/targets.py` [PROJECT_CHOICE]: V00986, V00987, V00989, V00990, V00991, V00994, V00996, V00997, V00998, V00999, V01000, V01001, ... (34 rows)
+* `interceptor/guidance/maneuvers.py` [PROJECT_CHOICE]: V00710, V00711, V00712, V00713, V00714, V00715, V00716, V00717, V00718, V00719, V00720, V00721, ... (110 rows)
+* `interceptor/guidance/targets.py` [PROJECT_CHOICE]: V00998, V00999, V01001, V01002, V01003, V01006, V01008, V01009, V01010, V01011, V01012, V01013, ... (34 rows)
 
 ## L10: dependent rows (16)
 
-* `interceptor/sim/wind.py` [CITED_METHOD]: V01126, V01127, V01128, V01129, V01131, V01132, V01133, V01134, V01135, V01137, V01138, V01139, ... (15 rows)
+* `interceptor/sim/wind.py` [CITED_METHOD]: V01138, V01139, V01140, V01141, V01143, V01144, V01145, V01146, V01147, V01149, V01150, V01151, ... (15 rows)
 * `simulator` [CITED_PARTIAL]: D008

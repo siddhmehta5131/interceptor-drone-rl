@@ -28,9 +28,9 @@ def test_limits_for_scales_interceptor_response(platform):
     lim = PLATFORMS[platform]
     lag = sweeps.limits_for(platform, "interceptor_lag_scale", 2.0)
     assert lag.tau_accel == pytest.approx(2.0 * lim.tau_accel) and lag.max_jerk == lim.max_jerk
-    ax = sweeps.limits_for(platform, "axial_limit_scale", 0.06)
-    assert ax.a_t_max == pytest.approx(0.06 * lim.a_t_max)
-    assert ax.a_t_min == pytest.approx(0.06 * lim.a_t_min) and ax.a_n_max == lim.a_n_max
+    ax = sweeps.limits_for(platform, "axial_limit_scale", 0.5)
+    assert ax.a_t_max == pytest.approx(0.5 * lim.a_t_max)
+    assert ax.a_t_min == pytest.approx(0.5 * lim.a_t_min) and ax.a_n_max == lim.a_n_max
     assert sweeps.limits_for(platform, "jerk_limit_scale", 0.5).max_jerk == pytest.approx(0.5 * lim.max_jerk)
     for name in ("interceptor_lag_scale", "axial_limit_scale", "jerk_limit_scale"):
         assert 1.0 in sweeps.SWEEPS[name][1]  # nominal point is in every grid

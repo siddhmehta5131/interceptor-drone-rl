@@ -105,17 +105,17 @@ platforms:
       unit: m/s
       source: "configs/airframes/aerosonde.yaml derived_limits.v_min: EQ-FW-2 with CL_max = 1.45 (PROJECT_CHOICE, BUGS #32)"
     v_max:
-      value: 40.0
+      value: 32.4
       unit: m/s
-      source: "PROJECT_CHOICE, v1 notebook value; the book propulsion model gives 32.4 m/s (configs/airframes/aerosonde.yaml derived_limits.v_max, BUGS #32)"
+      source: "configs/airframes/aerosonde.yaml derived_limits.v_max: DERIVED (EQ-FW-3): full-throttle root of T(V) = D(V) at sea level, 32.43 m/s rounded; thrust from the Beard & McLain propulsion model (uavbook draft 2025-10-02 eqs. 4.17-4.22) with the mavsim_public Aerosonde parameters, drag C_D = C_Dp + C_L^2/(pi e AR); computed by interceptor/guidance/airframes.py::aerosonde_max_level_speed, checked by tests/unit/test_equations_and_airframes.py. Changed 2026-11-15 from the v1-notebook 40 m/s (BUGS #32)"
     a_t_max:
-      value: 41.202
+      value: 2.47
       unit: m/s^2
-      source: "PROJECT_CHOICE, v1 notebook value; EQ-FW-4 with the book propulsion model gives 0.25 g at 25 m/s (configs/airframes/aerosonde.yaml derived_limits.a_t_max, BUGS #32)"
+      source: "configs/airframes/aerosonde.yaml derived_limits.a_t_max: DERIVED (EQ-FW-4): (T_max - D)/m at the 25 m/s trim speed (mavsim u0), full throttle, same model as v_max; interceptor/guidance/airframes.py::aerosonde_axial_acceleration(25, 1). Speed dependent (4.9 m/s^2 at 15 m/s, 0 at v_max); the constant is tested by the axial_limit_scale sweep. Changed 2026-11-15 from the v1-notebook 4.2 g (BUGS #32)"
     a_t_min:
-      value: -19.62
+      value: -3.02
       unit: m/s^2
-      source: "PROJECT_CHOICE, v1 notebook value; EQ-FW-4 with the book propulsion model gives -0.31 g at 25 m/s (configs/airframes/aerosonde.yaml derived_limits.a_t_min, BUGS #32)"
+      source: "configs/airframes/aerosonde.yaml derived_limits.a_t_min: DERIVED (EQ-FW-4): (T_idle - D)/m at 25 m/s with zero throttle (windmilling propeller), same model as v_max; interceptor/guidance/airframes.py::aerosonde_axial_acceleration(25, 0). Changed 2026-11-15 from the v1-notebook -2 g (BUGS #32)"
     a_n_max:
       value: 37.278
       unit: m/s^2
@@ -163,7 +163,7 @@ platforms:
     v_target_nominal:
       value: 30.6
       unit: m/s
-      source: "Orlan-10 reconnaissance UAV (Special Technology Center): cruising speed 110 km/h = 30.6 m/s, maximum 150 km/h, wingspan 3.1 m, MTOW 16.5 kg (Airforce Technology project profile, 24 Mar 2023, https://www.airforce-technology.com/projects/orlan-10-unmanned-aerial-vehicle-uav/, read 2026-11-14; trade press, no manufacturer datasheet read; other secondary sources give 90-100 km/h cruise; secondary source, data/threat_platforms.csv T16). Changed 2026-11-14 from the Bayraktar TB2 (46.3 m/s, Baykar), which is faster than the 40 m/s Aerosonde interceptor and gave 2/30 pure-APN kills (BUGS #24); the TB2 and Shahed-136 (51 m/s) cases are covered by the P9.1 target_speed_ratio sweep up to 1.1"
+      source: "Orlan-10 reconnaissance UAV (Special Technology Center): cruising speed 110 km/h = 30.6 m/s, maximum 150 km/h, wingspan 3.1 m, MTOW 16.5 kg (Airforce Technology project profile, 24 Mar 2023, https://www.airforce-technology.com/projects/orlan-10-unmanned-aerial-vehicle-uav/, read 2026-11-14; trade press, no manufacturer datasheet read; other secondary sources give 90-100 km/h cruise; secondary source, data/threat_platforms.csv T16). Changed 2026-11-14 from the Bayraktar TB2 (46.3 m/s, Baykar), which is faster than the Aerosonde interceptor (then modelled at 40 m/s, now 32.4 m/s) and gave 2/30 pure-APN kills (BUGS #24); the TB2 and Shahed-136 (51 m/s) cases are covered by the P9.1 target_speed_ratio sweep up to 1.1"
     a_target_max:
       value: 37.278
       unit: m/s^2
@@ -177,9 +177,9 @@ platforms:
       unit: s
       source: "Spawn range / closing speed + 4 s; EQ-GEO-5"
     speed_ratio:
-      value: 1.31
+      value: 1.06
       unit: dimensionless
-      source: "Interceptor/target speed ratio = 40/30.6; EQ-TGT-1; follows v_target_nominal (Orlan-10 cruise, Airforce Technology)"
+      source: "Interceptor/target speed ratio = 32.4/30.6; EQ-TGT-1; follows v_target_nominal (Orlan-10 cruise, Airforce Technology) and the model v_max (BUGS #32)"
     a_ratio:
       value: 1.0
       unit: dimensionless
@@ -295,17 +295,17 @@ observation_scales:
     target_accel: {value: 7.404, unit: m/s^2, source: "P5.8: a_target_max, EQ-TGT-1"}
   fixed_wing:
     rel_pos: {value: 900.0, unit: m, source: "P5.8: r_init_max, EQ-GEO-5"}
-    rel_vel: {value: 40.0, unit: m/s, source: "P5.8: v_max, EQ-FW-3"}
-    interceptor_vel: {value: 40.0, unit: m/s, source: "P5.8: v_max, EQ-FW-3"}
+    rel_vel: {value: 32.4, unit: m/s, source: "P5.8: v_max, EQ-FW-3"}
+    interceptor_vel: {value: 32.4, unit: m/s, source: "P5.8: v_max, EQ-FW-3"}
     range: {value: 900.0, unit: m, source: "P5.8: r_init_max, EQ-GEO-5"}
-    closing_vel: {value: 40.0, unit: m/s, source: "P5.8: v_max, EQ-FW-3"}
+    closing_vel: {value: 32.4, unit: m/s, source: "P5.8: v_max, EQ-FW-3"}
     los_rate: {value: 1.0, unit: rad/s, source: "P5.8: LOS rate already O(0.1-1), EQ-GEO-2"}
     t_go: {value: 36.0, unit: s, source: "P5.8: max_time, EQ-APN-4"}
     future_pos: {value: 900.0, unit: m, source: "P5.8: r_init_max, EQ-GEO-5"}
-    future_vel: {value: 40.0, unit: m/s, source: "P5.8: v_max, EQ-FW-3"}
+    future_vel: {value: 32.4, unit: m/s, source: "P5.8: v_max, EQ-FW-3"}
     time_remaining: {value: 36.0, unit: s, source: "P5.8: max_time, EQ-GEO-5"}
     optimal_accel: {value: 37.278, unit: m/s^2, source: "P5.8: a_n_max, EQ-FW-5"}
-    optimal_vel: {value: 40.0, unit: m/s, source: "P5.8: v_max, EQ-FW-3"}
+    optimal_vel: {value: 32.4, unit: m/s, source: "P5.8: v_max, EQ-FW-3"}
     target_accel: {value: 37.278, unit: m/s^2, source: "P5.8: a_target_max, EQ-TGT-1"}
   missile:
     rel_pos: {value: 7000.0, unit: m, source: "P5.8: r_init_max, EQ-GEO-5"}

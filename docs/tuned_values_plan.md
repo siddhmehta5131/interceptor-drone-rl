@@ -81,7 +81,7 @@ repeatability case, or states the non-sweep argument.
 
 New evaluation-only sweeps added for this (run automatically by `scripts/sweep_robustness.py`,
 notebook 05): `interceptor_lag_scale` (tau_accel x0.5 / 1 / 2), `axial_limit_scale` (a_t_max, a_t_min
-x0.06 / 0.25 / 0.5 / 1; 0.06 is the fixed-wing value of the book propulsion model, BUGS #32),
+x0.5 / 1 / 2, spanning the speed dependence of the fixed-wing model values, BUGS #32),
 `jerk_limit_scale` (x0.5 / 1 / 2) and `seeker_gain_scale` (alpha-beta-gamma gains x0.5 / 1 / 1.5,
 capped at 1). Not swept and stated as such: the domain-randomisation widths (the on/off ablation
 exists), the FC observation layout (tested end to end against B1 / B2), the TD3 learning rate

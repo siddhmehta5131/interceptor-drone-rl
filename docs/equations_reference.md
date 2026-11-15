@@ -213,7 +213,7 @@ Maximum level speed is the root of (EQ-FW-3):
 
 $$T(V) = D(V)$$
 
-With the book propulsion model (Beard & McLain eqs. 4.17-4.22) and the mavsim parameters the root is 32.4 m/s; the configured $v_{\max} = 40$ m/s is a v1-notebook value (BUGS #32, decision pending).
+With the book propulsion model (Beard & McLain eqs. 4.17-4.22) and the mavsim parameters the root is 32.43 m/s, so $v_{\max} = 32.4$ m/s; at 25 m/s the same model gives $a_{t,\max} = 2.47$ and $a_{t,\min} = -3.02$ m/s² (BUGS #32).
 
 Axial acceleration envelope (EQ-FW-4):
 

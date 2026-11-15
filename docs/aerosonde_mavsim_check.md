@@ -78,6 +78,10 @@ a point mass, EQ-FW-1), so no result depends on the choice. `epsilon` and `S_pro
 
 ## Rows that cite Beard & McLain but are not values from it
 
+**Update 2026-11-15 (owner decision, BUGS #32):** `v_max`, `a_t_max` and `a_t_min` were changed to the
+model values in the "check" column (32.4 m/s, +2.47 m/s^2, -3.02 m/s^2), now computed by
+`interceptor/guidance/airframes.py`. The table below records the state before that change.
+
 The audit counted 55 rows referencing Beard & McLain: 47 in `aerosonde.yaml` (the 46 data rows in the
 table above, which also lists the derived aspect ratio, plus `derived_limits.tau_accel`) and 8 in `configs/platforms.yaml`. Six of
 the eight were labelled CITED only because the audit regex matched the word "aerosonde" in a file path;

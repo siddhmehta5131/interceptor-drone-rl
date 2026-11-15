@@ -31,10 +31,11 @@ SWEEPS = {
     "maneuver_shape": ("manoeuvre shape scale (x nominal)", (0.5, 1.0, 1.5)),
     # Interceptor response limits that are project choices (docs/tuned_values_plan.md):
     # tau_accel (first-order acceleration lag), a_t_max / a_t_min (axial envelope) and
-    # max_jerk, each scaled with the other limits nominal.  The axial grid reaches 0.06,
-    # the fixed-wing value the book propulsion model gives (2.5 / 41.2 m/s^2, BUGS #32).
+    # max_jerk, each scaled with the other limits nominal.  The fixed-wing axial limits are
+    # the propulsion-model values at 25 m/s (BUGS #32); x2 is about the 15 m/s value
+    # (4.9 m/s^2) and x0.5 is near the value at 29 m/s, so the grid spans the speed dependence.
     "interceptor_lag_scale": ("interceptor tau_accel (x nominal)", (0.5, 1.0, 2.0)),
-    "axial_limit_scale": ("interceptor a_t_max, a_t_min (x nominal)", (0.06, 0.25, 0.5, 1.0)),
+    "axial_limit_scale": ("interceptor a_t_max, a_t_min (x nominal)", (0.5, 1.0, 2.0)),
     "jerk_limit_scale": ("interceptor max_jerk (x nominal)", (0.5, 1.0, 2.0)),
     # The three alpha-beta-gamma seeker gains (configs/seeker.yaml ema_alpha_*, PROJECT_CHOICE)
     # scaled together, each capped at 1.0 (1.0 = raw measurement, no smoothing).

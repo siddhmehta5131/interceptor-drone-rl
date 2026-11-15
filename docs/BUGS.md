@@ -318,7 +318,7 @@ exists (P6.4 not yet run; `results/` holds no algorithm-selection tables), so no
 re-run; `results/tables/training_throughput.json` TD3 steps/s may shift slightly (noise sampling
 is cheap) but it is a laptop benchmark only.
 
-### 32. Fixed-wing interceptor limits do not follow from the cited model (OPEN, owner decision)
+### 32. Fixed-wing interceptor limits do not follow from the cited model (FIXED 2026-11-15)
 Item 3 of the 2026-11-15 sourcing pass compared every Aerosonde value with mavsim_public
 (`docs/aerosonde_mavsim_check.md`): the 53 airframe numbers are correct. The derived limits are
 not. With the book propulsion model (Beard & McLain uavbook draft 2025-10-02, eqs. 4.17-4.22)
@@ -393,4 +393,17 @@ the same N', selected on seeds 5000+ that are disjoint from training and evaluat
 explicit `N_nav` still wins (`sweep_nav.py`; the notebook-replay fixtures pin 4.0). The stored
 winners are stale and must come from the Colab rerun of `sweep_nav.py` BEFORE training.
 Test: `test_env_takes_n_prime_from_sweep_table`.
+
+**#32 fix (2026-11-15, owner decision: apply).** `v_max` 40 -> 32.4 m/s, `a_t_max` 41.2 -> 2.47
+m/s^2, `a_t_min` -19.6 -> -3.02 m/s^2 in `configs/airframes/aerosonde.yaml` and
+`configs/platforms.yaml` (plus the five 40 m/s observation scales and `speed_ratio` 1.31 -> 1.06).
+The values are computed by new functions in `interceptor/guidance/airframes.py`
+(`aerosonde_thrust`, `aerosonde_max_level_speed`, `aerosonde_axial_acceleration`; book eqs.
+4.17-4.22) and a unit test pins the config to them. `tau_accel` 0.12 s and `max_jerk` stay
+project choices (no source), tested by the `interceptor_lag_scale` / `jerk_limit_scale` sweeps.
+**Consequences:** the interceptor is now only 6 % faster than the nominal Orlan-10 target, and
+slower than targets drawn above 32.4 m/s (the target band is 0.75-1.15 x 30.6 = 23-35.2 m/s), so
+fixed-wing kill rates will drop; that is the honest result for this airframe pair. **Stale:**
+every fixed-wing result (`results/tables/nav_sweep*`, any guidance table or video with the
+fixed-wing platform) and the fixed-wing N' winners in `configs/guidance.yaml`.
 

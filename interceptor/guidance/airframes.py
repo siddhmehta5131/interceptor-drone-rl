@@ -117,3 +117,60 @@ def aerosonde_turn_rate(speed: float, load_factor: float,
     """Coordinated-turn rate for a given load factor (EQ-FW-6)."""
     return float(gravity * np.sqrt(max(load_factor ** 2 - 1.0, 0.0))
                  / max(speed, 1e-6))
+
+
+# --- Aerosonde propulsion model (Beard & McLain uavbook draft 2025-10-02, ch. 4) -------
+def aerosonde_propeller_speed(airspeed: float, throttle: float, cfg: dict) -> float:
+    """Operating propeller speed (rad/s): positive root of eqs. (4.20)-(4.21),
+    with ``V_in = V_max * throttle`` (eq. 4.22)."""
+    rho = _leaf(cfg, "physical.air_density_sea_level")
+    d = _leaf(cfg, "physical.propeller_diameter")
+    kq = 60.0 / (2.0 * np.pi * _leaf(cfg, "physical.motor_kv"))  # N m/A; K_V = K_Q in SI
+    r = _leaf(cfg, "physical.motor_resistance")
+    i0 = _leaf(cfg, "physical.motor_no_load_current")
+    v_in = _leaf(cfg, "physical.battery_voltage_max") * float(throttle)
+    cq0, cq1, cq2 = _leaf(cfg, "propeller_fit.CQ_coefficients")
+    a = rho * d ** 5 / (2.0 * np.pi) ** 2 * cq0
+    b = rho * d ** 4 / (2.0 * np.pi) * cq1 * airspeed + kq * kq / r
+    c = rho * d ** 3 * cq2 * airspeed ** 2 - kq / r * v_in + kq * i0
+    return float((-b + np.sqrt(max(b * b - 4.0 * a * c, 0.0))) / (2.0 * a))
+
+
+def aerosonde_thrust(airspeed: float, throttle: float, cfg: dict) -> float:
+    """Propeller thrust (N), eq. (4.17); negative when the propeller windmills."""
+    rho = _leaf(cfg, "physical.air_density_sea_level")
+    d = _leaf(cfg, "physical.propeller_diameter")
+    ct0, ct1, ct2 = _leaf(cfg, "propeller_fit.CT_coefficients")
+    om = aerosonde_propeller_speed(airspeed, throttle, cfg)
+    return float(rho * d ** 4 * ct0 / (4.0 * np.pi ** 2) * om ** 2
+                 + rho * d ** 3 * ct1 * airspeed / (2.0 * np.pi) * om
+                 + rho * d ** 2 * ct2 * airspeed ** 2)
+
+
+def aerosonde_level_drag(airspeed: float, cfg: dict) -> float:
+    """Drag in level flight (L = W) with C_D = C_Dp + C_L^2 / (pi e AR) (EQ-FW-1)."""
+    rho = _leaf(cfg, "physical.air_density_sea_level")
+    s = _leaf(cfg, "physical.wing_area")
+    b = _leaf(cfg, "physical.wing_span")
+    w = _leaf(cfg, "physical.mass") * _leaf(cfg, "physical.gravity")
+    q = 0.5 * rho * airspeed ** 2
+    cl = w / (q * s)
+    cd = _leaf(cfg, "aerodynamics.CD_p") + cl ** 2 / (np.pi * _leaf(cfg, "physical.oswald_efficiency") * b * b / s)
+    return float(q * s * cd)
+
+
+def aerosonde_max_level_speed(cfg: dict, lo: float = 15.0, hi: float = 80.0) -> float:
+    """Full-throttle root of T(V) = D(V) by bisection (EQ-FW-3)."""
+    for _ in range(100):
+        mid = 0.5 * (lo + hi)
+        if aerosonde_thrust(mid, 1.0, cfg) > aerosonde_level_drag(mid, cfg):
+            lo = mid
+        else:
+            hi = mid
+    return float(lo)
+
+
+def aerosonde_axial_acceleration(airspeed: float, throttle: float, cfg: dict) -> float:
+    """(T - D) / m in level flight (EQ-FW-4): throttle 1 = a_t_max, 0 = a_t_min."""
+    return float((aerosonde_thrust(airspeed, throttle, cfg) - aerosonde_level_drag(airspeed, cfg))
+                 / _leaf(cfg, "physical.mass"))
