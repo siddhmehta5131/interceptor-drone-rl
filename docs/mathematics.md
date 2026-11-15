@@ -135,11 +135,13 @@ N'_{\min}=3,\qquad N'_{\max}=5.
 P5.11 sweeps `N'` over this range separately for A1/A2 and each platform and
 selects by kill rate then median miss. The result is written back to
 `configs/guidance.yaml` (`navigation.N_prime_by_platform`) with
-`source: sweep P5.11`. In the last sweep (stale since the 2026-11-14 value
-changes, rerun in Colab) the quadcopter A2 pick `N' = 5` lies on the upper
-grid edge, but its kill rate was 0.93 at every grid point and the median miss
-varied by at most 0.13 m, so the pick is a tie-break on a flat response, not a
-trend that the grid cuts off.
+`source: sweep P5.11`. The 2026-11-15 sweep (100 episodes, Förster quad
+constants, `results/tables/nav_sweep.csv`) picks `N' = 3` for every platform
+and arm, on the lower grid edge, which is also the LQ-optimal value of
+EQ-APN-7. The response is flat: across `N' = 3-5` the kill rate moves by at most
+5 points (quad A2 0.70-0.75), 7 points (fixed wing A1 0.18-0.25) and 7 points
+(missile A2 0.37-0.44), inside the Wilson interval of 100 episodes, so the pick
+is a weak preference, not a trend that the grid cuts off.
 
 ### 1.6 Kill radius and engagement geometry
 

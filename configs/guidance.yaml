@@ -16,14 +16,14 @@ navigation:
   # Selected by kill rate first, median miss second.
   N_prime_by_platform:
     quadcopter:
-      apn_raw: {value: 3.0, unit: dimensionless, source: "sweep P5.11"}
-      apn_filtered: {value: 5.0, unit: dimensionless, source: "sweep P5.11"}
+      apn_raw: {value: 3.0, unit: dimensionless, source: "sweep P5.11 (scripts/sweep_nav.py, 100 episodes, rerun 2026-11-15 with the Förster quad constants; results/tables/nav_sweep.csv). Rule: highest kill rate, then median miss. Kill rates across N' 3-5 differ by at most 5-7 points, inside the 100-episode interval, so the preference is weak"}
+      apn_filtered: {value: 3.0, unit: dimensionless, source: "sweep P5.11 (scripts/sweep_nav.py, 100 episodes, rerun 2026-11-15 with the Förster quad constants; results/tables/nav_sweep.csv). Rule: highest kill rate, then median miss. Kill rates across N' 3-5 differ by at most 5-7 points, inside the 100-episode interval, so the preference is weak"}
     fixed_wing:
-      apn_raw: {value: 3.0, unit: dimensionless, source: "sweep P5.11"}
-      apn_filtered: {value: 3.5, unit: dimensionless, source: "sweep P5.11"}
+      apn_raw: {value: 3.0, unit: dimensionless, source: "sweep P5.11 (scripts/sweep_nav.py, 100 episodes, rerun 2026-11-15 with the Förster quad constants; results/tables/nav_sweep.csv). Rule: highest kill rate, then median miss. Kill rates across N' 3-5 differ by at most 5-7 points, inside the 100-episode interval, so the preference is weak"}
+      apn_filtered: {value: 3.0, unit: dimensionless, source: "sweep P5.11 (scripts/sweep_nav.py, 100 episodes, rerun 2026-11-15 with the Förster quad constants; results/tables/nav_sweep.csv). Rule: highest kill rate, then median miss. Kill rates across N' 3-5 differ by at most 5-7 points, inside the 100-episode interval, so the preference is weak"}
     missile:
-      apn_raw: {value: 3.0, unit: dimensionless, source: "sweep P5.11"}
-      apn_filtered: {value: 3.5, unit: dimensionless, source: "sweep P5.11"}
+      apn_raw: {value: 3.0, unit: dimensionless, source: "sweep P5.11 (scripts/sweep_nav.py, 100 episodes, rerun 2026-11-15 with the Förster quad constants; results/tables/nav_sweep.csv). Rule: highest kill rate, then median miss. Kill rates across N' 3-5 differ by at most 5-7 points, inside the 100-episode interval, so the preference is weak"}
+      apn_filtered: {value: 3.0, unit: dimensionless, source: "sweep P5.11 (scripts/sweep_nav.py, 100 episodes, rerun 2026-11-15 with the Förster quad constants; results/tables/nav_sweep.csv). Rule: highest kill rate, then median miss. Kill rates across N' 3-5 differ by at most 5-7 points, inside the 100-episode interval, so the preference is weak"}
   N_prime_min:
     value: 3.0
     unit: dimensionless
