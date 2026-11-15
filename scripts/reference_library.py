@@ -254,3 +254,51 @@ DECISION_RULES = {
     "D034": ("CITED_SECONDARY", [], "SECONDARY (primary searched 2026-11-15): threat set data/threat_platforms.csv: 2 of 16 rows primary (T03 USAF, T06 Baykar); Pakistani and Chinese manufacturers publish no datasheets reachable from here (www.pac.org.pk refused connections; AVIC/PLA publish none), so the rest stay secondary with their tier recorded per row. " + DATA_REFS),
     "D035": ("CITED_SECONDARY", [], "SECONDARY (primary searched 2026-11-15): Indian interceptor set: 7 of 15 platform rows and 4 of 12 sensor rows primary (Akash and Astra upgraded to the Bharat Dynamics PDF on 2026-11-15); DRDO/LRDE publish no radar datasheets, so radar ranges stay aggregator-sourced. " + DATA_REFS),
 }
+
+
+# Library-only checks (sourcing pass item 7, 2026-11-15).  The audit script writes
+# docs/library_pending.md from this list, with the dependent audit rows found by `rx`
+# in the reference / suggested_reference columns.  Each entry: (id, book, what to check
+# and which formula or value, what the repo uses meanwhile, regex).
+LIBRARY_PENDING = [
+    ("L1", "Zarchan, P. Tactical and Strategic Missile Guidance (AIAA Progress in Astronautics and Aeronautics, 6th ed. 2012 or any edition)",
+     "(a) Whether an admissible navigation-ratio range 3-5 is stated (chapter on proportional navigation and miss distance); if it is, N_prime_max = 5 can be cited instead of PROJECT_CHOICE. (b) APN law a_c = N' V_c lambda_dot + N' a_T / 2 (EQ-APN-1/2). (c) Miss distance vs N' and guidance time constant for a weaving target.",
+     "APN law and N' = 3 cited to Palumbo, Blauwkamp & Lloyd 2010 (JHU APL Tech. Dig. 29(1), Eq. 22 p. 49, Eq. 27 p. 51); upper bound 5 PROJECT_CHOICE tested by scripts/sweep_nav.py.",
+     r"Zarchan, P\. Tactical|\bzarchan\b|library item L1"),
+    ("L2", "Shaw, R. L. (1985). Fighter Combat: Tactics and Maneuvering. Naval Institute Press",
+     "That each of the 16 evasive laws (docs/mathematics.md section 5; guidance/targets.py) matches the manoeuvre Shaw describes under that name (weave, barrel roll, split-S, scissors, notch, crank, break, energy depletion, ...). Shaw gives qualitative descriptions; the numbers are ours.",
+     "Names only; every shape constant is PROJECT_CHOICE tested by the maneuver_shape sweep, amplitudes by target_accel_ratio.",
+     r"Shaw, R\. L"),
+    ("L3", "Imado, F., Miwa, S. (1986). Fighter evasive maneuvers against proportional navigation missile. J. Aircraft 23(11):825-830 (AIAA, paywalled; library copy)",
+     "Which manoeuvres are most effective against PN and at what time-to-go they should start (supports the terminal-break / barrel-roll timing constants and the choice of 16 laws).",
+     "Bibliographic record only; cited only by the notebook-v2 library in maneuvers.py, which v2 does not execute (defence UNUSED).",
+     r"Imado"),
+    ("L4", "Hairer, E., Norsett, S. P., Wanner, G. (1993). Solving Ordinary Differential Equations I, 2nd ed., Springer, ch. II",
+     "Classical RK4 tableau (c = 0, 1/2, 1/2, 1; b = 1/6, 1/3, 1/3, 1/6) and global order 4, as implemented in interceptor/sim/pipeline.py rk4().",
+     "Order measured directly: tests/unit/test_sim_timestep.py::test_fourth_order_convergence (log-log slope 3.7-4.5).",
+     r"Hairer"),
+    ("L5", "Zipfel, P. H. (2014). Modeling and Simulation of Aerospace Vehicle Dynamics, 3rd ed., AIAA (book and its AIM5 chapter)",
+     "(a) The trimmed normal-force limit C_N,max = C_D sin(alpha_max) + C_L cos(alpha_max) and n_max = C_N,max q S / (m g) (EQ-MS-1). (b) The autopilot rate-loop time constant tr used as tau_accel (EQ-MS-6). (c) Thrust nozzle-exit pressure correction T = deck + (p_SL - p) a_e (EQ-MS-2).",
+     "All AIM5 numbers come from the public CADAC++ AIM5 files (github SwaggyTyrion/CADAC f5405b8, compared in docs/aim5_cadac_check.md); only the theory needs the book.",
+     r"Zipfel, P\. H\. \(2014\)"),
+    ("L6", "Bar-Shalom, Y., Li, X. R., Kirubarajan, T. (2001). Estimation with Applications to Tracking and Navigation, Wiley, sec. 6.2.3 (and Kalman 1960)",
+     "White-noise-jerk constant-acceleration model: F and Q = q_j [dt^5/20, dt^4/8, dt^3/6; dt^4/8, dt^3/3, dt^2/2; dt^3/6, dt^2/2, dt] (EQ-KF-1/2) and the Joseph-form update (EQ-KF-5) in guidance/tracker.py; also the fixed-gain alpha-beta-gamma filter form that the live seeker uses (guidance/seeker.py, EQ-SEEK-4).",
+     "Tracker is not selected by any v2 entry point (BUGS #35 note); the live filter is the fixed-gain alpha-beta-gamma, tested by the seeker_gain_scale sweep.",
+     r"Bar-Shalom|Kalman, R\. E"),
+    ("L7", "Ogata, K. (2010). Modern Control Engineering, 5th ed., Prentice Hall, ch. 5 (transient-response specifications)",
+     "Definitions in interceptor/fc/metrics.py: 10-90 % rise time, peak overshoot as a fraction of the step, settling time with a 5 % band.",
+     "Standard definitions; the band (5 %) and percentages are explicit in the code.",
+     r"Ogata"),
+    ("L8", "Beard, R. W., McLain, T. W. (2012). Small Unmanned Aircraft: Theory and Practice, Princeton Univ. Press (print edition)",
+     "Appendix E table numbers and page numbers in the print edition, and whether the print Table E.2 has C_Y_beta = -0.83 and C_n_p = -0.069 like the 2025 draft (the code uses -0.98 and +0.069).",
+     "Values verified against mavsim_public (commit 10363e0) and the authors' 2025-10-02 draft (docs/aerosonde_mavsim_check.md); only the print page numbers are unchecked.",
+     r"Beard, R\. W\., McLain, T\. W\. \(2012\)"),
+    ("L9", "Chadwick, W. R., Zarchan, P. (1995). Interception of spiraling ballistic missiles. Proc. ACC, doi:10.1109/ACC.1995.532784 (IEEE, paywalled body)",
+     "The body of the paper: the 0.5-1 Hz critical weave frequency band quoted from the abstract, and the guidance time constant it assumes.",
+     "Abstract only; used as a cross-check on the weave rates (1.1-2.0 rad/s) which the maneuver_shape sweep varies.",
+     r"Chadwick"),
+    ("L10", "MIL-F-8785C (1980), Figures 10 and 11 (legible copy: DTIC AFWAL-TR-81-3109 user guide, or a library scan)",
+     "Exponents of the low-altitude Dryden forms: L_u = L_v = h / (0.177 + 0.000823 h)^1.2 and sigma_u / sigma_w = 1 / (0.177 + 0.000823 h)^0.4 (EQ-WIND-2); illegible in the public EverySpec OCR (sigma_w = 0.1 u20 was read, Sec. 3.7.3.4 p. 53).",
+     "Exponents taken from the MathWorks Dryden block documentation, which states it implements MIL-F-8785C.",
+     r"MIL-HDBK-1797 / MIL-F-8785C|Dryden low-altitude model"),
+]
