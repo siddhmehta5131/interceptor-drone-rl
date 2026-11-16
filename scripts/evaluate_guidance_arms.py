@@ -37,6 +37,15 @@ def _run_cell(job) -> dict:
     platform, arm, mode, target_set, behavior, episodes, seed0, policy_path = job
     from stable_baselines3 import PPO
     policy = PPO.load(policy_path, device="cpu")
+    # Evaluate in the environment the policy was trained in: a run trained with a
+    # non-default residual authority (P9.3) records it in its config.json.
+    extra = {}
+    cfg_path = Path(policy_path).parent / "config.json"
+    if cfg_path.exists():
+        import json
+        auth = (json.loads(cfg_path.read_text(encoding="utf-8")).get("guidance") or {}).get("residual_authority")
+        if auth is not None and mode == "apn_rl":
+            extra["residual_authority"] = float(auth)
     kills, misses, times = [], [], []
     for k in range(episodes):
         kwargs = {"fixed_maneuver": ManeuverType(behavior)} if target_set == "evasive" else {}
@@ -44,7 +53,7 @@ def _run_cell(job) -> dict:
             kwargs["polynomial_order"] = int(behavior) if behavior != "static" else 1
         env = UnifiedInterceptEnv(platform=PlatformType(platform), mode=mode,
                                   target_set=target_set, noise_scale=1.0,
-                                  seed=seed0 + k, **kwargs)
+                                  seed=seed0 + k, **kwargs, **extra)
         obs, _ = env.reset()
         done = False
         while not done:

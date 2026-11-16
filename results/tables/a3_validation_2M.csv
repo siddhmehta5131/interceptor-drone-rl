@@ -1,0 +1,10 @@
+platform,policy,episodes,kills,kill_rate,median_miss,seed_start,train_steps
+quadcopter,zero residual (= A2 command),64,46,0.71875,1.1869082737918064,20000,0
+quadcopter,sigma0 = 1 (SB3 default),64,50,0.78125,1.2050216762897088,20000,301128
+quadcopter,sigma0 = 0.1,64,48,0.75,1.1812564155911969,20000,2000896
+fixed_wing,zero residual (= A2 command),64,18,0.28125,328.67716711043767,20000,0
+fixed_wing,sigma0 = 1 (SB3 default),64,0,0.0,569.2779643586289,20000,301056
+fixed_wing,sigma0 = 0.1,64,9,0.140625,459.8048652832224,20000,2000896
+missile,zero residual (= A2 command),64,29,0.453125,5.2803044823669225,20000,0
+missile,sigma0 = 1 (SB3 default),64,30,0.46875,5.125143459952478,20000,301056
+missile,sigma0 = 0.1,64,31,0.484375,5.218971172116549,20000,2000896

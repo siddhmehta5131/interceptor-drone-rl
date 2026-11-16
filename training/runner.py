@@ -152,6 +152,11 @@ class _CheckpointCallback:
 
             def _save(self):
                 self.model.save(str(self.save_dir / "checkpoint.zip"))
+                # Periodic snapshots allow best-checkpoint selection on validation data
+                # (early stopping): PPO returns are not monotone in training steps.
+                snap = self.save_dir / "snapshots"
+                snap.mkdir(exist_ok=True)
+                self.model.save(str(snap / f"step_{int(self.model.num_timesteps):08d}.zip"))
                 if hasattr(self.model, "save_replay_buffer"):
                     try:
                         self.model.save_replay_buffer(
